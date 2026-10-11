@@ -8,16 +8,19 @@ import 'package:bike_control/main.dart' show OtherLocalizationsDelegate, screens
 import 'package:bike_control/pages/proxy_device_details/gear_ratio_curve.dart';
 import 'package:bike_control/pages/proxy_device_details/gear_ratios_editor_page.dart';
 import 'package:bike_control/pages/proxy_device_details/self_test_card.dart';
+import 'package:bike_control/pages/proxy_device_details/self_test_page.dart';
 import 'package:bike_control/pages/proxy_device_details/vs_calibration_page.dart';
 import 'package:bike_control/pages/proxy_device_details/shifting_config_picker.dart';
 import 'package:bike_control/pages/settings/settings_page.dart';
 import 'package:bike_control/pages/settings/virtual_shifting_settings_page.dart';
+import 'package:bike_control/services/trainer_self_test/self_test_result.dart';
 import 'package:bike_control/utils/core.dart';
 import 'package:bike_control/utils/keymap/apps/my_whoosh.dart';
 import 'package:bike_control/widgets/drivetrain/chain_geometry.dart';
 import 'package:bike_control/widgets/drivetrain/drivetrain_controls.dart';
 import 'package:bike_control/widgets/drivetrain/drivetrain_view.dart';
 import 'package:bike_control/widgets/ui/app_theme.dart';
+import 'package:bike_control/widgets/ui/bk_grouped_section.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_screenshot/golden_screenshot.dart' show loadAppFonts;
 import 'package:prop/emulators/definitions/fitness_bike_definition.dart';
@@ -400,9 +403,10 @@ Future<void> main() async {
 
   // The resistance self-test and the calibrator live with the rest of the
   // shifting settings: checking that the trainer obeys and tuning how its
-  // gears feel are both about shifting, not about the hardware link.
+  // gears feel are both about shifting, not about the hardware link. Both are
+  // rows of one group, each opening its own page.
   group('check and calibrate', () {
-    final selfTest = find.byType(SelfTestCard);
+    final selfTest = find.byKey(const ValueKey('vs-self-test'));
     final calibrate = find.byKey(const ValueKey('vs-calibrate'));
 
     // The snapshot harness this file runs under turns screenshot mode on; the
@@ -414,17 +418,49 @@ Future<void> main() async {
     });
     tearDown(() => screenshotMode = wasScreenshotMode);
 
-    testWidgets('the self-test and the calibrator sit together below Physics', (tester) async {
+    String subtitleOf(WidgetTester tester, Finder row) => tester.widget<BkGroupedRow>(row).subtitle!;
+
+    Future<void> open(WidgetTester tester, Finder row) async {
+      await tester.ensureVisible(row);
+      await tester.tap(row);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+    }
+
+    testWidgets('the self-test and the calibrator are two rows of one group below Physics', (tester) async {
       final (:proxy, :definition) = attachLiveTrainer();
       await _pump(tester, VirtualShiftingSettingsPage(definition: definition, device: proxy));
       await tester.pump();
 
       expect(selfTest, findsOneWidget);
       expect(calibrate, findsOneWidget);
+      expect(find.byType(SelfTestCard), findsNothing, reason: 'the test runs on its own page now');
+      Finder groupOf(Finder row) => find.ancestor(of: row, matching: find.byType(BkGroupedSection));
+      expect(tester.widget(groupOf(selfTest).first), same(tester.widget(groupOf(calibrate).first)));
       final physics = find.byKey(const ValueKey('vs-physics'));
       expect(_top(tester, physics), lessThan(_top(tester, selfTest)));
       expect(_top(tester, selfTest), lessThan(_top(tester, calibrate)));
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('the self-test row says what it does until there is a result, then the result', (tester) async {
+      final (:proxy, :definition) = attachLiveTrainer(id: 'row-subtitle-kickr');
+      await _pump(tester, VirtualShiftingSettingsPage(definition: definition, device: proxy));
+      await tester.pump();
+      expect(subtitleOf(tester, selfTest), l.selfTestStart);
+
+      // A test finishes on the self-test page; back here the row shows it.
+      await open(tester, selfTest);
+      expect(find.byType(SelfTestPage), findsOneWidget);
+      await core.settings.setSelfTestResultJson(proxy.trainerKey, _passResultJson);
+      tester.state<NavigatorState>(find.byType(Navigator).first).pop();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+
+      expect(
+        subtitleOf(tester, selfTest),
+        l.selfTestLastResult(SelfTestCard.verdictTitle(l, SelfTestVerdict.pass)),
+      );
     });
 
     testWidgets('the calibrator row opens the calibrator', (tester) async {
@@ -432,26 +468,8 @@ Future<void> main() async {
       await _pump(tester, VirtualShiftingSettingsPage(definition: definition, device: proxy));
       await tester.pump();
 
-      await tester.ensureVisible(calibrate);
-      await tester.tap(calibrate);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 600));
+      await open(tester, calibrate);
       expect(find.byType(VsCalibrationPage), findsOneWidget);
-    });
-
-    testWidgets('revealSelfTest scrolls the self-test into view', (tester) async {
-      final (:proxy, :definition) = attachLiveTrainer();
-      await _pump(
-        tester,
-        VirtualShiftingSettingsPage(definition: definition, device: proxy, revealSelfTest: true),
-        height: 844,
-      );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 600));
-
-      final top = _top(tester, selfTest);
-      expect(top, greaterThanOrEqualTo(0));
-      expect(top, lessThan(844));
     });
 
     testWidgets('a disconnected trainer still shows both, and nothing crashes', (tester) async {
@@ -464,10 +482,7 @@ Future<void> main() async {
 
       expect(selfTest, findsOneWidget);
       expect(calibrate, findsOneWidget);
-      await tester.ensureVisible(calibrate);
-      await tester.tap(calibrate);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 600));
+      await open(tester, calibrate);
       await tester.tap(find.byKey(const ValueKey('vs-cal-start')));
       await tester.pump();
       expect(find.byKey(const ValueKey('vs-cal-refusal')), findsOneWidget);
@@ -484,7 +499,7 @@ Future<void> main() async {
       expect(calibrate, findsNothing);
     });
 
-    testWidgets('openTrainerSelfTest lands on these settings with the self-test revealed', (tester) async {
+    testWidgets('openTrainerSelfTest opens the self-test page directly', (tester) async {
       final (:proxy, definition: _) = attachLiveTrainer();
       await _pump(
         tester,
@@ -500,9 +515,20 @@ Future<void> main() async {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 600));
 
-      final page = tester.widget<VirtualShiftingSettingsPage>(find.byType(VirtualShiftingSettingsPage));
-      expect(page.revealSelfTest, isTrue);
-      expect(page.device, same(proxy));
+      expect(tester.widget<SelfTestPage>(find.byType(SelfTestPage)).device, same(proxy));
+      expect(find.byType(VirtualShiftingSettingsPage), findsNothing);
     });
   });
 }
+
+/// A stored passing result, as [SelfTestResult.toJsonString] writes it.
+final _passResultJson = SelfTestResult(
+  at: DateTime(2026, 10, 11),
+  verdict: SelfTestVerdict.pass,
+  ergStepsPassed: 3,
+  ergStepsTotal: 3,
+  shiftStepsPassed: 3,
+  shiftStepsTotal: 3,
+  vsMode: 'trackResistance',
+  protocol: 'ftms',
+).toJsonString();

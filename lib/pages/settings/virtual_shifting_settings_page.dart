@@ -5,8 +5,9 @@ import 'package:bike_control/bluetooth/devices/proxy/proxy_device.dart';
 import 'package:bike_control/main.dart' show screenshotMode;
 import 'package:bike_control/pages/proxy_device_details.dart';
 import 'package:bike_control/pages/proxy_device_details/self_test_card.dart';
+import 'package:bike_control/pages/proxy_device_details/self_test_page.dart';
+import 'package:bike_control/services/trainer_self_test/self_test_result.dart';
 import 'package:bike_control/pages/proxy_device_details/vs_calibration_page.dart';
-import 'package:bike_control/pages/settings/overlay_settings_page.dart';
 import 'package:bike_control/utils/i18n_extension.dart';
 import 'package:bike_control/gen/l10n.dart';
 import 'package:bike_control/models/shifting_config.dart';
@@ -27,19 +28,18 @@ import 'package:bike_control/widgets/ui/colors.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:bike_control/widgets/ui/bk_page_column.dart';
 
-/// Opens the resistance self-test for [device]: these settings, scrolled to it.
+/// Opens the resistance self-test page for [device].
 ///
-/// The way in for everything that offers "run the self-test" (the support
-/// intake, the setup guide's done step). A trainer with no virtual-shifting
-/// definition has no self-test to run, so it lands on the trainer's own page,
-/// where the connection is.
+/// The way in for everything that offers "run the self-test" (the "Check and
+/// calibrate" row below, the support intake, the setup guide's done step). A
+/// trainer with no virtual-shifting definition has no self-test to run, so it
+/// lands on the trainer's own page, where the connection is.
 Future<void> openTrainerSelfTest(BuildContext context, ProxyDevice device) async {
-  final definition = device.fitnessBike;
-  if (definition == null) {
+  if (device.fitnessBike == null) {
     await context.push(ProxyDeviceDetailsPage(device: device));
     return;
   }
-  await context.push(VirtualShiftingSettingsPage(definition: definition, device: device, revealSelfTest: true));
+  await context.push(SelfTestPage(device: device));
 }
 
 /// "24 gears · Smoothing on · Custom ratios": what the Settings row says about
@@ -81,14 +81,14 @@ String rideVirtualShiftingSummary(BuildContext context, FitnessBikeDefinition de
 /// shifting config and to the live definition at once.
 ///
 /// Last, "Check and calibrate": the resistance self-test and, right under it,
-/// the shifting calibrator. Both are about how this trainer shifts, so they
-/// sit at the end of its shifting settings rather than on its hardware page.
+/// the shifting calibrator, two rows that each open their own page. Both are
+/// about how this trainer shifts, so they sit at the end of its shifting
+/// settings rather than on its hardware page.
 class VirtualShiftingSettingsPage extends StatefulWidget {
   const VirtualShiftingSettingsPage({
     super.key,
     required this.definition,
     required this.device,
-    this.revealSelfTest = false,
   });
 
   /// The definition the page was opened for. A reconnect (the self-test's
@@ -97,10 +97,6 @@ class VirtualShiftingSettingsPage extends StatefulWidget {
   final FitnessBikeDefinition definition;
   final ProxyDevice device;
 
-  /// Scrolls to the resistance self-test after the first frame: the support
-  /// intake's and the setup guide's "run the self-test" land here.
-  final bool revealSelfTest;
-
   @override
   State<VirtualShiftingSettingsPage> createState() => _VirtualShiftingSettingsPageState();
 }
@@ -108,7 +104,6 @@ class VirtualShiftingSettingsPage extends StatefulWidget {
 class _VirtualShiftingSettingsPageState extends State<VirtualShiftingSettingsPage> {
   FitnessBikeDefinition get def => widget.device.fitnessBike ?? widget.definition;
 
-  final GlobalKey _selfTestKey = GlobalKey();
   late final StreamSubscription<BaseDevice> _connectionSub;
 
   @override
@@ -120,9 +115,6 @@ class _VirtualShiftingSettingsPageState extends State<VirtualShiftingSettingsPag
       if (mounted) setState(() {});
     });
     widget.device.isConnectedListenable.addListener(_onDeviceChanged);
-    if (widget.revealSelfTest) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _revealSelfTest());
-    }
     // After the frame, not during it. Applying the config writes the
     // definition's ValueNotifiers, and the drivetrain above the settings
     // listens to them — marking it dirty mid-build is an error.
@@ -144,22 +136,10 @@ class _VirtualShiftingSettingsPageState extends State<VirtualShiftingSettingsPag
     if (mounted) setState(() {});
   }
 
-  void _revealSelfTest() {
-    final ctx = _selfTestKey.currentContext;
-    if (!mounted || ctx == null) return;
-    unawaited(
-      Scrollable.ensureVisible(
-        ctx,
-        duration: prefersReducedMotion(context) ? Duration.zero : const Duration(milliseconds: 400),
-        curve: Curves.easeInOut,
-        alignment: 0.1,
-      ),
-    );
-  }
-
-  /// The self-test's "Show gear overlay setup": the overlay's own page.
-  Future<void> _openOverlaySettings() async {
-    await context.push(OverlaySettingsPage(device: widget.device, definition: def));
+  /// Back from a test, the row shows its result.
+  Future<void> _openSelfTest() async {
+    await openTrainerSelfTest(context, widget.device);
+    if (mounted) setState(() {});
   }
 
   Future<void> _openCalibrator() async {
@@ -521,42 +501,35 @@ class _VirtualShiftingSettingsPageState extends State<VirtualShiftingSettingsPag
   }
 
   /// The resistance self-test, and the calibrator right under it: first "does
-  /// the trainer obey?", then "does it feel right?". The card keeps a stable
-  /// key so a reconnect it triggers itself (its protocol switch) does not
-  /// remount it mid-run.
+  /// the trainer obey?", then "does it feel right?". Each row opens its own
+  /// page and says where things stand: the last test result, the difficulty.
   Widget _checkAndCalibrate(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Column(
+    final last = SelfTestResult.tryParse(core.settings.getSelfTestResultJson(widget.device.trainerKey));
+    return BkGroupedSection(
       key: const ValueKey('vs-check'),
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      header: l10n.vsGroupCheck,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(BkGroupedSection.inset, 0, BkGroupedSection.inset, 6),
-          child: BkGroupedHeader(l10n.vsGroupCheck),
+        BkGroupedRow(
+          key: const ValueKey('vs-self-test'),
+          icon: LucideIcons.activity,
+          title: l10n.selfTestTitle,
+          subtitle: last == null
+              ? l10n.selfTestStart
+              : l10n.selfTestLastResult(SelfTestCard.verdictTitle(l10n, last.verdict)),
+          chevron: true,
+          onPressed: _openSelfTest,
         ),
-        KeyedSubtree(
-          key: _selfTestKey,
-          child: SelfTestCard(
-            key: const ValueKey('self-test'),
-            device: widget.device,
-            onShowOverlaySettings: _openOverlaySettings,
+        ValueListenableBuilder<int>(
+          valueListenable: def.difficultyPct,
+          builder: (context, pct, _) => BkGroupedRow(
+            key: const ValueKey('vs-calibrate'),
+            icon: LucideIcons.gauge,
+            title: l10n.vsCalibrateTitle,
+            subtitle: l10n.vsCalibrateRowSubtitle(pct),
+            chevron: true,
+            onPressed: _openCalibrator,
           ),
-        ),
-        const Gap(12),
-        BkGroupedSection(
-          children: [
-            ValueListenableBuilder<int>(
-              valueListenable: def.difficultyPct,
-              builder: (context, pct, _) => BkGroupedRow(
-                key: const ValueKey('vs-calibrate'),
-                icon: LucideIcons.gauge,
-                title: l10n.vsCalibrateTitle,
-                subtitle: l10n.vsCalibrateRowSubtitle(pct),
-                chevron: true,
-                onPressed: _openCalibrator,
-              ),
-            ),
-          ],
         ),
       ],
     );

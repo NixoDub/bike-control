@@ -50,12 +50,20 @@ class SelfTestCard extends StatefulWidget {
   /// [ProxyDevice.reconnectUpstream].
   final Future<void> Function()? reconnectDevice;
 
+  /// False on [SelfTestPage], whose header already names the test: the flow is
+  /// drawn without the card's own frame and title.
+  final bool framed;
+
+  /// The verdict's headline, as the card and the settings row show it.
+  static String verdictTitle(AppLocalizations l10n, SelfTestVerdict verdict) => _SelfTestCardState._verdictTitle(l10n, verdict);
+
   const SelfTestCard({
     super.key,
     required this.device,
     this.engineFactory,
     this.onShowOverlaySettings,
     this.reconnectDevice,
+    this.framed = true,
   });
 
   @override
@@ -173,6 +181,7 @@ class _SelfTestCardState extends State<SelfTestCard> {
     }
     final l10n = AppLocalizations.of(context);
     final cs = Theme.of(context).colorScheme;
+    if (!widget.framed) return _body(context, l10n);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
