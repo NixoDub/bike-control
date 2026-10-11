@@ -178,6 +178,10 @@ String describeProxyDevice(ProxyDevice device) {
     // "hard gears far too heavy" report apart from one already calibrated.
     parts.add('difficulty=${def.difficultyPct.value}%');
     parts.add('ftms=${def.ftmsCapabilitySummary}');
+    // Where the rider's real chain sits on the trainer (flywheel speed /
+    // cadence, approximate): the trackResistance physics assume ~2.0, so a
+    // "shifts barely felt" bundle with chainRatio=4.5 is a chain on 50/11.
+    if (def.estimatedChainRatio.value case final ratio?) parts.add('chainRatio=${ratio.toStringAsFixed(2)}');
     // Live telemetry BikeControl is reading from the trainer: cad shows raw /
     // filtered rpm. The whole VS resistance calc is cadence-driven, so a "no
     // resistance" bundle with cad:0 (while pedalling) means we aren't getting

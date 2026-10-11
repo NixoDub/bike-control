@@ -8,6 +8,7 @@ import 'package:bike_control/gen/l10n.dart';
 import 'package:bike_control/main.dart';
 import 'package:bike_control/pages/help_center/help_center_page.dart';
 import 'package:bike_control/pages/help_center/help_center_support_context.dart';
+import 'package:bike_control/pages/proxy_device_details/chain_position_hint_card.dart';
 import 'package:bike_control/pages/proxy_device_details/connection_card.dart';
 import 'package:bike_control/pages/proxy_device_details/control_protocol_section.dart';
 import 'package:bike_control/pages/proxy_device_details/need_help_card.dart';
@@ -142,8 +143,11 @@ class _ProxyDeviceDetailsPageState extends State<ProxyDeviceDetailsPage> {
               ],
               // The one link out: riders who come here for their gears still
               // find them.
-              if (device.fitnessBike != null) ...[
+              if (device.fitnessBike case final definition?) ...[
                 SizedBox(height: 12),
+                // Right above the settings it is about: the rider's real chain
+                // sits where the virtual shifting physics feel wrong.
+                ChainPositionHintCard(key: const ValueKey('chain-position-hint'), definition: definition),
                 BkGroupedSection(
                   children: [
                     BkGroupedRow(

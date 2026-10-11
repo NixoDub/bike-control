@@ -2890,5 +2890,8 @@
   "@vsCalibrateControllerAnswered": {"placeholders": {"answer": {"type": "String"}}},
   "vsCalibrateHintTooHeavy": "Tieni premuto marcia giù",
   "vsCalibrateHintAboutRight": "Premi entrambi i comandi",
-  "vsCalibrateHintTooLight": "Tieni premuto marcia su"
+  "vsCalibrateHintTooLight": "Tieni premuto marcia su",
+  "chainHintTitle": "Sposta la catena su un rapporto intermedio",
+  "chainHintVeryBigGear": "La catena sui rulli è su un rapporto molto lungo (rapporto di circa {ratio}). I rapporti virtuali risultano realistici con la catena su un rapporto intermedio, ad es. 34/17 o 50/25. Lasciala lì e cambia solo virtualmente.",
+  "chainHintVerySmallGear": "La catena sui rulli è su un rapporto molto corto (rapporto di circa {ratio}). I rapporti virtuali risultano realistici con la catena su un rapporto intermedio, ad es. 34/17 o 50/25. Lasciala lì e cambia solo virtualmente."
 }

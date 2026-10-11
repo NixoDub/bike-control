@@ -611,6 +611,7 @@ class ProxyDevice extends BluetoothDevice {
 
     _wireGearEchoLog(def);
     _wireSimRefusalLog(def);
+    _wireChainHintLog(def);
   }
 
   /// Puts this trainer back in the gear it was left in, and keeps
@@ -711,6 +712,39 @@ class ProxyDevice extends BluetoothDevice {
     def.trackResistanceRefused.addListener(onRefused);
     _simRefusalLoggedDef = def;
     _simRefusalLogListener = onRefused;
+  }
+
+  /// Same idempotency contract as [_wireGearEchoLog], for the chain-position
+  /// hint: the first time it shows on a definition (one per connection) goes
+  /// in the support log, so a "shifts barely felt" report says where the real
+  /// chain was.
+  FitnessBikeDefinition? _chainHintLoggedDef;
+  VoidCallback? _chainHintLogListener;
+
+  void _wireChainHintLog(FitnessBikeDefinition def) {
+    if (identical(_chainHintLoggedDef, def)) return;
+    final previous = _chainHintLogListener;
+    if (previous != null) {
+      _chainHintLoggedDef?.chainPositionHint.removeListener(previous);
+    }
+    var logged = false;
+    void onHint() {
+      final hint = def.chainPositionHint.value;
+      if (logged || hint == ChainPositionHint.none) return;
+      logged = true;
+      final side = hint == ChainPositionHint.veryBigGear ? 'very big' : 'very small';
+      final ratio = def.estimatedChainRatio.value?.toStringAsFixed(1) ?? '?';
+      core.connection.signalNotification(
+        LogNotification(
+          '${scanResult.name}: the real chain on the trainer is on a $side gear (ratio about $ratio), '
+          'asked the rider to move it to a middle gear',
+        ),
+      );
+    }
+
+    def.chainPositionHint.addListener(onHint);
+    _chainHintLoggedDef = def;
+    _chainHintLogListener = onHint;
   }
 
   /// Is the connected trainer reporting any sign of riding right now? Used to

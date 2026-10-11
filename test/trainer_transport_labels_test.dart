@@ -314,6 +314,22 @@ Future<void> main() async {
       expect(describeProxyDevice(device), contains('difficulty=70%'));
     });
 
+    test('trainer line carries the estimated real chain ratio once known', () {
+      // A "shifts barely felt" bundle is settled by where the rider's real chain
+      // sits: the trackResistance physics assume a middle gear.
+      final device = trainerWithFitnessBike();
+      expect(describeProxyDevice(device), isNot(contains('chainRatio=')));
+      // IBD (flags 0x44: speed + cadence + power), 64 rpm at 38.00 km/h: a
+      // 4.5 real ratio.
+      for (var i = 0; i < 5; i++) {
+        device.fitnessBike!.onNotification(
+          FitnessBikeDefinition.INDOOR_BIKE_DATA_UUID,
+          Uint8List.fromList([0x44, 0x00, 3800 & 0xFF, 3800 >> 8, 128, 0x00, 0x2C, 0x01]),
+        );
+      }
+      expect(describeProxyDevice(device), contains('chainRatio=4.50'));
+    });
+
     test('trainer line carries the live cadence/power/speed readout', () {
       // A "no resistance" report is settled by whether BikeControl is reading
       // cadence: the VS resistance calc is entirely cadence-driven, so the

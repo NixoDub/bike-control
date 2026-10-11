@@ -2890,5 +2890,8 @@
   "@vsCalibrateControllerAnswered": {"placeholders": {"answer": {"type": "String"}}},
   "vsCalibrateHintTooHeavy": "Maintiens vitesse inférieure",
   "vsCalibrateHintAboutRight": "Appuie sur les deux leviers",
-  "vsCalibrateHintTooLight": "Maintiens vitesse supérieure"
+  "vsCalibrateHintTooLight": "Maintiens vitesse supérieure",
+  "chainHintTitle": "Place ta chaîne sur un rapport moyen",
+  "chainHintVeryBigGear": "Ta chaîne sur le home trainer est sur un très grand rapport (développement d'environ {ratio}). Les vitesses virtuelles sont réalistes avec la chaîne sur un rapport moyen, par ex. 34/17 ou 50/25. Laisse-la là et change uniquement de vitesse virtuellement.",
+  "chainHintVerySmallGear": "Ta chaîne sur le home trainer est sur un très petit rapport (développement d'environ {ratio}). Les vitesses virtuelles sont réalistes avec la chaîne sur un rapport moyen, par ex. 34/17 ou 50/25. Laisse-la là et change uniquement de vitesse virtuellement."
 }
