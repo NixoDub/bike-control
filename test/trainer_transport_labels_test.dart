@@ -330,6 +330,17 @@ Future<void> main() async {
       expect(describeProxyDevice(device), contains('chainRatio=4.50'));
     });
 
+    test('a smart bike carries no chain ratio: it has no chain to estimate', () {
+      final device = trainerWithFitnessBike(name: 'KICKR BIKE 1A2B');
+      for (var i = 0; i < 5; i++) {
+        device.fitnessBike!.onNotification(
+          FitnessBikeDefinition.INDOOR_BIKE_DATA_UUID,
+          Uint8List.fromList([0x44, 0x00, 3800 & 0xFF, 3800 >> 8, 128, 0x00, 0x2C, 0x01]),
+        );
+      }
+      expect(describeProxyDevice(device), isNot(contains('chainRatio=')));
+    });
+
     test('trainer line carries the live cadence/power/speed readout', () {
       // A "no resistance" report is settled by whether BikeControl is reading
       // cadence: the VS resistance calc is entirely cadence-driven, so the

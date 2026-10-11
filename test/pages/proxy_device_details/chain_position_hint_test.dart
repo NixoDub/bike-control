@@ -53,11 +53,11 @@ Future<void> main() async {
 
   tearDown(() => core.connection.devices.clear());
 
-  ProxyDevice trainer() {
+  ProxyDevice trainer({String name = 'Smart Trainer 1234'}) {
     final device = ProxyDevice(
       BleDevice(
         deviceId: 'smart-trainer',
-        name: 'Smart Trainer 1234',
+        name: name,
         services: const [FitnessBikeDefinition.FITNESS_MACHINE_SERVICE_UUID],
       ),
     )..services = [
@@ -131,6 +131,15 @@ Future<void> main() async {
     await tester.pump();
     expect(find.text(l.chainHintVerySmallGear('1.1')), findsOneWidget);
     expect(find.text(l.chainHintVeryBigGear('1.1')), findsNothing);
+    await tester.pump(const Duration(seconds: 6));
+  });
+
+  testWidgets('never appears on a smart bike, which has no real chain', (tester) async {
+    final def = trainer(name: 'KICKR BIKE 1A2B').fitnessBike!;
+    await pumpCard(tester, def);
+    ride(def, 4.5, seconds: 60);
+    await tester.pump();
+    expect(find.text(l.chainHintTitle), findsNothing);
     await tester.pump(const Duration(seconds: 6));
   });
 
