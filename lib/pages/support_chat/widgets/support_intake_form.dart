@@ -3,7 +3,7 @@ import 'package:bike_control/bluetooth/devices/proxy/proxy_device.dart';
 import 'package:bike_control/pages/help_center/help_checks.dart';
 import 'package:bike_control/pages/network_troubleshooting_page.dart';
 import 'package:bike_control/pages/plan/plan_account_page.dart' show openPlanAccount;
-import 'package:bike_control/pages/proxy_device_details.dart';
+import 'package:bike_control/pages/settings/virtual_shifting_settings_page.dart' show openTrainerSelfTest;
 import 'package:bike_control/services/support_chat_models.dart';
 import 'package:bike_control/services/support_chat_service.dart';
 import 'package:bike_control/utils/core.dart';
@@ -468,7 +468,7 @@ class _InlineSelfHelp extends StatelessWidget {
               const ValueKey('intake-run-self-test'),
               LucideIcons.activity,
               l10n.intakeSelfHelpSelfTestAction,
-              () => context.push(ProxyDeviceDetailsPage(device: connectedTrainer, revealSelfTest: true)),
+              () => openTrainerSelfTest(context, connectedTrainer),
             ),
         ],
         connectedTrainer == null ? l10n.helpSelfTestNeedsTrainer : null,

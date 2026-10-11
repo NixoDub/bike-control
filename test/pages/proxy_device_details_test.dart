@@ -63,28 +63,29 @@ Future<void> main() async {
     expect(find.text(l.disconnectAndForget), findsOneWidget);
   });
 
-  testWidgets('a shifting trainer: connection, protocol, health, one link out, disconnect', (tester) async {
+  testWidgets('a shifting trainer: connection, protocol, help, one link out, disconnect', (tester) async {
     final (:proxy, :definition) = attachLiveTrainer();
     await pumpPage(tester, proxy);
 
     double top(Finder f) => tester.getTopLeft(f).dy;
     final connection = find.byType(ConnectionCard);
     final protocol = find.byType(ControlProtocolSection);
-    final selfTest = find.byType(SelfTestCard);
     final needHelp = find.byType(NeedHelpCard);
     final link = find.byKey(const ValueKey('trainer-vs-settings'));
     final disconnect = find.text(l.disconnectAndForgetForThisSession);
-    for (final f in [connection, protocol, selfTest, needHelp, link, disconnect]) {
+    for (final f in [connection, protocol, needHelp, link, disconnect]) {
       expect(f, findsOneWidget);
     }
     expect(top(connection), lessThan(top(protocol)));
-    expect(top(protocol), lessThanOrEqualTo(top(selfTest)));
-    expect(top(selfTest), lessThan(top(needHelp)));
+    expect(top(protocol), lessThan(top(needHelp)));
     expect(top(needHelp), lessThan(top(link)));
     expect(top(link), lessThan(top(disconnect)));
 
-    // What moved away: the gear hero and its drivetrain (Ride), the settings
+    // What moved away: the resistance self-test and the shifting calibrator
+    // (Settings → Virtual shifting), the gear hero and its drivetrain (Ride), the settings
     // and overlay (Settings), the live metrics and the Mini Workout (Ride).
+    expect(find.byType(SelfTestCard), findsNothing);
+    expect(find.byKey(const ValueKey('vs-calibrate')), findsNothing);
     expect(find.byType(DrivetrainView), findsNothing);
     expect(find.text(l.overlaySection), findsNothing);
     expect(find.text(l.miniWorkoutStart), findsNothing);
@@ -92,7 +93,7 @@ Future<void> main() async {
     expect(find.text(l.gearSettings), findsNothing);
     expect(tester.takeException(), isNull);
 
-    // Need help? is the secondary action; the self-test keeps the primary.
+    // Need help? stays the secondary action on the page.
     final help = tester.widget<Button>(find.byKey(const ValueKey('need-help-open')));
     expect(help.style, ButtonVariance.secondary);
   });

@@ -4,7 +4,6 @@
 import 'package:bike_control/bluetooth/devices/proxy/proxy_device.dart';
 import 'package:bike_control/gen/l10n.dart';
 import 'package:bike_control/main.dart' show OtherLocalizationsDelegate, installLoggerErrorListener, navigatorKey;
-import 'package:bike_control/pages/proxy_device_details.dart';
 import 'package:bike_control/pages/proxy_device_details/vs_calibration_page.dart';
 import 'package:bike_control/utils/actions/base_actions.dart';
 import 'package:bike_control/utils/core.dart';
@@ -354,17 +353,6 @@ Future<void> main() async {
 
     expect(find.byKey(const ValueKey('vs-cal-firmware')), findsOneWidget);
     expect(find.byKey(const ValueKey('vs-cal-start')), findsNothing);
-
-    await tearDownPage(tester);
-  });
-
-  testWidgets('the trainer page opens the calibrator from next to the self-test', (tester) async {
-    final device = trainer();
-    await pumpPage(tester, ProxyDeviceDetailsPage(device: device));
-
-    await tapKey(tester, 'vs-calibrate');
-    await tester.pump(const Duration(milliseconds: 600));
-    expect(find.byType(VsCalibrationPage), findsOneWidget);
 
     await tearDownPage(tester);
   });

@@ -2901,7 +2901,7 @@
   "helpCheckControllerAwakeSub": "Controllers go to sleep when you don't use them. Press a button to wake it, then look under Devices: if it isn't connected there, connect it again.",
   "helpCheckConnectionMethodTitle": "Is the connection to your trainer app on?",
   "helpCheckConnectionMethodSub": "Open Settings → Trainer app & connection and check that the connection method you use (Bluetooth, Network or Local) is switched on and your trainer app is connected.",
-  "helpSelfTestNeedsTrainer": "Connect your trainer in BikeControl first — the self-test needs a live connection. You'll then find it on your trainer's page.",
+  "helpSelfTestNeedsTrainer": "Connect your trainer in BikeControl first. The self-test needs a live connection. You'll then find it in your trainer's virtual shifting settings.",
   "onboardingDoneOverlayNote": "{app} keeps showing its own gear number. BikeControl's gear is shown in the overlay.",
   "@onboardingDoneOverlayNote": {"placeholders": {"app": {"type": "String"}}},
   "onboardingDoneShowOverlay": "Show the gear overlay",
@@ -3292,5 +3292,6 @@
   "vsCalibratePct": "{pct}%",
   "@vsCalibratePct": {"placeholders": {"pct": {"type": "int"}}},
   "vsCalibrateReset": "Reset to 100%",
-  "vsCalibrateAgain": "Calibrate again"
+  "vsCalibrateAgain": "Calibrate again",
+  "vsGroupCheck": "Check and calibrate"
 }

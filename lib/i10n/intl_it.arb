@@ -2524,7 +2524,7 @@
   "helpCheckControllerAwakeSub": "I controller vanno in standby quando non li usi. Premi un pulsante per riattivarlo, poi guarda in Dispositivi: se lì non risulta collegato, ricollegalo.",
   "helpCheckConnectionMethodTitle": "La connessione con la tua app di allenamento è attiva?",
   "helpCheckConnectionMethodSub": "Apri Impostazioni → App di allenamento e connessione e controlla che il metodo di connessione che usi (Bluetooth, Rete o Locale) sia attivo e che la tua app di allenamento sia collegata.",
-  "helpSelfTestNeedsTrainer": "Collega prima il trainer in BikeControl: l'autotest richiede una connessione attiva. Lo troverai poi nella pagina del trainer.",
+  "helpSelfTestNeedsTrainer": "Collega prima il trainer in BikeControl: l'autotest richiede una connessione attiva. Lo troverai poi nelle impostazioni Virtual Shifting del trainer.",
   "onboardingDoneOverlayNote": "{app} continua a mostrare il proprio numero di marcia. La marcia di BikeControl è nell'Overlay.",
   "@onboardingDoneOverlayNote": {"placeholders": {"app": {"type": "String"}}},
   "onboardingDoneShowOverlay": "Mostra l'Overlay delle marce",
@@ -2882,5 +2882,6 @@
   "vsCalibratePct": "{pct}%",
   "@vsCalibratePct": {"placeholders": {"pct": {"type": "int"}}},
   "vsCalibrateReset": "Ripristina a 100%",
-  "vsCalibrateAgain": "Calibra di nuovo"
+  "vsCalibrateAgain": "Calibra di nuovo",
+  "vsGroupCheck": "Verifica e calibra"
 }

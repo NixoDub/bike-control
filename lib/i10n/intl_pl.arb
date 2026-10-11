@@ -2524,7 +2524,7 @@
   "helpCheckControllerAwakeSub": "Kontrolery usypiają, gdy ich nie używasz. Naciśnij przycisk, żeby go wybudzić, a potem zajrzyj do Urządzeń: jeśli nie jest tam połączony, połącz go ponownie.",
   "helpCheckConnectionMethodTitle": "Czy połączenie z aplikacją treningową jest włączone?",
   "helpCheckConnectionMethodSub": "Otwórz Ustawienia → Aplikacja treningowa i połączenie i sprawdź, czy używana metoda połączenia (Bluetooth, Sieć lub Lokalna) jest włączona, a aplikacja treningowa połączona.",
-  "helpSelfTestNeedsTrainer": "Najpierw połącz trenażer w BikeControl — autotest wymaga aktywnego połączenia. Znajdziesz go potem na stronie trenażera.",
+  "helpSelfTestNeedsTrainer": "Najpierw połącz trenażer w BikeControl. Autotest wymaga aktywnego połączenia. Znajdziesz go potem w ustawieniach Virtual Shifting trenażera.",
   "onboardingDoneOverlayNote": "{app} nadal pokazuje własny numer biegu. Bieg BikeControl widać w Overlay.",
   "@onboardingDoneOverlayNote": {"placeholders": {"app": {"type": "String"}}},
   "onboardingDoneShowOverlay": "Pokaż Overlay biegów",
@@ -2882,5 +2882,6 @@
   "vsCalibratePct": "{pct}%",
   "@vsCalibratePct": {"placeholders": {"pct": {"type": "int"}}},
   "vsCalibrateReset": "Przywróć 100%",
-  "vsCalibrateAgain": "Kalibruj ponownie"
+  "vsCalibrateAgain": "Kalibruj ponownie",
+  "vsGroupCheck": "Sprawdź i skalibruj"
 }

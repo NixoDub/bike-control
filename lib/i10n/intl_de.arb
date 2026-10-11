@@ -2524,7 +2524,7 @@
   "helpCheckControllerAwakeSub": "Controller schlafen ein, wenn du sie nicht benutzt. Drück eine Taste, um ihn zu wecken, und schau dann unter Geräte: Ist er dort nicht verbunden, verbinde ihn neu.",
   "helpCheckConnectionMethodTitle": "Ist die Verbindung zu deiner Trainer-App an?",
   "helpCheckConnectionMethodSub": "Öffne Einstellungen → Trainer-App & Verbindung und prüf, ob deine Verbindungsart (Bluetooth, Netzwerk oder Lokal) eingeschaltet und deine Trainer-App verbunden ist.",
-  "helpSelfTestNeedsTrainer": "Verbinde zuerst deinen Trainer in BikeControl — der Selbsttest braucht eine aktive Verbindung. Du findest ihn dann auf der Seite deines Trainers.",
+  "helpSelfTestNeedsTrainer": "Verbinde zuerst deinen Trainer in BikeControl. Der Selbsttest braucht eine aktive Verbindung. Du findest ihn dann in den Virtual Shifting Einstellungen deines Trainers.",
   "onboardingDoneOverlayNote": "{app} zeigt weiter seine eigene Gangzahl. Den Gang von BikeControl siehst du im Overlay.",
   "@onboardingDoneOverlayNote": {"placeholders": {"app": {"type": "String"}}},
   "onboardingDoneShowOverlay": "Gang-Overlay anzeigen",
@@ -2882,5 +2882,6 @@
   "vsCalibratePct": "{pct} %",
   "@vsCalibratePct": {"placeholders": {"pct": {"type": "int"}}},
   "vsCalibrateReset": "Auf 100 % zurücksetzen",
-  "vsCalibrateAgain": "Erneut kalibrieren"
+  "vsCalibrateAgain": "Erneut kalibrieren",
+  "vsGroupCheck": "Prüfen und kalibrieren"
 }

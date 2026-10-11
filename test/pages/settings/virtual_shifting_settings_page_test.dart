@@ -4,9 +4,11 @@
 // in view while it animates), then Physics; the per-gear steppers one screen
 // deeper.
 import 'package:bike_control/gen/l10n.dart';
-import 'package:bike_control/main.dart' show OtherLocalizationsDelegate;
+import 'package:bike_control/main.dart' show OtherLocalizationsDelegate, screenshotMode;
 import 'package:bike_control/pages/proxy_device_details/gear_ratio_curve.dart';
 import 'package:bike_control/pages/proxy_device_details/gear_ratios_editor_page.dart';
+import 'package:bike_control/pages/proxy_device_details/self_test_card.dart';
+import 'package:bike_control/pages/proxy_device_details/vs_calibration_page.dart';
 import 'package:bike_control/pages/proxy_device_details/shifting_config_picker.dart';
 import 'package:bike_control/pages/settings/settings_page.dart';
 import 'package:bike_control/pages/settings/virtual_shifting_settings_page.dart';
@@ -394,5 +396,113 @@ Future<void> main() async {
         }
       });
     }
+  });
+
+  // The resistance self-test and the calibrator live with the rest of the
+  // shifting settings: checking that the trainer obeys and tuning how its
+  // gears feel are both about shifting, not about the hardware link.
+  group('check and calibrate', () {
+    final selfTest = find.byType(SelfTestCard);
+    final calibrate = find.byKey(const ValueKey('vs-calibrate'));
+
+    // The snapshot harness this file runs under turns screenshot mode on; the
+    // section is (rightly) hidden there, so these tests ride with it off.
+    late bool wasScreenshotMode;
+    setUp(() {
+      wasScreenshotMode = screenshotMode;
+      screenshotMode = false;
+    });
+    tearDown(() => screenshotMode = wasScreenshotMode);
+
+    testWidgets('the self-test and the calibrator sit together below Physics', (tester) async {
+      final (:proxy, :definition) = attachLiveTrainer();
+      await _pump(tester, VirtualShiftingSettingsPage(definition: definition, device: proxy));
+      await tester.pump();
+
+      expect(selfTest, findsOneWidget);
+      expect(calibrate, findsOneWidget);
+      final physics = find.byKey(const ValueKey('vs-physics'));
+      expect(_top(tester, physics), lessThan(_top(tester, selfTest)));
+      expect(_top(tester, selfTest), lessThan(_top(tester, calibrate)));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('the calibrator row opens the calibrator', (tester) async {
+      final (:proxy, :definition) = attachLiveTrainer();
+      await _pump(tester, VirtualShiftingSettingsPage(definition: definition, device: proxy));
+      await tester.pump();
+
+      await tester.ensureVisible(calibrate);
+      await tester.tap(calibrate);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(find.byType(VsCalibrationPage), findsOneWidget);
+    });
+
+    testWidgets('revealSelfTest scrolls the self-test into view', (tester) async {
+      final (:proxy, :definition) = attachLiveTrainer();
+      await _pump(
+        tester,
+        VirtualShiftingSettingsPage(definition: definition, device: proxy, revealSelfTest: true),
+        height: 844,
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+
+      final top = _top(tester, selfTest);
+      expect(top, greaterThanOrEqualTo(0));
+      expect(top, lessThan(844));
+    });
+
+    testWidgets('a disconnected trainer still shows both, and nothing crashes', (tester) async {
+      final (:proxy, :definition) = attachLiveTrainer();
+      proxy
+        ..isConnected = false
+        ..debugSetTrainerAppConnected(false);
+      await _pump(tester, VirtualShiftingSettingsPage(definition: definition, device: proxy));
+      await tester.pump();
+
+      expect(selfTest, findsOneWidget);
+      expect(calibrate, findsOneWidget);
+      await tester.ensureVisible(calibrate);
+      await tester.tap(calibrate);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.tap(find.byKey(const ValueKey('vs-cal-start')));
+      await tester.pump();
+      expect(find.byKey(const ValueKey('vs-cal-refusal')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('store screenshots leave them out, like the trainer page did', (tester) async {
+      final (:proxy, :definition) = attachLiveTrainer();
+      screenshotMode = true;
+      await _pump(tester, VirtualShiftingSettingsPage(definition: definition, device: proxy));
+      await tester.pump();
+
+      expect(selfTest, findsNothing);
+      expect(calibrate, findsNothing);
+    });
+
+    testWidgets('openTrainerSelfTest lands on these settings with the self-test revealed', (tester) async {
+      final (:proxy, definition: _) = attachLiveTrainer();
+      await _pump(
+        tester,
+        Builder(
+          builder: (context) => Button.primary(
+            key: const ValueKey('go'),
+            onPressed: () => openTrainerSelfTest(context, proxy),
+            child: const Text('go'),
+          ),
+        ),
+      );
+      await tester.tap(find.byKey(const ValueKey('go')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+
+      final page = tester.widget<VirtualShiftingSettingsPage>(find.byType(VirtualShiftingSettingsPage));
+      expect(page.revealSelfTest, isTrue);
+      expect(page.device, same(proxy));
+    });
   });
 }

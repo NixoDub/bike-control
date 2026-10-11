@@ -2524,7 +2524,7 @@
   "helpCheckControllerAwakeSub": "Les manettes se mettent en veille quand tu ne t'en sers pas. Appuie sur un bouton pour la réveiller, puis regarde dans Appareils : si elle n'y est pas connectée, reconnecte-la.",
   "helpCheckConnectionMethodTitle": "La connexion à ton app d'entraînement est-elle activée ?",
   "helpCheckConnectionMethodSub": "Ouvre Réglages → Application d’entraînement et connexion et vérifie que la méthode de connexion que tu utilises (Bluetooth, Réseau ou Local) est activée et que ton app d'entraînement est connectée.",
-  "helpSelfTestNeedsTrainer": "Connecte d'abord ton home-trainer dans BikeControl — l'autotest a besoin d'une connexion active. Tu le trouveras ensuite sur la page de ton home-trainer.",
+  "helpSelfTestNeedsTrainer": "Connecte d'abord ton home-trainer dans BikeControl : l'autotest a besoin d'une connexion active. Tu le trouveras ensuite dans les réglages Virtual Shifting de ton home-trainer.",
   "onboardingDoneOverlayNote": "{app} continue d'afficher son propre numéro de vitesse. La vitesse de BikeControl s'affiche dans l'Overlay.",
   "@onboardingDoneOverlayNote": {"placeholders": {"app": {"type": "String"}}},
   "onboardingDoneShowOverlay": "Afficher l'Overlay des vitesses",
@@ -2882,5 +2882,6 @@
   "vsCalibratePct": "{pct} %",
   "@vsCalibratePct": {"placeholders": {"pct": {"type": "int"}}},
   "vsCalibrateReset": "Réinitialiser à 100 %",
-  "vsCalibrateAgain": "Calibrer à nouveau"
+  "vsCalibrateAgain": "Calibrer à nouveau",
+  "vsGroupCheck": "Vérifier et calibrer"
 }

@@ -2524,7 +2524,7 @@
   "helpCheckControllerAwakeSub": "Los mandos se duermen cuando no los usas. Pulsa un botón para despertarlo y mira en Dispositivos: si no aparece conectado, vuelve a conectarlo.",
   "helpCheckConnectionMethodTitle": "¿Está activada la conexión con tu app de entrenamiento?",
   "helpCheckConnectionMethodSub": "Abre Ajustes → App de entrenamiento y conexión y comprueba que el método de conexión que usas (Bluetooth, Red o Local) está activado y que tu app de entrenamiento está conectada.",
-  "helpSelfTestNeedsTrainer": "Conecta primero tu rodillo en BikeControl: el autotest necesita una conexión activa. Luego lo encontrarás en la página de tu rodillo.",
+  "helpSelfTestNeedsTrainer": "Conecta primero tu rodillo en BikeControl: el autotest necesita una conexión activa. Luego lo encontrarás en los ajustes de Virtual Shifting de tu rodillo.",
   "onboardingDoneOverlayNote": "{app} sigue mostrando su propio número de marcha. La marcha de BikeControl se ve en el Overlay.",
   "@onboardingDoneOverlayNote": {"placeholders": {"app": {"type": "String"}}},
   "onboardingDoneShowOverlay": "Mostrar el Overlay de marchas",
@@ -2882,5 +2882,6 @@
   "vsCalibratePct": "{pct} %",
   "@vsCalibratePct": {"placeholders": {"pct": {"type": "int"}}},
   "vsCalibrateReset": "Restablecer a 100 %",
-  "vsCalibrateAgain": "Calibrar de nuevo"
+  "vsCalibrateAgain": "Calibrar de nuevo",
+  "vsGroupCheck": "Comprobar y calibrar"
 }
