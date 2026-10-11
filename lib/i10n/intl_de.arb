@@ -2885,5 +2885,10 @@
   "@vsCalibratePct": {"placeholders": {"pct": {"type": "int"}}},
   "vsCalibrateReset": "Auf 100 % zurücksetzen",
   "vsCalibrateAgain": "Erneut kalibrieren",
-  "vsGroupCheck": "Prüfen und kalibrieren"
+  "vsGroupCheck": "Prüfen und kalibrieren",
+  "vsCalibrateControllerAnswered": "{answer}, über deinen Controller",
+  "@vsCalibrateControllerAnswered": {"placeholders": {"answer": {"type": "String"}}},
+  "vsCalibrateHintTooHeavy": "Runterschalten halten",
+  "vsCalibrateHintAboutRight": "Beide Schalter drücken",
+  "vsCalibrateHintTooLight": "Hochschalten halten"
 }

@@ -1,10 +1,13 @@
 import 'dart:async';
 
+import 'package:bike_control/bluetooth/devices/base_device.dart';
 import 'package:bike_control/bluetooth/devices/proxy/proxy_device.dart';
 import 'package:bike_control/gen/l10n.dart';
 import 'package:bike_control/main.dart' show recordError;
 import 'package:bike_control/pages/proxy_device_details/gear_ratios_editor_page.dart' show updateActiveShiftingConfig;
+import 'package:bike_control/services/vs_calibration/calibration_controller_input.dart';
 import 'package:bike_control/services/vs_calibration/vs_calibration_session.dart';
+import 'package:bike_control/utils/core.dart';
 import 'package:bike_control/widgets/ui/app_theme.dart' show BkComponentThemes;
 import 'package:bike_control/widgets/ui/bk_grouped_section.dart';
 import 'package:bike_control/widgets/ui/bk_icon_button.dart';
@@ -13,6 +16,7 @@ import 'package:bike_control/widgets/ui/bk_page_header.dart';
 import 'package:bike_control/widgets/ui/stepper_control.dart';
 import 'package:bike_control/widgets/ui/type_scale.dart';
 import 'package:prop/emulators/definitions/fitness_bike_definition.dart';
+import 'package:flutter/semantics.dart' show SemanticsService;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
@@ -56,6 +60,16 @@ class _VsCalibrationPageState extends State<VsCalibrationPage> {
   /// grade), handed back however the run ends.
   TrainerControlSnapshot? _startControl;
 
+  /// The rider's controller answering the run (see
+  /// [CalibrationControllerInput] for the scheme); installed on
+  /// [BaseDevice.inputInterceptor] for exactly as long as a run is on.
+  CalibrationControllerInput? _controllerInput;
+
+  /// The answer the controller just gave, outlined on its button for a
+  /// moment so the rider sees it registered.
+  CalibrationRating? _controllerFlash;
+  Timer? _flashTimer;
+
   /// True once the current grade has been adjusted at least once, so the
   /// "ride it again" line only appears after a change.
   bool _adjustedHere = false;
@@ -72,6 +86,7 @@ class _VsCalibrationPageState extends State<VsCalibrationPage> {
     // A run outlives the page unless ended here: the trainer would stay on a
     // calibration grade at a difficulty nobody accepted.
     _abandonRun();
+    _flashTimer?.cancel();
     super.dispose();
   }
 
@@ -105,6 +120,13 @@ class _VsCalibrationPageState extends State<VsCalibrationPage> {
     _runDef = def;
     _session = session;
     def.setCalibrationGrade(session.grade001Pct);
+    final input = CalibrationControllerInput(
+      onAnswer: _onControllerAnswer,
+      currentGear: () => def.currentGear.value,
+      restoreGear: (gear) => def.setTargetGear(gear),
+    );
+    _controllerInput = input;
+    BaseDevice.inputInterceptor = input;
     _wakelock(true);
     setState(() {
       _refusal = null;
@@ -130,9 +152,50 @@ class _VsCalibrationPageState extends State<VsCalibrationPage> {
     setState(() => _adjustedHere = session.stepIndex == stepBefore);
   }
 
+  /// A controller answer: the same as tapping it, plus the shift feedback the
+  /// rider gets for a gear change and a screen-reader announcement.
+  void _onControllerAnswer(CalibrationRating rating) {
+    if (!mounted || _session == null) return;
+    final l10n = AppLocalizations.of(context);
+    unawaited(core.shiftFeedback.shifted(up: rating != CalibrationRating.tooHeavy));
+    final view = View.maybeOf(context);
+    if (view != null) {
+      unawaited(
+        SemanticsService.sendAnnouncement(
+          view,
+          l10n.vsCalibrateControllerAnswered(_answerLabel(l10n, rating)),
+          Directionality.maybeOf(context) ?? TextDirection.ltr,
+        ),
+      );
+    }
+    _flashTimer?.cancel();
+    setState(() => _controllerFlash = rating);
+    _flashTimer = Timer(const Duration(milliseconds: 700), () {
+      if (mounted) setState(() => _controllerFlash = null);
+    });
+    _rate(rating);
+  }
+
+  static String _answerLabel(AppLocalizations l10n, CalibrationRating rating) => switch (rating) {
+    CalibrationRating.tooHeavy => l10n.vsCalibrateTooHeavy,
+    CalibrationRating.aboutRight => l10n.vsCalibrateAboutRight,
+    CalibrationRating.tooLight => l10n.vsCalibrateTooLight,
+  };
+
+  /// Hands the controller back to its normal mapping; every way a run ends
+  /// goes through here.
+  void _releaseController() {
+    final input = _controllerInput;
+    _controllerInput = null;
+    if (input != null && identical(BaseDevice.inputInterceptor, input)) {
+      BaseDevice.inputInterceptor = null;
+    }
+  }
+
   Future<void> _finish(FitnessBikeDefinition def, int pct) async {
     _session = null;
     _runDef = null;
+    _releaseController();
     _wakelock(false);
     // The difficulty stays; the trainer goes back to whatever it was doing.
     _restoreControl(def);
@@ -152,6 +215,7 @@ class _VsCalibrationPageState extends State<VsCalibrationPage> {
     final def = _runDef;
     _session = null;
     _runDef = null;
+    _releaseController();
     if (def == null) return;
     _wakelock(false);
     if (!_owns(def)) return;
@@ -449,16 +513,72 @@ class _VsCalibrationPageState extends State<VsCalibrationPage> {
           : Button.outline(key: ValueKey(key), alignment: Alignment.center, onPressed: () => _rate(rating), child: child);
     }
 
+    final cs = Theme.of(context).colorScheme;
+    // With a controller connected, each answer says how to give it from the
+    // bars (the scheme is documented on [CalibrationControllerInput]).
+    final hints = core.connection.controllerDevices.any((d) => d.isConnected);
+
+    Widget slot(Widget button, CalibrationRating rating, String hint) {
+      final flashing = _controllerFlash == rating;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 4,
+        children: [
+          // A fixed 2 px ring, coloured only while flashing, so the answer
+          // that registered stands out without the layout jumping.
+          Container(
+            key: flashing ? const ValueKey('vs-cal-controller-flash') : null,
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: flashing ? cs.primary : const Color(0x00000000), width: 2),
+            ),
+            child: button,
+          ),
+          if (hints)
+            ExcludeSemantics(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                spacing: 6,
+                children: [
+                  Icon(LucideIcons.gamepad2, size: 13, color: cs.mutedForeground),
+                  Flexible(
+                    child: Text(
+                      hint,
+                      textAlign: TextAlign.center,
+                      style: context.typography.caption.copyWith(color: cs.mutedForeground),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      );
+    }
+
     final buttons = [
-      answer('vs-cal-too-heavy', LucideIcons.weight, l10n.vsCalibrateTooHeavy, CalibrationRating.tooHeavy),
-      answer('vs-cal-about-right', LucideIcons.check, l10n.vsCalibrateAboutRight, CalibrationRating.aboutRight, primary: true),
-      answer('vs-cal-too-light', LucideIcons.feather, l10n.vsCalibrateTooLight, CalibrationRating.tooLight),
+      slot(
+        answer('vs-cal-too-heavy', LucideIcons.weight, l10n.vsCalibrateTooHeavy, CalibrationRating.tooHeavy),
+        CalibrationRating.tooHeavy,
+        l10n.vsCalibrateHintTooHeavy,
+      ),
+      slot(
+        answer('vs-cal-about-right', LucideIcons.check, l10n.vsCalibrateAboutRight, CalibrationRating.aboutRight, primary: true),
+        CalibrationRating.aboutRight,
+        l10n.vsCalibrateHintAboutRight,
+      ),
+      slot(
+        answer('vs-cal-too-light', LucideIcons.feather, l10n.vsCalibrateTooLight, CalibrationRating.tooLight),
+        CalibrationRating.tooLight,
+        l10n.vsCalibrateHintTooLight,
+      ),
     ];
-    return LayoutBuilder(
+    final layout = LayoutBuilder(
       builder: (context, constraints) => constraints.maxWidth >= 480
-          ? Row(spacing: 8, children: [for (final b in buttons) Expanded(child: b)])
-          : Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 8, children: buttons),
+          ? Row(crossAxisAlignment: CrossAxisAlignment.start, spacing: 8, children: [for (final b in buttons) Expanded(child: b)])
+          : Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 6, children: buttons),
     );
+    return hints ? KeyedSubtree(key: const ValueKey('vs-cal-controller-hints'), child: layout) : layout;
   }
 
   // ----------------------------------------------------------------- result

@@ -2885,5 +2885,10 @@
   "@vsCalibratePct": {"placeholders": {"pct": {"type": "int"}}},
   "vsCalibrateReset": "Przywróć 100%",
   "vsCalibrateAgain": "Kalibruj ponownie",
-  "vsGroupCheck": "Sprawdź i skalibruj"
+  "vsGroupCheck": "Sprawdź i skalibruj",
+  "vsCalibrateControllerAnswered": "{answer}, z kontrolera",
+  "@vsCalibrateControllerAnswered": {"placeholders": {"answer": {"type": "String"}}},
+  "vsCalibrateHintTooHeavy": "Przytrzymaj bieg w dół",
+  "vsCalibrateHintAboutRight": "Naciśnij obie manetki",
+  "vsCalibrateHintTooLight": "Przytrzymaj bieg w górę"
 }

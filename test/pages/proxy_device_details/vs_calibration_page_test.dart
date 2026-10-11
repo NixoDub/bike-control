@@ -1,12 +1,18 @@
 // The virtual shifting calibrator: the rider pedals, the page puts three grades
 // on the trainer, and their "too heavy / about right / too light" tunes the
 // difficulty of every virtual gear on this trainer.
+import 'package:bike_control/bluetooth/devices/base_device.dart';
+import 'package:bike_control/bluetooth/devices/gamepad/gamepad_device.dart';
 import 'package:bike_control/bluetooth/devices/proxy/proxy_device.dart';
 import 'package:bike_control/gen/l10n.dart';
 import 'package:bike_control/main.dart' show OtherLocalizationsDelegate, installLoggerErrorListener, navigatorKey;
 import 'package:bike_control/pages/proxy_device_details/vs_calibration_page.dart';
+import 'package:bike_control/services/vs_calibration/calibration_controller_input.dart';
+import 'package:bike_control/services/vs_calibration/vs_calibration_session.dart';
 import 'package:bike_control/utils/actions/base_actions.dart';
 import 'package:bike_control/utils/core.dart';
+import 'package:bike_control/utils/keymap/buttons.dart';
+import 'package:bike_control/utils/keymap/keymap.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -305,6 +311,90 @@ Future<void> main() async {
     });
   });
 
+  group('the rider\'s controller', () {
+    const minus = ControllerButton('calMinus');
+
+    Future<FitnessBikeDefinition> started(WidgetTester tester, ProxyDevice device) async {
+      await pumpPage(tester, VsCalibrationPage(device: device));
+      await tapKey(tester, 'vs-cal-start');
+      return device.fitnessBike!;
+    }
+
+    testWidgets('answers while a run is on, with feedback for screen readers', (tester) async {
+      final device = trainer();
+      final def = await started(tester, device);
+      final input = BaseDevice.inputInterceptor;
+      expect(input, isNotNull);
+
+      input!.intercept(minus, InGameAction.shiftDown, ButtonTrigger.longPress, isKeyDown: true);
+      await tester.pump();
+      expect(def.difficultyPct.value, 80);
+      expect(
+        tester.takeAnnouncements().map((a) => a.message),
+        contains(AppLocalizations.current.vsCalibrateControllerAnswered(AppLocalizations.current.vsCalibrateTooHeavy)),
+      );
+      expect(find.byKey(const ValueKey('vs-cal-controller-flash')), findsOneWidget);
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.byKey(const ValueKey('vs-cal-controller-flash')), findsNothing);
+
+      await tearDownPage(tester);
+    });
+
+    testWidgets('both shifters walk through to the result', (tester) async {
+      final device = trainer();
+      await started(tester, device);
+      for (var i = 0; i < VsCalibrationSession.grades001Pct.length; i++) {
+        // The answer debounce runs on the wall clock: let it pass for real.
+        if (i > 0) await tester.runAsync(() => Future<void>.delayed(CalibrationControllerInput.answerDebounce));
+        BaseDevice.inputInterceptor!.interceptChord(
+          const [ControllerButton('calPlus'), minus],
+          const [InGameAction.shiftUp, InGameAction.shiftDown],
+        );
+        await tester.pump(const Duration(seconds: 1));
+      }
+      expect(find.byKey(const ValueKey('vs-cal-result')), findsOneWidget);
+      expect(BaseDevice.inputInterceptor, isNull, reason: 'finishing hands the controller back');
+      await tearDownPage(tester);
+    });
+
+    testWidgets('stopping hands the controller back', (tester) async {
+      await started(tester, trainer());
+      await tapKey(tester, 'vs-cal-stop');
+      expect(BaseDevice.inputInterceptor, isNull);
+      await tearDownPage(tester);
+    });
+
+    testWidgets('leaving the page hands the controller back', (tester) async {
+      await started(tester, trainer());
+      await tearDownPage(tester);
+      expect(BaseDevice.inputInterceptor, isNull);
+    });
+
+    testWidgets('a trainer app connecting hands the controller back', (tester) async {
+      final device = trainer();
+      await started(tester, device);
+      device.debugSetTrainerAppConnected(true);
+      await tester.pump();
+      expect(BaseDevice.inputInterceptor, isNull);
+      await tearDownPage(tester);
+    });
+
+    testWidgets('the controller scheme is shown next to the answers when a controller is connected', (tester) async {
+      final controller = GamepadDevice('Pad', id: 'calibration-pad')..isConnected = true;
+      core.connection.devices.add(controller);
+      addTearDown(() => core.connection.devices.remove(controller));
+      await started(tester, trainer());
+      expect(find.byKey(const ValueKey('vs-cal-controller-hints')), findsOneWidget);
+      await tearDownPage(tester);
+    });
+
+    testWidgets('and left out without one', (tester) async {
+      await started(tester, trainer());
+      expect(find.byKey(const ValueKey('vs-cal-controller-hints')), findsNothing);
+      await tearDownPage(tester);
+    });
+  });
+
   testWidgets('the on-screen shift buttons move the gear, for mouse and keyboard riders', (tester) async {
     final device = trainer();
     final def = device.fitnessBike!;
@@ -357,3 +447,4 @@ Future<void> main() async {
     await tearDownPage(tester);
   });
 }
+

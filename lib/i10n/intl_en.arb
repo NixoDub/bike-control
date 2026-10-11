@@ -3295,5 +3295,10 @@
   "@vsCalibratePct": {"placeholders": {"pct": {"type": "int"}}},
   "vsCalibrateReset": "Reset to 100%",
   "vsCalibrateAgain": "Calibrate again",
-  "vsGroupCheck": "Check and calibrate"
+  "vsGroupCheck": "Check and calibrate",
+  "vsCalibrateControllerAnswered": "{answer}, from your controller",
+  "@vsCalibrateControllerAnswered": {"placeholders": {"answer": {"type": "String"}}},
+  "vsCalibrateHintTooHeavy": "Hold shift down",
+  "vsCalibrateHintAboutRight": "Press both shifters",
+  "vsCalibrateHintTooLight": "Hold shift up"
 }

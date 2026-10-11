@@ -2885,5 +2885,10 @@
   "@vsCalibratePct": {"placeholders": {"pct": {"type": "int"}}},
   "vsCalibrateReset": "Réinitialiser à 100 %",
   "vsCalibrateAgain": "Calibrer à nouveau",
-  "vsGroupCheck": "Vérifier et calibrer"
+  "vsGroupCheck": "Vérifier et calibrer",
+  "vsCalibrateControllerAnswered": "{answer}, depuis ta manette",
+  "@vsCalibrateControllerAnswered": {"placeholders": {"answer": {"type": "String"}}},
+  "vsCalibrateHintTooHeavy": "Maintiens vitesse inférieure",
+  "vsCalibrateHintAboutRight": "Appuie sur les deux leviers",
+  "vsCalibrateHintTooLight": "Maintiens vitesse supérieure"
 }
