@@ -4,12 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       build_mac:
-        # macOS patches go through the Mac App Store workaround
-        # (scripts/shorebird_mas_patch.rb). This requires a one-time local
-        # `register-baseline` for the target release BEFORE this runs — see
-        # scripts/README-shorebird-macos.md. Off by default because that local
-        # step can't happen in CI. Set release_version to x.y.z+build.
-        description: 'Patch for macOS (needs local register-baseline first, see scripts/README-shorebird-macos.md)'
+        description: 'Patch for macOS'
         required: false
         default: true
         type: boolean
@@ -113,45 +108,21 @@ jobs:
           keystore-base64: ${{ secrets.KEYSTORE_BASE64 }}
           keystore-properties: ${{ secrets.KEYSTORE_PROPERTIES }}
 
-      # macOS can't use the stock shorebird-patch action: Apple re-processes the
-      # store .pkg, so patches must be built against the store-delivered .app that a
-      # local `register-baseline` uploaded as macos/app_mas_contents. The script
-      # fails fast with a clear message if that baseline is missing.
-      # See scripts/README-shorebird-macos.md and shorebirdtech/shorebird#3223.
-      - name: Prepare App Store authentication key (macOS patch)
+      - name: 🚀 Shorebird Patch macOS
         if: inputs.build_mac
-        env:
-          API_KEY_BASE64: ${{ secrets.APPSTORE_API_KEY_FILE_BASE64 }}
-          APPSTORE_API_KEY: ${{ secrets.APPSTORE_API_KEY }}
-        run: |
-          mkdir -p ./private_keys
-          printf %s "$API_KEY_BASE64" | base64 -D > "./private_keys/AuthKey_${APPSTORE_API_KEY}.p8"
+        uses: shorebirdtech/shorebird-patch@v1
+        with:
+          platform: macos
+          release-version: ${{ inputs.release_version }}
+          args: '--track ${{ inputs.track }} --allow-asset-diffs --allow-native-diffs --split-debug-info=symbols -- --dart-define=VERIFYING_SHARED_SECRET=${{ secrets.VERIFYING_SHARED_SECRET }} --dart-define=REVENUECAT_API_KEY_IOS=${{ secrets.REVENUECAT_API_KEY_IOS }} --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}'
 
-      - name: 🚀 Shorebird Patch macOS (Mac App Store baseline)
-        if: inputs.build_mac
-        env:
-          SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
-          # The workflow's release_version defaults to the string 'latest'. A GHA
-          # `x && '' || y` expression can't yield an empty string (an empty string
-          # is falsy), so translate 'latest' to empty in the shell below instead.
-          INPUT_RELEASE_VERSION: ${{ inputs.release_version }}
-          ASC_APP_ID: ${{ secrets.ASC_MACOS_APP_ID }}
-          ASC_KEY_ID: ${{ secrets.APPSTORE_API_KEY }}
-          ASC_ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
-          ASC_API_KEY_PATH: ./private_keys/AuthKey_${{ secrets.APPSTORE_API_KEY }}.p8
-          SHOREBIRD_PATCH_ARGS: "--track ${{ inputs.track }} --allow-asset-diffs --allow-native-diffs --split-debug-info=symbols -- --dart-define=VERIFYING_SHARED_SECRET=${{ secrets.VERIFYING_SHARED_SECRET }} --dart-define=REVENUECAT_API_KEY_IOS=${{ secrets.REVENUECAT_API_KEY_IOS }} --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}"
-        run: |
-          # Pass an explicit x.y.z+build (the version you ran register-baseline for).
-          # 'latest' => empty, which makes the script auto-detect the live
-          # READY_FOR_SALE version — that path additionally needs ASC_MACOS_APP_ID.
-          if [ "$INPUT_RELEASE_VERSION" != "latest" ]; then
-            export RELEASE_VERSION="$INPUT_RELEASE_VERSION"
-          fi
-          if [ -z "${RELEASE_VERSION:-}" ] && [ -z "${ASC_APP_ID:-}" ]; then
-            echo "::error::Set release_version to the x.y.z+build you registered the MAS baseline for, or add the ASC_MACOS_APP_ID secret to auto-detect the live version."
-            exit 1
-          fi
-          ruby scripts/shorebird_mas_patch.rb patch
+      - name: 🚀 Shorebird Patch macOS (beta track)
+        if: inputs.build_mac && inputs.track == 'stable'
+        uses: shorebirdtech/shorebird-patch@v1
+        with:
+          platform: macos
+          release-version: ${{ inputs.release_version }}
+          args: '--track beta --allow-asset-diffs --allow-native-diffs --split-debug-info=symbols -- --dart-define=VERIFYING_SHARED_SECRET=${{ secrets.VERIFYING_SHARED_SECRET }} --dart-define=REVENUECAT_API_KEY_IOS=${{ secrets.REVENUECAT_API_KEY_IOS }} --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}'
 
       - name: 🚀 Shorebird Patch Android
         if: inputs.build_android
