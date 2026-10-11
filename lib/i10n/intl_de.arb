@@ -1823,6 +1823,8 @@
   "useADifferentEmailAddress": "Andere Adresse verwenden",
   "pleaseEnterAValidEmailAddress": "Bitte gib eine gültige E-Mail-Adresse ein",
   "theCodeIsIncorrectOrExpired": "Der Code ist falsch oder abgelaufen. Fordere einen neuen an.",
+  "password": "Passwort",
+  "thatPasswordIsIncorrect": "Das Passwort ist falsch.",
   "tooManyCodeRequestsPleaseWait": "Zu viele Anfragen. Warte eine Minute und versuche es dann erneut.",
   "couldNotSendTheCodePleaseTryAgain": "Der Code konnte nicht gesendet werden. Bitte versuche es erneut.",
   "orSeparator": "oder",

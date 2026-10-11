@@ -18,8 +18,11 @@ class _FakeEmailOtpAuth implements EmailOtpAuth {
   final List<String> sentTo = <String>[];
   final List<({String email, String code})> verified = <({String email, String code})>[];
 
+  final List<({String email, String password})> passwordSignIns = <({String email, String password})>[];
+
   Object? sendError;
   Object? verifyError;
+  Object? passwordError;
 
   @override
   Future<void> sendCode(String email) async {
@@ -31,6 +34,12 @@ class _FakeEmailOtpAuth implements EmailOtpAuth {
   Future<void> verifyCode({required String email, required String code}) async {
     verified.add((email: email, code: code));
     if (verifyError != null) throw verifyError!;
+  }
+
+  @override
+  Future<void> signInWithPassword({required String email, required String password}) async {
+    passwordSignIns.add((email: email, password: password));
+    if (passwordError != null) throw passwordError!;
   }
 }
 
@@ -195,7 +204,9 @@ Future<void> main() async {
     expect(auth.sentTo, hasLength(2));
   });
 
-  testWidgets('code sent: the resend countdown and "use a different address" sit centred under the code', (tester) async {
+  testWidgets('code sent: the resend countdown and "use a different address" sit centred under the code', (
+    tester,
+  ) async {
     await pumpForm(tester);
     await submitEmail(tester, 'rider@example.com');
 
@@ -205,5 +216,58 @@ Future<void> main() async {
       final label = find.descendant(of: find.byKey(key), matching: find.byType(RichText)).first;
       expect(tester.getCenter(label).dx, moreOrLessEquals(centre, epsilon: 1));
     }
+  });
+
+  group('App Review account', () {
+    Future<void> submitPassword(WidgetTester tester, String password) async {
+      await tester.enterText(find.byKey(EmailLoginForm.passwordFieldKey), password);
+      await tester.tap(find.byKey(EmailLoginForm.passwordSignInButtonKey));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('asks for a password instead of mailing a code', (tester) async {
+      await pumpForm(tester);
+
+      await submitEmail(tester, ' BikeControlAppReview@gmail.com ');
+
+      expect(auth.sentTo, isEmpty);
+      expect(find.byKey(EmailLoginForm.codeFieldKey), findsNothing);
+      expect(find.byKey(EmailLoginForm.passwordFieldKey), findsOneWidget);
+    });
+
+    testWidgets('the password signs the reviewer in', (tester) async {
+      await pumpForm(tester);
+      await submitEmail(tester, EmailLoginForm.appReviewEmail);
+
+      await submitPassword(tester, 'hunter2');
+
+      expect(auth.passwordSignIns, <({String email, String password})>[
+        (email: EmailLoginForm.appReviewEmail, password: 'hunter2'),
+      ]);
+      expect(signedIn, 1);
+    });
+
+    testWidgets('a wrong password keeps the reviewer on the password screen with an error', (tester) async {
+      await pumpForm(tester);
+      await submitEmail(tester, EmailLoginForm.appReviewEmail);
+      auth.passwordError = const AuthException('Invalid login credentials');
+
+      await submitPassword(tester, 'nope');
+
+      expect(signedIn, 0);
+      expect(find.byKey(EmailLoginForm.passwordFieldKey), findsOneWidget);
+      expect(find.byKey(EmailLoginForm.errorKey), findsOneWidget);
+    });
+
+    testWidgets('the reviewer can go back and use a different address', (tester) async {
+      await pumpForm(tester);
+      await submitEmail(tester, EmailLoginForm.appReviewEmail);
+
+      await tester.tap(find.byKey(EmailLoginForm.changeEmailKey));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(EmailLoginForm.emailFieldKey), findsOneWidget);
+      expect(find.byKey(EmailLoginForm.passwordFieldKey), findsNothing);
+    });
   });
 }

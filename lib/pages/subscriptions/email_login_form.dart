@@ -18,6 +18,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// and corporate mail scanners routinely open (and thereby burn) one-shot
 /// links before the rider ever sees them. A typed code works the same on every
 /// platform, including web.
+///
+/// The one exception is [appReviewEmail]: App Store and Play reviewers can't
+/// read a code mailed to that inbox, so it signs in with a password instead.
 class EmailLoginForm extends StatefulWidget {
   const EmailLoginForm({
     super.key,
@@ -51,6 +54,12 @@ class EmailLoginForm extends StatefulWidget {
   static const Key errorKey = Key('email_login_error');
   static const Key resendButtonKey = Key('email_login_resend_button');
   static const Key changeEmailKey = Key('email_login_change_email');
+  static const Key passwordFieldKey = Key('email_login_password_field');
+  static const Key passwordSignInButtonKey = Key('email_login_password_sign_in_button');
+
+  /// The demo account handed to store reviewers; its password lives in the
+  /// store review information, never in this public repo.
+  static const String appReviewEmail = 'bikecontrolappreview@gmail.com';
 
   /// Matches Supabase's own per-address send limit; asking sooner just earns a
   /// 429, so the button counts down instead.
@@ -65,9 +74,13 @@ class _EmailLoginFormState extends State<EmailLoginForm> {
 
   late final EmailOtpAuth _auth = widget._auth ?? SupabaseEmailOtpAuth();
   final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
   /// The address the code went to; null while the rider is still typing one.
   String? _codeSentTo;
+
+  /// The App Review address waiting for its password; null otherwise.
+  String? _passwordFor;
   String? _error;
   bool _busy = false;
 
@@ -86,6 +99,7 @@ class _EmailLoginFormState extends State<EmailLoginForm> {
   void dispose() {
     _cooldownTimer?.cancel();
     _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -96,6 +110,15 @@ class _EmailLoginFormState extends State<EmailLoginForm> {
     final email = (_codeSentTo ?? _emailController.text).trim();
     if (!_emailPattern.hasMatch(email)) {
       setState(() => _error = context.i18n.pleaseEnterAValidEmailAddress);
+      return;
+    }
+
+    if (email.toLowerCase() == EmailLoginForm.appReviewEmail) {
+      setState(() {
+        _passwordFor = email;
+        _error = null;
+      });
+      widget.onCodeSentChanged?.call(true);
       return;
     }
 
@@ -148,6 +171,27 @@ class _EmailLoginFormState extends State<EmailLoginForm> {
     }
   }
 
+  Future<void> _signInWithPassword() async {
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await _auth.signInWithPassword(email: _passwordFor!, password: _passwordController.text);
+      if (!mounted) return;
+      setState(() => _busy = false);
+      widget.onSignedIn();
+    } catch (e, s) {
+      recordError(e, s, context: 'Email password sign-in');
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = context.i18n.thatPasswordIsIncorrect;
+      });
+    }
+  }
+
   bool _isRateLimited(Object error) => error is AuthApiException && error.statusCode == '429';
 
   void _startCooldown() {
@@ -168,6 +212,8 @@ class _EmailLoginFormState extends State<EmailLoginForm> {
     _cooldownTimer?.cancel();
     setState(() {
       _codeSentTo = null;
+      _passwordFor = null;
+      _passwordController.clear();
       _resendAllowedAt = null;
       _error = null;
     });
@@ -181,7 +227,12 @@ class _EmailLoginFormState extends State<EmailLoginForm> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (_codeSentTo == null) ..._buildEmailEntry(context) else ..._buildCodeEntry(context),
+        if (_passwordFor != null)
+          ..._buildPasswordEntry(context)
+        else if (_codeSentTo == null)
+          ..._buildEmailEntry(context)
+        else
+          ..._buildCodeEntry(context),
         if (_codeSentTo == null && _error != null) _errorView(context),
       ],
     );
@@ -226,6 +277,38 @@ class _EmailLoginFormState extends State<EmailLoginForm> {
         key: EmailLoginForm.sendButtonKey,
         onPressed: _busy ? null : () => _sendCode(isResend: false),
         child: Text(context.i18n.sendMeACode),
+      ),
+    ];
+  }
+
+  List<Widget> _buildPasswordEntry(BuildContext context) {
+    return [
+      Text(_passwordFor!, textAlign: TextAlign.center).small.muted,
+      TextField(
+        key: EmailLoginForm.passwordFieldKey,
+        controller: _passwordController,
+        obscureText: true,
+        autofillHints: const [AutofillHints.password],
+        textInputAction: TextInputAction.go,
+        placeholder: Text(context.i18n.password),
+        features: const [InputFeature.leading(Icon(LucideIcons.lock, size: 16))],
+        onSubmitted: (_) => _signInWithPassword(),
+      ),
+      BkPillButton.secondary(
+        key: EmailLoginForm.passwordSignInButtonKey,
+        onPressed: _busy ? null : _signInWithPassword,
+        child: Text(context.i18n.signIn),
+      ),
+      Center(
+        child: Button.ghost(
+          key: EmailLoginForm.changeEmailKey,
+          onPressed: _backToEmailEntry,
+          child: Text(
+            context.i18n.useADifferentEmailAddress,
+            textAlign: TextAlign.center,
+            style: context.typography.small.copyWith(color: bkAccentText(context), fontWeight: FontWeight.w600),
+          ),
+        ),
       ),
     ];
   }

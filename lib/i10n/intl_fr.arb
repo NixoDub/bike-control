@@ -1811,6 +1811,8 @@
   "useADifferentEmailAddress": "Utiliser une autre adresse",
   "pleaseEnterAValidEmailAddress": "Saisis une adresse e-mail valide",
   "theCodeIsIncorrectOrExpired": "Ce code est incorrect ou a expiré. Demandes-en un nouveau.",
+  "password": "Mot de passe",
+  "thatPasswordIsIncorrect": "Ce mot de passe est incorrect.",
   "tooManyCodeRequestsPleaseWait": "Trop de demandes. Patiente une minute, puis réessaie.",
   "couldNotSendTheCodePleaseTryAgain": "Impossible d'envoyer le code. Réessaie.",
   "orSeparator": "ou",
