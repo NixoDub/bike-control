@@ -4,18 +4,23 @@
 // in view while it animates), then Physics; the per-gear steppers one screen
 // deeper.
 import 'package:bike_control/gen/l10n.dart';
-import 'package:bike_control/main.dart' show OtherLocalizationsDelegate;
+import 'package:bike_control/main.dart' show OtherLocalizationsDelegate, screenshotMode;
 import 'package:bike_control/pages/proxy_device_details/gear_ratio_curve.dart';
 import 'package:bike_control/pages/proxy_device_details/gear_ratios_editor_page.dart';
+import 'package:bike_control/pages/proxy_device_details/self_test_card.dart';
+import 'package:bike_control/pages/proxy_device_details/self_test_page.dart';
+import 'package:bike_control/pages/proxy_device_details/vs_calibration_page.dart';
 import 'package:bike_control/pages/proxy_device_details/shifting_config_picker.dart';
 import 'package:bike_control/pages/settings/settings_page.dart';
 import 'package:bike_control/pages/settings/virtual_shifting_settings_page.dart';
+import 'package:bike_control/services/trainer_self_test/self_test_result.dart';
 import 'package:bike_control/utils/core.dart';
 import 'package:bike_control/utils/keymap/apps/my_whoosh.dart';
 import 'package:bike_control/widgets/drivetrain/chain_geometry.dart';
 import 'package:bike_control/widgets/drivetrain/drivetrain_controls.dart';
 import 'package:bike_control/widgets/drivetrain/drivetrain_view.dart';
 import 'package:bike_control/widgets/ui/app_theme.dart';
+import 'package:bike_control/widgets/ui/bk_grouped_section.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:golden_screenshot/golden_screenshot.dart' show loadAppFonts;
 import 'package:prop/emulators/definitions/fitness_bike_definition.dart';
@@ -265,6 +270,31 @@ Future<void> main() async {
       expect(definition.maxGear, MyWhoosh().virtualGearAmount);
     });
 
+    // A calibrated difficulty is part of how the gears feel, so Reset takes it
+    // back to 100 % with the rest.
+    testWidgets('Reset also takes the calibrated difficulty back to the default', (tester) async {
+      final (:proxy, :definition) = attachLiveTrainer();
+      await core.shiftingConfigs.upsert(
+        core.shiftingConfigs.activeFor(proxy.trainerKey).copyWith(difficultyPct: 70, isActive: true),
+      );
+      await _pump(tester, VirtualShiftingSettingsPage(definition: definition, device: proxy));
+      await tester.pump();
+      expect(definition.difficultyPct.value, 70);
+
+      await tester.tap(find.byKey(const ValueKey('vs-reset')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.byKey(const ValueKey('vs-reset-confirm')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(definition.difficultyPct.value, FitnessBikeDefinition.defaultDifficultyPct);
+      expect(
+        core.shiftingConfigs.activeFor(proxy.trainerKey).difficultyPct,
+        FitnessBikeDefinition.defaultDifficultyPct,
+      );
+    });
+
     testWidgets('Per-gear ratios opens the steppers with the curve pinned above them', (tester) async {
       final (:proxy, :definition) = attachLiveTrainer();
       await _pump(tester, VirtualShiftingSettingsPage(definition: definition, device: proxy), height: 844);
@@ -370,4 +400,135 @@ Future<void> main() async {
       });
     }
   });
+
+  // The resistance self-test and the calibrator live with the rest of the
+  // shifting settings: checking that the trainer obeys and tuning how its
+  // gears feel are both about shifting, not about the hardware link. Both are
+  // rows of one group, each opening its own page.
+  group('check and calibrate', () {
+    final selfTest = find.byKey(const ValueKey('vs-self-test'));
+    final calibrate = find.byKey(const ValueKey('vs-calibrate'));
+
+    // The snapshot harness this file runs under turns screenshot mode on; the
+    // section is (rightly) hidden there, so these tests ride with it off.
+    late bool wasScreenshotMode;
+    setUp(() {
+      wasScreenshotMode = screenshotMode;
+      screenshotMode = false;
+    });
+    tearDown(() => screenshotMode = wasScreenshotMode);
+
+    String subtitleOf(WidgetTester tester, Finder row) => tester.widget<BkGroupedRow>(row).subtitle!;
+
+    Future<void> open(WidgetTester tester, Finder row) async {
+      await tester.ensureVisible(row);
+      await tester.tap(row);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+    }
+
+    testWidgets('the self-test and the calibrator are two rows of one group below Physics', (tester) async {
+      final (:proxy, :definition) = attachLiveTrainer();
+      await _pump(tester, VirtualShiftingSettingsPage(definition: definition, device: proxy));
+      await tester.pump();
+
+      expect(selfTest, findsOneWidget);
+      expect(calibrate, findsOneWidget);
+      expect(find.byType(SelfTestCard), findsNothing, reason: 'the test runs on its own page now');
+      Finder groupOf(Finder row) => find.ancestor(of: row, matching: find.byType(BkGroupedSection));
+      expect(tester.widget(groupOf(selfTest).first), same(tester.widget(groupOf(calibrate).first)));
+      final physics = find.byKey(const ValueKey('vs-physics'));
+      expect(_top(tester, physics), lessThan(_top(tester, selfTest)));
+      expect(_top(tester, selfTest), lessThan(_top(tester, calibrate)));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('the self-test row says what it does until there is a result, then the result', (tester) async {
+      final (:proxy, :definition) = attachLiveTrainer(id: 'row-subtitle-kickr');
+      await _pump(tester, VirtualShiftingSettingsPage(definition: definition, device: proxy));
+      await tester.pump();
+      expect(subtitleOf(tester, selfTest), l.selfTestStart);
+
+      // A test finishes on the self-test page; back here the row shows it.
+      await open(tester, selfTest);
+      expect(find.byType(SelfTestPage), findsOneWidget);
+      await core.settings.setSelfTestResultJson(proxy.trainerKey, _passResultJson);
+      tester.state<NavigatorState>(find.byType(Navigator).first).pop();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+
+      expect(
+        subtitleOf(tester, selfTest),
+        l.selfTestLastResult(SelfTestCard.verdictTitle(l, SelfTestVerdict.pass)),
+      );
+    });
+
+    testWidgets('the calibrator row opens the calibrator', (tester) async {
+      final (:proxy, :definition) = attachLiveTrainer();
+      await _pump(tester, VirtualShiftingSettingsPage(definition: definition, device: proxy));
+      await tester.pump();
+
+      await open(tester, calibrate);
+      expect(find.byType(VsCalibrationPage), findsOneWidget);
+    });
+
+    testWidgets('a disconnected trainer still shows both, and nothing crashes', (tester) async {
+      final (:proxy, :definition) = attachLiveTrainer();
+      proxy
+        ..isConnected = false
+        ..debugSetTrainerAppConnected(false);
+      await _pump(tester, VirtualShiftingSettingsPage(definition: definition, device: proxy));
+      await tester.pump();
+
+      expect(selfTest, findsOneWidget);
+      expect(calibrate, findsOneWidget);
+      await open(tester, calibrate);
+      await tester.tap(find.byKey(const ValueKey('vs-cal-start')));
+      await tester.pump();
+      expect(find.byKey(const ValueKey('vs-cal-refusal')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('store screenshots leave them out, like the trainer page did', (tester) async {
+      final (:proxy, :definition) = attachLiveTrainer();
+      screenshotMode = true;
+      await _pump(tester, VirtualShiftingSettingsPage(definition: definition, device: proxy));
+      await tester.pump();
+
+      expect(selfTest, findsNothing);
+      expect(calibrate, findsNothing);
+    });
+
+    testWidgets('openTrainerSelfTest opens the self-test page directly', (tester) async {
+      final (:proxy, definition: _) = attachLiveTrainer();
+      await _pump(
+        tester,
+        Builder(
+          builder: (context) => Button.primary(
+            key: const ValueKey('go'),
+            onPressed: () => openTrainerSelfTest(context, proxy),
+            child: const Text('go'),
+          ),
+        ),
+      );
+      await tester.tap(find.byKey(const ValueKey('go')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+
+      expect(tester.widget<SelfTestPage>(find.byType(SelfTestPage)).device, same(proxy));
+      expect(find.byType(VirtualShiftingSettingsPage), findsNothing);
+    });
+  });
 }
+
+/// A stored passing result, as [SelfTestResult.toJsonString] writes it.
+final _passResultJson = SelfTestResult(
+  at: DateTime(2026, 10, 11),
+  verdict: SelfTestVerdict.pass,
+  ergStepsPassed: 3,
+  ergStepsTotal: 3,
+  shiftStepsPassed: 3,
+  shiftStepsTotal: 3,
+  vsMode: 'trackResistance',
+  protocol: 'ftms',
+).toJsonString();

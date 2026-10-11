@@ -8,18 +8,16 @@ import 'package:bike_control/gen/l10n.dart';
 import 'package:bike_control/main.dart';
 import 'package:bike_control/pages/help_center/help_center_page.dart';
 import 'package:bike_control/pages/help_center/help_center_support_context.dart';
+import 'package:bike_control/pages/proxy_device_details/chain_position_hint_card.dart';
 import 'package:bike_control/pages/proxy_device_details/connection_card.dart';
 import 'package:bike_control/pages/proxy_device_details/control_protocol_section.dart';
 import 'package:bike_control/pages/proxy_device_details/need_help_card.dart';
-import 'package:bike_control/pages/proxy_device_details/self_test_card.dart';
-import 'package:bike_control/pages/settings/overlay_settings_page.dart';
 import 'package:bike_control/pages/settings/virtual_shifting_settings_page.dart';
 import 'package:bike_control/services/overview_screenshot.dart';
 import 'package:bike_control/services/telemetry_snapshot.dart';
 import 'package:bike_control/utils/core.dart';
 import 'package:bike_control/utils/i18n_extension.dart';
 import 'package:bike_control/utils/lazy_async.dart';
-import 'package:bike_control/utils/reduced_motion.dart';
 import 'package:bike_control/widgets/menu.dart' show debugText;
 import 'package:bike_control/widgets/ui/loading_widget.dart';
 import 'package:bike_control/widgets/ui/bk_grouped_section.dart';
@@ -31,22 +29,18 @@ import 'package:bike_control/widgets/ui/bk_page_column.dart';
 
 /// Devices → Smart Trainer: the trainer's hardware page. Is it connected and
 /// how (the connection card, with the WiFi / Bluetooth choice), which control
-/// protocol it speaks, and is it healthy (the resistance self-test, Need
-/// help?) — plus one link out to its virtual shifting settings, which live in
-/// Settings, and the way to disconnect it.
+/// protocol it speaks, Need help? — plus one link out to its virtual shifting
+/// settings, which live in Settings, and the way to disconnect it.
 ///
-/// The gear itself is on Ride; how it shifts and the overlay are in Settings.
+/// The gear itself is on Ride; how it shifts, the resistance self-test, the
+/// shifting calibrator and the overlay are in Settings (see
+/// [openTrainerSelfTest] for the way into the self-test).
 class ProxyDeviceDetailsPage extends StatefulWidget {
   final ProxyDevice device;
-
-  /// Scrolls to the resistance self-test after the first frame — the setup
-  /// guide's "Run the trainer check" lands here.
-  final bool revealSelfTest;
 
   const ProxyDeviceDetailsPage({
     super.key,
     required this.device,
-    this.revealSelfTest = false,
   });
 
   @override
@@ -55,7 +49,6 @@ class ProxyDeviceDetailsPage extends StatefulWidget {
 
 class _ProxyDeviceDetailsPageState extends State<ProxyDeviceDetailsPage> {
   late StreamSubscription<BaseDevice> _connectionSub;
-  final GlobalKey _selfTestKey = GlobalKey();
 
   /// Mirrors the persisted flag so the x tap hides the card in the same
   /// frame instead of waiting on the prefs write; read once at init because
@@ -74,29 +67,6 @@ class _ProxyDeviceDetailsPageState extends State<ProxyDeviceDetailsPage> {
     _connectionSub = core.connection.connectionStream.listen((_) {
       if (mounted) setState(() {});
     });
-    if (widget.revealSelfTest) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _revealSelfTest());
-    }
-  }
-
-  void _revealSelfTest() {
-    final ctx = _selfTestKey.currentContext;
-    if (!mounted || ctx == null) return;
-    unawaited(
-      Scrollable.ensureVisible(
-        ctx,
-        duration: prefersReducedMotion(context) ? Duration.zero : const Duration(milliseconds: 400),
-        curve: Curves.easeInOut,
-        alignment: 0.1,
-      ),
-    );
-  }
-
-  /// The self-test's "Show gear overlay setup": the overlay's own page.
-  Future<void> _openOverlaySettings() async {
-    final definition = widget.device.fitnessBike;
-    if (definition == null) return;
-    await context.push(OverlaySettingsPage(device: widget.device, definition: definition));
   }
 
   Future<void> _openVirtualShiftingSettings() async {
@@ -147,8 +117,9 @@ class _ProxyDeviceDetailsPageState extends State<ProxyDeviceDetailsPage> {
                 ConnectionCard(key: const ValueKey('connection-card'), device: device),
                 SizedBox(height: 12),
               ],
-              // How BikeControl talks to this trainer — hardware, so it sits
-              // here, next to the self-test that recommends changing it.
+              // How BikeControl talks to this trainer: hardware, so it sits
+              // here. The self-test (in the shifting settings) recommends
+              // changing it and switches it itself.
               if (device.fitnessBike case final definition?)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
@@ -159,20 +130,6 @@ class _ProxyDeviceDetailsPageState extends State<ProxyDeviceDetailsPage> {
                   ),
                 ),
               if (!screenshotMode) ...[
-                // Checking comes before asking: the self-test answers "does
-                // BikeControl control my trainer?" on its own, so it sits
-                // above the card that routes to support.
-                if (device.fitnessBike != null) ...[
-                  KeyedSubtree(
-                    key: _selfTestKey,
-                    child: SelfTestCard(
-                      key: const ValueKey('self-test'),
-                      device: device,
-                      onShowOverlaySettings: _openOverlaySettings,
-                    ),
-                  ),
-                  SizedBox(height: 12),
-                ],
                 // Keyed for the same reason: dismissing it toggles a sibling
                 // right next to ConnectionCard.
                 if (!_needHelpDismissed) ...[
@@ -186,8 +143,11 @@ class _ProxyDeviceDetailsPageState extends State<ProxyDeviceDetailsPage> {
               ],
               // The one link out: riders who come here for their gears still
               // find them.
-              if (device.fitnessBike != null) ...[
+              if (device.fitnessBike case final definition?) ...[
                 SizedBox(height: 12),
+                // Right above the settings it is about: the rider's real chain
+                // sits where the virtual shifting physics feel wrong.
+                ChainPositionHintCard(key: const ValueKey('chain-position-hint'), definition: definition),
                 BkGroupedSection(
                   children: [
                     BkGroupedRow(

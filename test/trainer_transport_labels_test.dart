@@ -303,6 +303,44 @@ Future<void> main() async {
       expect(describeProxyDevice(device), contains('vsMode=targetPower\u2192trackResistance'));
     });
 
+    test('trainer line carries the virtual shifting difficulty', () {
+      // "My hard gears are far too heavy" reads differently once support can
+      // see the rider already calibrated the trainer, and to what. Printed at
+      // the default too, so a missing field never has to be guessed at.
+      final device = trainerWithFitnessBike();
+      expect(describeProxyDevice(device), contains('difficulty=100%'));
+
+      device.fitnessBike!.setDifficultyPct(70);
+      expect(describeProxyDevice(device), contains('difficulty=70%'));
+    });
+
+    test('trainer line carries the estimated real chain ratio once known', () {
+      // A "shifts barely felt" bundle is settled by where the rider's real chain
+      // sits: the trackResistance physics assume a middle gear.
+      final device = trainerWithFitnessBike();
+      expect(describeProxyDevice(device), isNot(contains('chainRatio=')));
+      // IBD (flags 0x44: speed + cadence + power), 64 rpm at 38.00 km/h: a
+      // 4.5 real ratio.
+      for (var i = 0; i < 5; i++) {
+        device.fitnessBike!.onNotification(
+          FitnessBikeDefinition.INDOOR_BIKE_DATA_UUID,
+          Uint8List.fromList([0x44, 0x00, 3800 & 0xFF, 3800 >> 8, 128, 0x00, 0x2C, 0x01]),
+        );
+      }
+      expect(describeProxyDevice(device), contains('chainRatio=4.50'));
+    });
+
+    test('a smart bike carries no chain ratio: it has no chain to estimate', () {
+      final device = trainerWithFitnessBike(name: 'KICKR BIKE 1A2B');
+      for (var i = 0; i < 5; i++) {
+        device.fitnessBike!.onNotification(
+          FitnessBikeDefinition.INDOOR_BIKE_DATA_UUID,
+          Uint8List.fromList([0x44, 0x00, 3800 & 0xFF, 3800 >> 8, 128, 0x00, 0x2C, 0x01]),
+        );
+      }
+      expect(describeProxyDevice(device), isNot(contains('chainRatio=')));
+    });
+
     test('trainer line carries the live cadence/power/speed readout', () {
       // A "no resistance" report is settled by whether BikeControl is reading
       // cadence: the VS resistance calc is entirely cadence-driven, so the

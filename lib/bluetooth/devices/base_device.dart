@@ -4,7 +4,8 @@ import 'package:bike_control/bluetooth/devices/proxy/proxy_device.dart';
 import 'package:bike_control/bluetooth/devices/zwift/constants.dart';
 import 'package:bike_control/gen/l10n.dart';
 import 'package:bike_control/main.dart';
-import 'package:bike_control/utils/actions/base_actions.dart' show Success;
+import 'package:bike_control/bluetooth/devices/controller_input_interceptor.dart';
+import 'package:bike_control/utils/actions/base_actions.dart' show ActionResult, Success;
 import 'package:bike_control/utils/actions/desktop.dart';
 import 'package:bike_control/utils/core.dart';
 import 'package:bike_control/utils/iap/iap_manager.dart';
@@ -67,6 +68,11 @@ abstract class BaseDevice {
   /// connect/disconnect notifications for the cycle.
   bool get isResetting => false;
 
+  /// While set, every controller press is offered to it first (see
+  /// [ControllerInputInterceptor]); the shifting calibrator installs one for
+  /// the length of a run and removes it on every way out.
+  static ControllerInputInterceptor? inputInterceptor;
+
   static const Duration _longPressTriggerDelay = Duration(milliseconds: 550);
   static const Duration _doubleClickDelay = Duration(milliseconds: 320);
   static const Duration _repeatInterval = Duration(milliseconds: 250);
@@ -125,6 +131,13 @@ abstract class BaseDevice {
           _activeLongPressButtons.clear();
         }
         _previouslyPressedButtons = buttonsClicked.toSet();
+        // Before the front-shift combo: while a screen owns the chord (the
+        // calibrator's "both shifters"), it must not also change the ring.
+        final chord = inputInterceptor?.interceptChord(buttonsClicked, buttonsClicked.map(_mappedAction).toList());
+        if (chord != null) {
+          _reportIntercepted(chord);
+          return;
+        }
         if (await _maybeHandleFrontShiftCombo(buttonsClicked)) return;
         await performClick(buttonsClicked, trigger: ButtonTrigger.singleClick);
         return;
@@ -282,7 +295,28 @@ abstract class BaseDevice {
     }
   }
 
+  /// What the rider's keymap does with [button] on a single click.
+  InGameAction? _mappedAction(ControllerButton button) =>
+      core.actionHandler.supportedApp?.keymap.getKeyPair(button, trigger: ButtonTrigger.singleClick)?.inGameAction;
+
+  bool _longPressClaimed(ControllerButton button) =>
+      supportsLongPress && (inputInterceptor?.claimsLongPress(_mappedAction(button)) ?? false);
+
+  /// Offers a press to [inputInterceptor]; non-null means it was consumed.
+  ActionResult? _intercept(ControllerButton button, ButtonTrigger trigger, {required bool isKeyDown}) {
+    final interceptor = inputInterceptor;
+    if (interceptor == null) return null;
+    final result = interceptor.intercept(button, _mappedAction(button), trigger, isKeyDown: isKeyDown);
+    if (result != null) _reportIntercepted(result);
+    return result;
+  }
+
+  void _reportIntercepted(ActionResult result) {
+    if (result.message.isNotEmpty) actionStreamInternal.add(ActionNotification(result));
+  }
+
   bool _hasTriggerAction(ControllerButton button, ButtonTrigger trigger) {
+    if (trigger == ButtonTrigger.longPress && _longPressClaimed(button)) return true;
     final keyPair = core.actionHandler.supportedApp?.keymap.getKeyPair(button, trigger: trigger);
     if (keyPair == null && core.actionHandler.supportedApp == null) {
       return trigger == ButtonTrigger.singleClick;
@@ -312,6 +346,8 @@ abstract class BaseDevice {
   /// Active by default for Pro users when no explicit long press action is set.
   bool _shouldRepeatSingleClick(ControllerButton button) {
     if (!supportsLongPress) return false;
+    // A claimed hold is an answer, not a stream of repeated clicks.
+    if (_longPressClaimed(button)) return false;
     if (!isProEnabledForRepeat) return false;
     final longPressPair = core.actionHandler.supportedApp?.keymap.getKeyPair(
       button,
@@ -361,6 +397,7 @@ abstract class BaseDevice {
     ButtonTrigger trigger = ButtonTrigger.longPress,
   }) async {
     for (final action in buttonsClicked) {
+      if (_intercept(action, trigger, isKeyDown: true) != null) continue;
       // Check IAP status before executing command
       if (!_canExecuteCommand()) {
         //actionStreamInternal.add(AlertNotification(LogLevel.LOGLEVEL_ERROR, _getCommandLimitMessage()));
@@ -422,6 +459,7 @@ abstract class BaseDevice {
     ButtonTrigger trigger = ButtonTrigger.singleClick,
   }) async {
     for (final action in buttonsClicked) {
+      if (_intercept(action, trigger, isKeyDown: true) != null) continue;
       // Check IAP status before executing command
       if (!_canExecuteCommand()) {
         _showCommandLimitAlert();
@@ -445,6 +483,7 @@ abstract class BaseDevice {
   }) async {
     _stopRepeatingSingleClick();
     for (final action in buttonsReleased) {
+      if (_intercept(action, trigger, isKeyDown: false) != null) continue;
       // Skip normal release handling for repeat-on-long-press buttons
       if (_shouldRepeatSingleClick(action)) {
         continue;
