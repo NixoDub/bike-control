@@ -36,6 +36,9 @@ class _Otp implements EmailOtpAuth {
   Future<void> verifyCode({required String email, required String code}) async {
     if (failVerify) throw const AuthException('Token has expired or is invalid', statusCode: '403');
   }
+
+  @override
+  Future<void> signInWithPassword({required String email, required String password}) async {}
 }
 
 class _NoHttp extends http.BaseClient {

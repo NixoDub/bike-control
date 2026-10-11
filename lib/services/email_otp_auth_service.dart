@@ -11,6 +11,11 @@ abstract class EmailOtpAuth {
   /// Redeems [code] for a session. Throws [AuthException] when it is wrong,
   /// expired, or already used.
   Future<void> verifyCode({required String email, required String code});
+
+  /// Password sign-in, only offered for the App Review account: reviewers
+  /// can't read a code mailed to our inbox. Throws [AuthException] when the
+  /// password is wrong.
+  Future<void> signInWithPassword({required String email, required String password});
 }
 
 class SupabaseEmailOtpAuth implements EmailOtpAuth {
@@ -29,4 +34,8 @@ class SupabaseEmailOtpAuth implements EmailOtpAuth {
     // returning rider and `signup` for one Supabase just created.
     type: OtpType.email,
   );
+
+  @override
+  Future<void> signInWithPassword({required String email, required String password}) =>
+      _supabase.auth.signInWithPassword(email: email, password: password);
 }
