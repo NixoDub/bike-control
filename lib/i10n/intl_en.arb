@@ -2100,6 +2100,8 @@
   "useADifferentEmailAddress": "Use a different address",
   "pleaseEnterAValidEmailAddress": "Please enter a valid email address",
   "theCodeIsIncorrectOrExpired": "That code is incorrect or has expired. Request a new one.",
+  "password": "Password",
+  "thatPasswordIsIncorrect": "That password is incorrect.",
   "tooManyCodeRequestsPleaseWait": "Too many requests. Please wait a minute, then try again.",
   "couldNotSendTheCodePleaseTryAgain": "We couldn't send the code. Please try again.",
   "orSeparator": "or",

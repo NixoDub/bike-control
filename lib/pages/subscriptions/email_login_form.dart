@@ -18,6 +18,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// and corporate mail scanners routinely open (and thereby burn) one-shot
 /// links before the rider ever sees them. A typed code works the same on every
 /// platform, including web.
+///
+/// The one exception is [appReviewEmail]: App Store and Play reviewers can't
+/// read a code mailed to that inbox, so it signs in with a password instead.
 class EmailLoginForm extends StatefulWidget {
   const EmailLoginForm({
     super.key,
@@ -51,6 +54,12 @@ class EmailLoginForm extends StatefulWidget {
   static const Key errorKey = Key('email_login_error');
   static const Key resendButtonKey = Key('email_login_resend_button');
   static const Key changeEmailKey = Key('email_login_change_email');
+  static const Key passwordFieldKey = Key('email_login_password_field');
+  static const Key passwordSignInButtonKey = Key('email_login_password_sign_in_button');
+
+  /// The demo account handed to store reviewers; its password lives in the
+  /// store review information, never in this public repo.
+  static const String appReviewEmail = 'bikecontrolappreview@gmail.com';
 
   /// Matches Supabase's own per-address send limit; asking sooner just earns a
   /// 429, so the button counts down instead.
@@ -65,9 +74,14 @@ class _EmailLoginFormState extends State<EmailLoginForm> {
 
   late final EmailOtpAuth _auth = widget._auth ?? SupabaseEmailOtpAuth();
   final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
   /// The address the code went to; null while the rider is still typing one.
   String? _codeSentTo;
+
+  /// Whether the address typed so far is [EmailLoginForm.appReviewEmail],
+  /// which swaps "send me a code" for a password field.
+  bool _isAppReviewEmail = false;
   String? _error;
   bool _busy = false;
 
@@ -83,9 +97,25 @@ class _EmailLoginFormState extends State<EmailLoginForm> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _emailController.addListener(_onEmailChanged);
+  }
+
+  void _onEmailChanged() {
+    final isAppReview = _emailController.text.trim().toLowerCase() == EmailLoginForm.appReviewEmail;
+    if (isAppReview == _isAppReviewEmail) return;
+    setState(() {
+      _isAppReviewEmail = isAppReview;
+      _error = null;
+    });
+  }
+
+  @override
   void dispose() {
     _cooldownTimer?.cancel();
     _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -144,6 +174,27 @@ class _EmailLoginFormState extends State<EmailLoginForm> {
         _error = _isRateLimited(e)
             ? context.i18n.tooManyCodeRequestsPleaseWait
             : context.i18n.theCodeIsIncorrectOrExpired;
+      });
+    }
+  }
+
+  Future<void> _signInWithPassword() async {
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await _auth.signInWithPassword(email: _emailController.text.trim(), password: _passwordController.text);
+      if (!mounted) return;
+      setState(() => _busy = false);
+      widget.onSignedIn();
+    } catch (e, s) {
+      recordError(e, s, context: 'Email password sign-in');
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = context.i18n.thatPasswordIsIncorrect;
       });
     }
   }
@@ -220,13 +271,30 @@ class _EmailLoginFormState extends State<EmailLoginForm> {
         textInputAction: TextInputAction.go,
         placeholder: Text(context.i18n.emailAddress),
         features: const [InputFeature.leading(Icon(LucideIcons.mail, size: 16))],
-        onSubmitted: (_) => _sendCode(isResend: false),
+        onSubmitted: (_) => _isAppReviewEmail ? null : _sendCode(isResend: false),
       ),
-      BkPillButton.secondary(
-        key: EmailLoginForm.sendButtonKey,
-        onPressed: _busy ? null : () => _sendCode(isResend: false),
-        child: Text(context.i18n.sendMeACode),
-      ),
+      if (_isAppReviewEmail) ...[
+        TextField(
+          key: EmailLoginForm.passwordFieldKey,
+          controller: _passwordController,
+          obscureText: true,
+          autofillHints: const [AutofillHints.password],
+          textInputAction: TextInputAction.go,
+          placeholder: Text(context.i18n.password),
+          features: const [InputFeature.leading(Icon(LucideIcons.lock, size: 16))],
+          onSubmitted: (_) => _signInWithPassword(),
+        ),
+        BkPillButton.secondary(
+          key: EmailLoginForm.passwordSignInButtonKey,
+          onPressed: _busy ? null : _signInWithPassword,
+          child: Text(context.i18n.signIn),
+        ),
+      ] else
+        BkPillButton.secondary(
+          key: EmailLoginForm.sendButtonKey,
+          onPressed: _busy ? null : () => _sendCode(isResend: false),
+          child: Text(context.i18n.sendMeACode),
+        ),
     ];
   }
 
