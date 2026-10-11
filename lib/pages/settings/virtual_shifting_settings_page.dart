@@ -133,14 +133,23 @@ class _VirtualShiftingSettingsPageState extends State<VirtualShiftingSettingsPag
     if (confirmed == true && mounted) await _reset();
   }
 
-  /// Back to the trainer app's gear count, smoothing on, the stock curve.
+  /// Back to the trainer app's gear count, smoothing on, the stock curve and
+  /// the default difficulty (the calibrator's result is part of the feel).
   Future<void> _reset() async {
     final app = core.settings.getTrainerApp();
     final targetMaxGear = app?.virtualGearAmount ?? ShiftingConfig.maxGearDefault;
     def.setMaxGear(targetMaxGear);
     def.setGradeSmoothingEnabled(true);
     def.resetGearRatios();
-    await _update((c) => c.copyWith(maxGear: targetMaxGear, gradeSmoothing: true, clearGearRatios: true));
+    def.setDifficultyPct(FitnessBikeDefinition.defaultDifficultyPct);
+    await _update(
+      (c) => c.copyWith(
+        maxGear: targetMaxGear,
+        gradeSmoothing: true,
+        clearGearRatios: true,
+        difficultyPct: FitnessBikeDefinition.defaultDifficultyPct,
+      ),
+    );
   }
 
   @override

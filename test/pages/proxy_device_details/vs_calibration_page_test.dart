@@ -170,7 +170,6 @@ Future<void> main() async {
 
     expect(find.byKey(const ValueKey('vs-cal-result')), findsOneWidget);
     expect(core.shiftingConfigs.activeFor(device.trainerKey).difficultyPct, 80);
-    expect(def.simGrade.value, 0, reason: 'fine-tuning happens on the flat');
 
     await tapKey(tester, 'stepper-plus');
     expect(def.difficultyPct.value, 85);
@@ -238,6 +237,73 @@ Future<void> main() async {
     expect(def.difficultyPct.value, 100);
 
     await tearDownPage(tester);
+  });
+
+  group('every way a run ends hands the trainer back as it was', () {
+    // An ERG target set before the run: the run must not leave the trainer in
+    // virtual shifting, however it ends.
+    Future<(ProxyDevice, FitnessBikeDefinition)> ergRun(WidgetTester tester) async {
+      final device = trainer();
+      final def = device.fitnessBike!..setManualErgPower(180);
+      await pumpPage(tester, VsCalibrationPage(device: device));
+      await tapKey(tester, 'vs-cal-start');
+      await tapKey(tester, 'vs-cal-too-heavy');
+      expect(def.trainerMode.value, TrainerMode.simModeVirtualShifting);
+      return (device, def);
+    }
+
+    void expectErgBack(FitnessBikeDefinition def) {
+      expect(def.trainerMode.value, TrainerMode.ergMode);
+      expect(def.ergTargetPower.value, 180);
+    }
+
+    testWidgets('finishing', (tester) async {
+      final (_, def) = await ergRun(tester);
+      for (var i = 0; i < 3; i++) {
+        await tapKey(tester, 'vs-cal-about-right');
+      }
+      expect(find.byKey(const ValueKey('vs-cal-result')), findsOneWidget);
+      expectErgBack(def);
+      expect(def.difficultyPct.value, 80, reason: 'the result itself is kept');
+      await tearDownPage(tester);
+    });
+
+    testWidgets('stopping', (tester) async {
+      final (_, def) = await ergRun(tester);
+      await tapKey(tester, 'vs-cal-stop');
+      expectErgBack(def);
+      await tearDownPage(tester);
+    });
+
+    testWidgets('leaving the page', (tester) async {
+      final (_, def) = await ergRun(tester);
+      await tearDownPage(tester);
+      expectErgBack(def);
+    });
+
+    testWidgets('a trainer app connecting', (tester) async {
+      final (device, def) = await ergRun(tester);
+      device.debugSetTrainerAppConnected(true);
+      await tester.pump();
+      expectErgBack(def);
+      await tearDownPage(tester);
+    });
+
+    testWidgets('virtual shifting keeps the grade it had', (tester) async {
+      final device = trainer();
+      final def = device.fitnessBike!
+        ..setVirtualShiftingMode(VirtualShiftingMode.trackResistance)
+        ..setCalibrationGrade(250);
+      await pumpPage(tester, VsCalibrationPage(device: device));
+      await tapKey(tester, 'vs-cal-start');
+      for (var i = 0; i < 3; i++) {
+        await tapKey(tester, 'vs-cal-about-right');
+      }
+      expect(def.trainerMode.value, TrainerMode.simModeVirtualShifting);
+      expect(def.virtualShiftingMode.value, VirtualShiftingMode.trackResistance);
+      expect(def.simGrade.value, 250);
+      await tearDownPage(tester);
+    });
   });
 
   testWidgets('the on-screen shift buttons move the gear, for mouse and keyboard riders', (tester) async {

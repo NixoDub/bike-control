@@ -174,6 +174,9 @@ String describeProxyDevice(ProxyDevice device) {
     parts.add(
       'vsMode=${savedVsMode.name}${drivenVsMode == savedVsMode ? '' : '→${drivenVsMode.name}'}',
     );
+    // The calibrator's per-trainer scale on every gear's resistance; tells a
+    // "hard gears far too heavy" report apart from one already calibrated.
+    parts.add('difficulty=${def.difficultyPct.value}%');
     parts.add('ftms=${def.ftmsCapabilitySummary}');
     // Live telemetry BikeControl is reading from the trainer: cad shows raw /
     // filtered rpm. The whole VS resistance calc is cadence-driven, so a "no

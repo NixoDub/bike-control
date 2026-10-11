@@ -303,6 +303,17 @@ Future<void> main() async {
       expect(describeProxyDevice(device), contains('vsMode=targetPower\u2192trackResistance'));
     });
 
+    test('trainer line carries the virtual shifting difficulty', () {
+      // "My hard gears are far too heavy" reads differently once support can
+      // see the rider already calibrated the trainer, and to what. Printed at
+      // the default too, so a missing field never has to be guessed at.
+      final device = trainerWithFitnessBike();
+      expect(describeProxyDevice(device), contains('difficulty=100%'));
+
+      device.fitnessBike!.setDifficultyPct(70);
+      expect(describeProxyDevice(device), contains('difficulty=70%'));
+    });
+
     test('trainer line carries the live cadence/power/speed readout', () {
       // A "no resistance" report is settled by whether BikeControl is reading
       // cadence: the VS resistance calc is entirely cadence-driven, so the

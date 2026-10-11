@@ -265,6 +265,31 @@ Future<void> main() async {
       expect(definition.maxGear, MyWhoosh().virtualGearAmount);
     });
 
+    // A calibrated difficulty is part of how the gears feel, so Reset takes it
+    // back to 100 % with the rest.
+    testWidgets('Reset also takes the calibrated difficulty back to the default', (tester) async {
+      final (:proxy, :definition) = attachLiveTrainer();
+      await core.shiftingConfigs.upsert(
+        core.shiftingConfigs.activeFor(proxy.trainerKey).copyWith(difficultyPct: 70, isActive: true),
+      );
+      await _pump(tester, VirtualShiftingSettingsPage(definition: definition, device: proxy));
+      await tester.pump();
+      expect(definition.difficultyPct.value, 70);
+
+      await tester.tap(find.byKey(const ValueKey('vs-reset')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.byKey(const ValueKey('vs-reset-confirm')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(definition.difficultyPct.value, FitnessBikeDefinition.defaultDifficultyPct);
+      expect(
+        core.shiftingConfigs.activeFor(proxy.trainerKey).difficultyPct,
+        FitnessBikeDefinition.defaultDifficultyPct,
+      );
+    });
+
     testWidgets('Per-gear ratios opens the steppers with the curve pinned above them', (tester) async {
       final (:proxy, :definition) = attachLiveTrainer();
       await _pump(tester, VirtualShiftingSettingsPage(definition: definition, device: proxy), height: 844);

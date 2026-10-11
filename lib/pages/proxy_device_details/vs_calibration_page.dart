@@ -51,15 +51,14 @@ class _VsCalibrationPageState extends State<VsCalibrationPage> {
   VsCalibrationSession? _session;
   FitnessBikeDefinition? _runDef;
   int _startPct = FitnessBikeDefinition.defaultDifficultyPct;
-  int _startGrade = 0;
+
+  /// What the trainer was doing before the run (ERG and its target, or a
+  /// grade), handed back however the run ends.
+  TrainerControlSnapshot? _startControl;
 
   /// True once the current grade has been adjusted at least once, so the
   /// "ride it again" line only appears after a change.
   bool _adjustedHere = false;
-
-  /// True when the result view follows a run and the page left the trainer on
-  /// the flat for fine-tuning by feel.
-  bool _onFlat = false;
 
   @override
   void initState() {
@@ -101,7 +100,7 @@ class _VsCalibrationPageState extends State<VsCalibrationPage> {
     final def = _def;
     if (def == null) return;
     _startPct = def.difficultyPct.value;
-    _startGrade = def.simGrade.value;
+    _startControl = def.captureControlState();
     final session = VsCalibrationSession(startPct: _startPct);
     _runDef = def;
     _session = session;
@@ -110,7 +109,6 @@ class _VsCalibrationPageState extends State<VsCalibrationPage> {
     setState(() {
       _refusal = null;
       _adjustedHere = false;
-      _onFlat = false;
       _view = _View.running;
     });
   }
@@ -136,12 +134,9 @@ class _VsCalibrationPageState extends State<VsCalibrationPage> {
     _session = null;
     _runDef = null;
     _wakelock(false);
-    // Fine-tuning happens on the flat, where an over-heavy gear shows most.
-    def.setCalibrationGrade(0);
-    setState(() {
-      _onFlat = true;
-      _view = _View.result;
-    });
+    // The difficulty stays; the trainer goes back to whatever it was doing.
+    _restoreControl(def);
+    setState(() => _view = _View.result);
     await _persist(pct);
   }
 
@@ -161,7 +156,13 @@ class _VsCalibrationPageState extends State<VsCalibrationPage> {
     _wakelock(false);
     if (!_owns(def)) return;
     def.setDifficultyPct(_startPct);
-    def.setCalibrationGrade(_startGrade);
+    _restoreControl(def);
+  }
+
+  void _restoreControl(FitnessBikeDefinition def) {
+    final control = _startControl;
+    _startControl = null;
+    if (control != null) def.restoreControlState(control);
   }
 
   /// False once a reconnect has replaced (and disposed) [def].
@@ -183,7 +184,6 @@ class _VsCalibrationPageState extends State<VsCalibrationPage> {
 
   void _openManual() => setState(() {
     _refusal = null;
-    _onFlat = false;
     _view = _View.result;
   });
 
@@ -481,7 +481,7 @@ class _VsCalibrationPageState extends State<VsCalibrationPage> {
           ),
           const Gap(8),
           Text(
-            _onFlat ? '${l10n.vsCalibrateResultBody} ${l10n.vsCalibrateResultFlat}' : l10n.vsCalibrateResultBody,
+            l10n.vsCalibrateResultBody,
             style: context.typography.small.copyWith(color: cs.mutedForeground),
           ),
           const Gap(20),
