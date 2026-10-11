@@ -79,8 +79,9 @@ class _EmailLoginFormState extends State<EmailLoginForm> {
   /// The address the code went to; null while the rider is still typing one.
   String? _codeSentTo;
 
-  /// The App Review address waiting for its password; null otherwise.
-  String? _passwordFor;
+  /// Whether the address typed so far is [EmailLoginForm.appReviewEmail],
+  /// which swaps "send me a code" for a password field.
+  bool _isAppReviewEmail = false;
   String? _error;
   bool _busy = false;
 
@@ -93,6 +94,21 @@ class _EmailLoginFormState extends State<EmailLoginForm> {
     if (until == null) return Duration.zero;
     final left = until.difference(widget.clock());
     return left.isNegative ? Duration.zero : left;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController.addListener(_onEmailChanged);
+  }
+
+  void _onEmailChanged() {
+    final isAppReview = _emailController.text.trim().toLowerCase() == EmailLoginForm.appReviewEmail;
+    if (isAppReview == _isAppReviewEmail) return;
+    setState(() {
+      _isAppReviewEmail = isAppReview;
+      _error = null;
+    });
   }
 
   @override
@@ -110,15 +126,6 @@ class _EmailLoginFormState extends State<EmailLoginForm> {
     final email = (_codeSentTo ?? _emailController.text).trim();
     if (!_emailPattern.hasMatch(email)) {
       setState(() => _error = context.i18n.pleaseEnterAValidEmailAddress);
-      return;
-    }
-
-    if (email.toLowerCase() == EmailLoginForm.appReviewEmail) {
-      setState(() {
-        _passwordFor = email;
-        _error = null;
-      });
-      widget.onCodeSentChanged?.call(true);
       return;
     }
 
@@ -178,7 +185,7 @@ class _EmailLoginFormState extends State<EmailLoginForm> {
       _error = null;
     });
     try {
-      await _auth.signInWithPassword(email: _passwordFor!, password: _passwordController.text);
+      await _auth.signInWithPassword(email: _emailController.text.trim(), password: _passwordController.text);
       if (!mounted) return;
       setState(() => _busy = false);
       widget.onSignedIn();
@@ -212,8 +219,6 @@ class _EmailLoginFormState extends State<EmailLoginForm> {
     _cooldownTimer?.cancel();
     setState(() {
       _codeSentTo = null;
-      _passwordFor = null;
-      _passwordController.clear();
       _resendAllowedAt = null;
       _error = null;
     });
@@ -227,12 +232,7 @@ class _EmailLoginFormState extends State<EmailLoginForm> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (_passwordFor != null)
-          ..._buildPasswordEntry(context)
-        else if (_codeSentTo == null)
-          ..._buildEmailEntry(context)
-        else
-          ..._buildCodeEntry(context),
+        if (_codeSentTo == null) ..._buildEmailEntry(context) else ..._buildCodeEntry(context),
         if (_codeSentTo == null && _error != null) _errorView(context),
       ],
     );
@@ -271,45 +271,30 @@ class _EmailLoginFormState extends State<EmailLoginForm> {
         textInputAction: TextInputAction.go,
         placeholder: Text(context.i18n.emailAddress),
         features: const [InputFeature.leading(Icon(LucideIcons.mail, size: 16))],
-        onSubmitted: (_) => _sendCode(isResend: false),
+        onSubmitted: (_) => _isAppReviewEmail ? null : _sendCode(isResend: false),
       ),
-      BkPillButton.secondary(
-        key: EmailLoginForm.sendButtonKey,
-        onPressed: _busy ? null : () => _sendCode(isResend: false),
-        child: Text(context.i18n.sendMeACode),
-      ),
-    ];
-  }
-
-  List<Widget> _buildPasswordEntry(BuildContext context) {
-    return [
-      Text(_passwordFor!, textAlign: TextAlign.center).small.muted,
-      TextField(
-        key: EmailLoginForm.passwordFieldKey,
-        controller: _passwordController,
-        obscureText: true,
-        autofillHints: const [AutofillHints.password],
-        textInputAction: TextInputAction.go,
-        placeholder: Text(context.i18n.password),
-        features: const [InputFeature.leading(Icon(LucideIcons.lock, size: 16))],
-        onSubmitted: (_) => _signInWithPassword(),
-      ),
-      BkPillButton.secondary(
-        key: EmailLoginForm.passwordSignInButtonKey,
-        onPressed: _busy ? null : _signInWithPassword,
-        child: Text(context.i18n.signIn),
-      ),
-      Center(
-        child: Button.ghost(
-          key: EmailLoginForm.changeEmailKey,
-          onPressed: _backToEmailEntry,
-          child: Text(
-            context.i18n.useADifferentEmailAddress,
-            textAlign: TextAlign.center,
-            style: context.typography.small.copyWith(color: bkAccentText(context), fontWeight: FontWeight.w600),
-          ),
+      if (_isAppReviewEmail) ...[
+        TextField(
+          key: EmailLoginForm.passwordFieldKey,
+          controller: _passwordController,
+          obscureText: true,
+          autofillHints: const [AutofillHints.password],
+          textInputAction: TextInputAction.go,
+          placeholder: Text(context.i18n.password),
+          features: const [InputFeature.leading(Icon(LucideIcons.lock, size: 16))],
+          onSubmitted: (_) => _signInWithPassword(),
         ),
-      ),
+        BkPillButton.secondary(
+          key: EmailLoginForm.passwordSignInButtonKey,
+          onPressed: _busy ? null : _signInWithPassword,
+          child: Text(context.i18n.signIn),
+        ),
+      ] else
+        BkPillButton.secondary(
+          key: EmailLoginForm.sendButtonKey,
+          onPressed: _busy ? null : () => _sendCode(isResend: false),
+          child: Text(context.i18n.sendMeACode),
+        ),
     ];
   }
 

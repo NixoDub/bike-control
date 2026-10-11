@@ -219,25 +219,40 @@ Future<void> main() async {
   });
 
   group('App Review account', () {
+    Future<void> typeEmail(WidgetTester tester, String email) async {
+      await tester.enterText(find.byKey(EmailLoginForm.emailFieldKey), email);
+      await tester.pumpAndSettle();
+    }
+
     Future<void> submitPassword(WidgetTester tester, String password) async {
       await tester.enterText(find.byKey(EmailLoginForm.passwordFieldKey), password);
       await tester.tap(find.byKey(EmailLoginForm.passwordSignInButtonKey));
       await tester.pumpAndSettle();
     }
 
-    testWidgets('asks for a password instead of mailing a code', (tester) async {
+    testWidgets('typing the address shows the password field right away, no code is mailed', (tester) async {
       await pumpForm(tester);
 
-      await submitEmail(tester, ' BikeControlAppReview@gmail.com ');
+      await typeEmail(tester, ' BikeControlAppReview@gmail.com ');
 
-      expect(auth.sentTo, isEmpty);
-      expect(find.byKey(EmailLoginForm.codeFieldKey), findsNothing);
+      expect(find.byKey(EmailLoginForm.emailFieldKey), findsOneWidget);
       expect(find.byKey(EmailLoginForm.passwordFieldKey), findsOneWidget);
+      expect(find.byKey(EmailLoginForm.sendButtonKey), findsNothing);
+      expect(auth.sentTo, isEmpty);
+    });
+
+    testWidgets('any other address shows no password field', (tester) async {
+      await pumpForm(tester);
+
+      await typeEmail(tester, 'rider@example.com');
+
+      expect(find.byKey(EmailLoginForm.passwordFieldKey), findsNothing);
+      expect(find.byKey(EmailLoginForm.sendButtonKey), findsOneWidget);
     });
 
     testWidgets('the password signs the reviewer in', (tester) async {
       await pumpForm(tester);
-      await submitEmail(tester, EmailLoginForm.appReviewEmail);
+      await typeEmail(tester, EmailLoginForm.appReviewEmail);
 
       await submitPassword(tester, 'hunter2');
 
@@ -247,9 +262,9 @@ Future<void> main() async {
       expect(signedIn, 1);
     });
 
-    testWidgets('a wrong password keeps the reviewer on the password screen with an error', (tester) async {
+    testWidgets('a wrong password keeps the reviewer on the form with an error', (tester) async {
       await pumpForm(tester);
-      await submitEmail(tester, EmailLoginForm.appReviewEmail);
+      await typeEmail(tester, EmailLoginForm.appReviewEmail);
       auth.passwordError = const AuthException('Invalid login credentials');
 
       await submitPassword(tester, 'nope');
@@ -259,15 +274,14 @@ Future<void> main() async {
       expect(find.byKey(EmailLoginForm.errorKey), findsOneWidget);
     });
 
-    testWidgets('the reviewer can go back and use a different address', (tester) async {
+    testWidgets('editing the address away hides the password field again', (tester) async {
       await pumpForm(tester);
-      await submitEmail(tester, EmailLoginForm.appReviewEmail);
+      await typeEmail(tester, EmailLoginForm.appReviewEmail);
 
-      await tester.tap(find.byKey(EmailLoginForm.changeEmailKey));
-      await tester.pumpAndSettle();
+      await typeEmail(tester, 'rider@example.com');
 
-      expect(find.byKey(EmailLoginForm.emailFieldKey), findsOneWidget);
       expect(find.byKey(EmailLoginForm.passwordFieldKey), findsNothing);
+      expect(find.byKey(EmailLoginForm.sendButtonKey), findsOneWidget);
     });
   });
 }
