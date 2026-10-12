@@ -243,6 +243,13 @@ NetworkCheck vpnCheck(NetworkProbeContext ctx) {
 }
 
 /// Check 4: did the OS's own mDNS browser see our advertisement echoed back?
+///
+/// Only the advertisement of the method under test counts: the records
+/// served by a [NetworkProbeContext.methodServerLabel] server, matched by
+/// port. Zwift's DirCon record is named after the bridged trainer and Rouvy's
+/// Click record after the emulated device, so a name is no discriminator, and
+/// the service type alone is not either — Click and DirCon share
+/// `_wahoo-fitness-tnp._tcp`.
 NetworkCheck advertisementVisibleCheck(NetworkProbeContext ctx) {
   final snapshot = ctx.snapshot;
   if (snapshot == null) {
@@ -256,9 +263,18 @@ NetworkCheck advertisementVisibleCheck(NetworkProbeContext ctx) {
     return const NetworkCheck(id: NetworkCheckId.advertisementVisible, verdict: NetworkVerdict.skipped);
   }
 
-  final obcRecord = snapshot.advertised.firstOrNullWhere((r) => r.name == 'BikeControl');
-  final obcType = obcRecord?.type;
-  final seen = obcType != null && snapshot.discovered.any((d) => d.isSelf && d.type == obcType);
+  // The ports the method's server(s) bound. Several DirCon servers can run at
+  // once (one per bridged trainer); without a listening one, fall back to the
+  // port the method prefers.
+  final serverPorts = snapshot.servers
+      .where((s) => s.label == ctx.methodServerLabel && s.listening && s.port != null)
+      .map((s) => s.port!)
+      .toSet();
+  final methodPorts = serverPorts.isEmpty ? {ctx.methodPreferredPort} : serverPorts;
+  final methodRecords = snapshot.advertised.where((r) => methodPorts.contains(r.port));
+  final seen = methodRecords.any(
+    (r) => snapshot.discovered.any((d) => d.isSelf && d.type == r.type && (d.port == r.port || d.name == r.name)),
+  );
   if (seen) {
     return const NetworkCheck(id: NetworkCheckId.advertisementVisible, verdict: NetworkVerdict.pass);
   }

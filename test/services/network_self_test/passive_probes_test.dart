@@ -602,6 +602,144 @@ void main() {
       expect(check.detail['hint'], 'advertisement not seen by the OS browser');
       expect(check.fixes, [NetworkFixId.restartMethod]);
     });
+
+    // Zwift rides on DirCon: with a trainer bridged over WiFi the method's
+    // advertisement is the trainer's own "<trainer> - BikeControl" record, and
+    // there is no record literally named "BikeControl" at all.
+    final bridgedTrainer = AdvertisedRecord(
+      name: 'KICKR CORE 73D3 - BikeControl',
+      type: '_wahoo-fitness-tnp._tcp',
+      port: 36868,
+      address: '192.168.88.9',
+      txt: {},
+    );
+    const dirconServer = TcpServerInfo(label: 'DirCon', port: 36868, listening: true, hasClient: false);
+
+    test('pass: Zwift — the bridged trainer DirCon advertisement was discovered', () {
+      final check = advertisementVisibleCheck(
+        ctx(
+          methodServerLabel: 'DirCon',
+          methodPreferredPort: 36868,
+          snapshot: _diag(
+            servers: const [dirconServer],
+            advertised: [bridgedTrainer],
+            discovered: const [
+              DiscoveredMdnsService(
+                type: '_wahoo-fitness-tnp._tcp',
+                name: 'KICKR CORE 73D3 - BikeControl',
+                host: 'KICKR-CORE-73D3---BikeControl.local.',
+                port: 36868,
+                txt: {},
+                isSelf: true,
+              ),
+            ],
+          ),
+        ),
+      );
+      expect(check.verdict, NetworkVerdict.pass);
+    });
+
+    test('fail: Zwift — the DirCon advertisement was not discovered', () {
+      final check = advertisementVisibleCheck(
+        ctx(
+          methodServerLabel: 'DirCon',
+          methodPreferredPort: 36868,
+          snapshot: _diag(
+            servers: const [
+              dirconServer,
+              TcpServerInfo(label: 'Click', port: 36860, listening: true, hasClient: false),
+            ],
+            advertised: [
+              bridgedTrainer,
+              AdvertisedRecord(
+                name: 'KICKR BIKE PRO BikeControl',
+                type: '_wahoo-fitness-tnp._tcp',
+                port: 36860,
+                address: '192.168.88.9',
+                txt: {},
+              ),
+            ],
+            // Only the Click record came back. Same service type, but it is
+            // not the method under test, so it must not count.
+            discovered: const [
+              DiscoveredMdnsService(
+                type: '_wahoo-fitness-tnp._tcp',
+                name: 'KICKR BIKE PRO BikeControl',
+                host: '192.168.88.9',
+                port: 36860,
+                txt: {},
+                isSelf: true,
+              ),
+            ],
+          ),
+        ),
+      );
+      expect(check.verdict, NetworkVerdict.fail);
+      expect(check.detail['hint'], 'advertisement not seen by the OS browser');
+      expect(check.fixes, [NetworkFixId.restartMethod]);
+    });
+
+    test('pass: Rouvy — the Click advertisement was discovered', () {
+      final check = advertisementVisibleCheck(
+        ctx(
+          methodServerLabel: 'Click',
+          methodPreferredPort: 36860,
+          snapshot: _diag(
+            servers: const [TcpServerInfo(label: 'Click', port: 36860, listening: true, hasClient: false)],
+            advertised: [
+              AdvertisedRecord(
+                name: 'KICKR BIKE PRO BikeControl',
+                type: '_wahoo-fitness-tnp._tcp',
+                port: 36860,
+                address: '192.168.1.5',
+                txt: {},
+              ),
+            ],
+            discovered: const [
+              DiscoveredMdnsService(
+                type: '_wahoo-fitness-tnp._tcp',
+                name: 'KICKR BIKE PRO BikeControl',
+                host: '192.168.1.5',
+                port: 36860,
+                txt: {},
+                isSelf: true,
+              ),
+            ],
+          ),
+        ),
+      );
+      expect(check.verdict, NetworkVerdict.pass);
+    });
+
+    test('pass: OpenBikeControl on a walked-up port is still matched to its server', () {
+      final check = advertisementVisibleCheck(
+        ctx(
+          snapshot: _diag(
+            servers: const [TcpServerInfo(label: 'OpenBikeControl', port: 36869, listening: true, hasClient: false)],
+            advertised: [
+              AdvertisedRecord(
+                name: 'BikeControl',
+                type: '_openbikecontrol._tcp',
+                port: 36869,
+                address: '192.168.1.5',
+                txt: {},
+              ),
+            ],
+            discovered: const [
+              DiscoveredMdnsService(
+                type: '_openbikecontrol._tcp',
+                name: 'BikeControl',
+                host: '192.168.1.5',
+                port: 36869,
+                txt: {},
+                isSelf: true,
+              ),
+            ],
+          ),
+        ),
+      );
+      expect(check.verdict, NetworkVerdict.pass);
+    });
   });
 
   group('localNetworkPermissionCheck', () {
