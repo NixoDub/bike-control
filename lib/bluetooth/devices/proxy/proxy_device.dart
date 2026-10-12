@@ -464,18 +464,44 @@ class ProxyDevice extends BluetoothDevice {
     return core.settings.getTrainerApp() is Zwift;
   }
 
-  /// The name Rouvy needs the bridge to advertise under; null for every other
-  /// app, leaving the usual name in place. Reasoning in `prop`
-  /// ([DirconEmulator.advertisementNameOverride]).
+  /// The name the bridge advertises under for the selected trainer app; null
+  /// leaves the usual `<trainer> - BikeControl` in place. Read on every
+  /// advertisement, so it follows the trainer app as it changes.
   @visibleForTesting
-  String? rouvyAdvertisementName() {
-    if (core.settings.getTrainerApp() is! Rouvy) return null;
-    final name = scanResult.name;
-    final composed = name == null || name.isEmpty ? _bridgeSuffix : '$name - $_bridgeSuffix';
+  String? bridgeAdvertisementName() => switch (core.settings.getTrainerApp()) {
+    Rouvy() => rouvyAdvertisementNameFor(scanResult.name),
+    Zwift() => zwiftAdvertisementNameFor(scanResult.name),
+    _ => null,
+  };
+
+  /// Rouvy: the trainer name with a neutral suffix. Reasoning in `prop`
+  /// ([DirconEmulator.advertisementNameOverride]).
+  static String rouvyAdvertisementNameFor(String? trainerName) {
+    final composed = trainerName == null || trainerName.isEmpty ? _bridgeSuffix : '$trainerName - $_bridgeSuffix';
     return composed.toLowerCase().contains('bikecontrol') ? _bridgeSuffix : composed;
   }
 
   static const _bridgeSuffix = 'Bridge';
+
+  /// Zwift: advertise the bridge under a name that doesn't embed the trainer's
+  /// name — "BikeControl" plus the trainer's trailing identifier
+  /// ("KICKR CORE 73D3" → "BikeControl 73D3"), so several trainers stay
+  /// distinguishable. The first candidate that neither contains the trainer
+  /// name nor is contained in it wins.
+  static String zwiftAdvertisementNameFor(String? trainerName) {
+    final name = trainerName?.trim() ?? '';
+    final tokens = name.split(RegExp(r'[\s_-]+')).where((t) => t.isNotEmpty).toList();
+    final id = tokens.length > 1 && RegExp(r'^[A-Za-z0-9]*[0-9][A-Za-z0-9]*$').hasMatch(tokens.last)
+        ? tokens.last
+        : null;
+    final candidates = [if (id != null) 'BikeControl $id', 'BikeControl', _bridgeSuffix, 'Virtual Trainer'];
+    if (name.isEmpty) return candidates.first;
+    final lower = name.toLowerCase();
+    return candidates.firstWhere((c) {
+      final candidate = c.toLowerCase();
+      return !candidate.contains(lower) && !lower.contains(candidate);
+    }, orElse: () => candidates.last);
+  }
 
   /// Rouvy needs an IPv4-only listener; the controller endpoint has bound one
   /// for it for a while. Reasoning in `prop` ([DirconEmulator.forceIPv4]).
@@ -793,7 +819,7 @@ class ProxyDevice extends BluetoothDevice {
         // VS modes (wifi / bluetooth): the FBD lives in the shared ftmsEmulator.
         ftmsEmulator.shouldAdvertise = () => !_isBridgeTrialOver;
         ftmsEmulator.deviceName = () => scanResult.name;
-        ftmsEmulator.advertisementNameOverride = rouvyAdvertisementName;
+        ftmsEmulator.advertisementNameOverride = bridgeAdvertisementName;
         ftmsEmulator.forceIPv4 = rouvyNeedsIPv4;
         ftmsEmulator.bareShortServiceUuids = _bareShortServiceUuids;
         _fbd = fbd;
@@ -1341,7 +1367,7 @@ class ProxyDevice extends BluetoothDevice {
       _retrofitModeN.value = next;
       ftmsEmulator.shouldAdvertise = () => !_isBridgeTrialOver;
       ftmsEmulator.deviceName = () => scanResult.name;
-      ftmsEmulator.advertisementNameOverride = rouvyAdvertisementName;
+      ftmsEmulator.advertisementNameOverride = bridgeAdvertisementName;
       ftmsEmulator.forceIPv4 = rouvyNeedsIPv4;
       ftmsEmulator.bareShortServiceUuids = _bareShortServiceUuids;
       _bindToActiveEmulator();

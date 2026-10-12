@@ -268,6 +268,26 @@ Future<void> main() async {
       expect(find.byType(OnboardingAppGuideCard), findsNothing, reason: 'the app is already connected');
     });
 
+    testWidgets('names the entry by what the bridge advertises', (tester) async {
+      await pump(
+        tester,
+        (c) => onboardingDoneBody(
+          c,
+          app: MyWhoosh(),
+          controllerName: 'Zwift Click',
+          trainerName: 'KICKR CORE 73D3',
+          bridgeName: 'BikeControl 73D3',
+          appConnected: true,
+          trainerAppConnected: false,
+          reduceMotion: true,
+          showTestMode: false,
+        ),
+      );
+
+      expect(find.text('BikeControl 73D3'), findsWidgets);
+      expect(find.text('KICKR CORE 73D3 - BikeControl'), findsNothing);
+    });
+
     testWidgets('no trainer check until the app has picked up the trainer', (tester) async {
       await pump(tester, (c) => bridgeWaiting(c));
       expect(find.byKey(const ValueKey('onboarding-done-trainer-check')), findsNothing);

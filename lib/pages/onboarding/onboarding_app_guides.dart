@@ -159,15 +159,20 @@ class OnboardingAppGuideCard extends StatelessWidget {
 /// A rider whose bridge is running but hasn't been picked up yet gets these
 /// exact instructions, not a paraphrase of them.
 class OnboardingPairAsTrainerCard extends StatelessWidget {
-  const OnboardingPairAsTrainerCard({super.key, required this.app, required this.trainerName});
+  const OnboardingPairAsTrainerCard({super.key, required this.app, required this.trainerName, this.bridgeName});
 
   final SupportedApp app;
   final String? trainerName;
 
+  /// What the bridge actually advertises (`ProxyDevice.advertisementName`);
+  /// it depends on the trainer app, so it is preferred over a name composed
+  /// from [trainerName].
+  final String? bridgeName;
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final bridgeEntry = '${trainerName ?? ''} - BikeControl';
+    final bridgeEntry = bridgeName ?? '${trainerName ?? ''} - BikeControl';
     return
     Container(
       width: double.infinity,

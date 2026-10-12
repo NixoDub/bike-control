@@ -939,6 +939,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       target: core.settings.getLastTarget() ?? _selectedTarget ?? Target.otherDevice,
       hasTrainer: onboardingTrainerBridged(core.connection.proxyDevices),
       trainerName: core.connection.proxyDevices.where((t) => t.isBridged).firstOrNull?.name,
+      bridgeName: core.connection.proxyDevices.where((t) => t.isBridged).firstOrNull?.advertisementName,
       onUpdate: () {
         setState(() {});
         _syncNetworkPrecheck();
@@ -958,6 +959,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       app: _selectedApp!,
       controllerName: core.connection.controllerDevices.where((d) => d.isConnected).firstOrNull?.name,
       trainerName: core.connection.proxyDevices.where((t) => t.isBridged).firstOrNull?.name,
+      bridgeName: core.connection.proxyDevices.where((t) => t.isBridged).firstOrNull?.advertisementName,
       // isConnectedListenable mirrors emulator.isConnected — i.e. the
       // trainer app actually holds the virtual trainer, not just "the
       // bridge is running".

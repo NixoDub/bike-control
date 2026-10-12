@@ -792,9 +792,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   /// The outstanding cards as last built — the chain as it is on screen.
   List<String> _outstandingLinkIds = const [];
 
-  /// The bridged trainer's own name, which the pairing instructions use to
-  /// spell out the entry to look for ("KICKR CORE - BikeControl").
-  String? get _bridgedTrainerName => core.connection.proxyDevices.firstOrNullWhere((p) => p.isBridged)?.name;
+  /// The bridged trainer, whose advertised name the pairing instructions use
+  /// to spell out the entry to look for ("KICKR CORE - BikeControl").
+  ProxyDevice? get _bridgedTrainer => core.connection.proxyDevices.firstOrNullWhere((p) => p.isBridged);
 
   // ── Build ─────────────────────────────────────────────────────────────
 
@@ -2003,7 +2003,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         } else if (activeStep == SetupStepId.trainerAppBridged) {
           // The bridge is up and the app hasn't picked it up: show how to pair
           // BikeControl as the trainer, not how to connect a trainer.
-          await openPairAsTrainerSheet(context, trainerName: _bridgedTrainerName);
+          final bridged = _bridgedTrainer;
+          await openPairAsTrainerSheet(context, trainerName: bridged?.name, bridgeName: bridged?.advertisementName);
         } else if (link.status == LinkStatus.ready) {
           await openTrainerHelpSheet(context);
         } else {
