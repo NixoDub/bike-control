@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bike_control/bluetooth/messages/notification.dart';
+import 'package:bike_control/main.dart' show recordError;
 import 'package:bike_control/utils/core.dart';
 import 'package:bike_control/utils/i18n_extension.dart';
 import 'package:bike_control/utils/keymap/buttons.dart';
@@ -17,6 +18,7 @@ import 'package:universal_ble/universal_ble.dart';
 
 import '../bluetooth_device.dart';
 import 'sram_ble_transport.dart';
+import 'sram_link_errors.dart';
 import 'sram_setup_sheet.dart';
 
 class SramAxs extends BluetoothDevice {
@@ -29,6 +31,16 @@ class SramAxs extends BluetoothDevice {
   SramBleTransport? _transport;
   SramAxsLogic? _logic;
   Timer? _keepAliveTimer;
+
+  /// Set when setup/restore found the link wedged (see [_resetWedgedLink])
+  /// and tore it down; cleared once the device is back ([handleServices]).
+  /// While set the entry stays listed (greyed) and Connection re-queues this
+  /// same instance when the scan sees the derailleur again — so the guided
+  /// sheet, which holds this instance, retries on the fresh link.
+  bool _linkResetting = false;
+
+  @override
+  bool get isResetting => _linkResetting;
 
   /// Logged once per connection when a press can't be decoded, so it's clear
   /// from the logs whether the session key is active this session.
@@ -165,6 +177,7 @@ class SramAxs extends BluetoothDevice {
   @override
   Future<void> handleServices(List<BleService> services) async {
     _resetGesture(); // clear any gesture timers/state left over from a prior connection
+    _linkResetting = false; // back on a fresh link
     final transport = SramBleTransport(device.deviceId, services);
     final logic = SramAxsLogic(transport);
     _transport = transport;
@@ -381,6 +394,7 @@ class SramAxs extends BluetoothDevice {
     final logic = _logic;
     if (logic == null) return;
     try {
+      if (_linkResetting) throw const SramLinkResettingException();
       // Ensure a working bond (re-bonds if a persisted key went stale).
       await logic.ensureBonded();
       await core.settings.setSramKey(_serialKey, _bytesToHex(logic.sessionKey!));
@@ -396,6 +410,7 @@ class SramAxs extends BluetoothDevice {
       core.connection.signalChange(this);
     } catch (e, st) {
       actionStreamInternal.add(LogNotification('SramAxs setup failed: $e\n$st'));
+      await _resetWedgedLink(e);
       rethrow;
     }
   }
@@ -405,6 +420,7 @@ class SramAxs extends BluetoothDevice {
     final backup = core.settings.getSramBackup(_serialKey);
     if (logic == null || backup == null) return;
     try {
+      if (_linkResetting) throw const SramLinkResettingException();
       await logic.restoreConfig(backup);
       await core.settings.setSramKey(_serialKey, _bytesToHex(logic.sessionKey!)); // persist any re-bond
       await core.settings.setSramShiftingDisabled(_serialKey, false);
@@ -412,7 +428,30 @@ class SramAxs extends BluetoothDevice {
       core.connection.signalChange(this);
     } catch (e, st) {
       actionStreamInternal.add(LogNotification('SramAxs restore failed: $e\n$st'));
+      await _resetWedgedLink(e);
       rethrow;
+    }
+  }
+
+  /// A GATT call or the bond handshake timing out means the derailleur stopped
+  /// answering on this connection, and every later attempt on it times out
+  /// too — it never recovers without a reconnect. So tear the link down the
+  /// same way a genuine drop is handled (Connection.disconnect + a rescan),
+  /// with [isResetting] keeping this instance listed so the rescan reconnects
+  /// it rather than creating a new one. A refused authorization
+  /// (`create-bond decrypt failed`) is not a link problem and leaves it up.
+  /// The persisted backup/key are untouched.
+  Future<void> _resetWedgedLink(Object error) async {
+    if (error is SramLinkResettingException || !isSramLinkUnresponsive(error) || !isConnected) return;
+    _linkResetting = true;
+    actionStreamInternal.add(
+      LogNotification('SramAxs: derailleur stopped responding on this connection — reconnecting for a fresh link'),
+    );
+    try {
+      await core.connection.disconnect(this, forget: false, persistForget: false);
+      unawaited(core.connection.performScanning());
+    } catch (e, st) {
+      await recordError(e, st, context: 'SramAxs: resetting an unresponsive link');
     }
   }
 

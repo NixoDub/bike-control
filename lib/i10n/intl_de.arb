@@ -1167,6 +1167,7 @@
   "sramAuthorizeBody": "Halte die AXS-Taste an deinem Schaltwerk gedrückt, bis die Leuchte blinkt, und tippe dann auf Erneut versuchen.",
   "sramErrorTitle": "Das hat nicht geklappt",
   "sramGenericError": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
+  "sramLinkResetError": "Das Schaltwerk hat nicht mehr geantwortet, deshalb verbindet sich BikeControl neu. Warte, bis es wieder als verbunden angezeigt wird, und versuche es dann erneut.",
   "sramShiftingOff": "Geräteinternes Schalten ist aus – BikeControl steuert deine Gänge.",
   "sramSettingUp": "Wird eingerichtet",
   "sramRestoringShifting": "Schaltung wird wiederhergestellt",

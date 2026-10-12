@@ -1155,6 +1155,7 @@
   "sramAuthorizeBody": "Tieni premuto il pulsante AXS sul deragliatore finché la spia lampeggia, poi tocca Riprova.",
   "sramErrorTitle": "Non ha funzionato",
   "sramGenericError": "Qualcosa è andato storto. Riprova.",
+  "sramLinkResetError": "Il deragliatore ha smesso di rispondere, quindi BikeControl si sta riconnettendo. Attendi che risulti di nuovo connesso, poi riprova.",
   "sramShiftingOff": "Il cambio integrato è disattivato: BikeControl controlla i tuoi rapporti.",
   "sramSettingUp": "Configurazione in corso",
   "sramRestoringShifting": "Ripristino del cambio",

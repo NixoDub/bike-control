@@ -1155,6 +1155,7 @@
   "sramAuthorizeBody": "Przytrzymaj przycisk AXS na przerzutce, aż zamiga jej dioda, a potem dotknij Ponów.",
   "sramErrorTitle": "Nie udało się",
   "sramGenericError": "Coś poszło nie tak. Spróbuj ponownie.",
+  "sramLinkResetError": "Przerzutka przestała odpowiadać, więc BikeControl łączy się z nią ponownie. Poczekaj, aż znów będzie widoczna jako połączona, i spróbuj ponownie.",
   "sramShiftingOff": "Przełączanie w urządzeniu jest wyłączone — BikeControl steruje biegami.",
   "sramSettingUp": "Konfigurowanie",
   "sramRestoringShifting": "Przywracanie przełączania",

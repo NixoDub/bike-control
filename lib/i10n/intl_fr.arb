@@ -1155,6 +1155,7 @@
   "sramAuthorizeBody": "Maintiens le bouton AXS de ton dérailleur jusqu'à ce que sa lumière clignote, puis touche Réessayer.",
   "sramErrorTitle": "Ça n'a pas fonctionné",
   "sramGenericError": "Une erreur s'est produite. Veuillez réessayer.",
+  "sramLinkResetError": "Le dérailleur ne répond plus, BikeControl s'y reconnecte. Attendez qu'il apparaisse de nouveau comme connecté, puis réessayez.",
   "sramShiftingOff": "Le passage des vitesses du dérailleur est désactivé – BikeControl contrôle vos vitesses.",
   "sramSettingUp": "Configuration en cours",
   "sramRestoringShifting": "Restauration en cours",

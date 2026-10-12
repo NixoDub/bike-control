@@ -5,9 +5,29 @@ import 'package:dartx/dartx.dart';
 import 'package:prop/prop.dart';
 import 'package:universal_ble/universal_ble.dart';
 
+/// A non-timeout GATT failure from [SramBleTransport], annotated with the
+/// operation and characteristic that failed so a diagnostics line says what
+/// broke (`… (read d905ee53-…)`). The original error stays in [cause].
+class SramTransportException implements Exception {
+  SramTransportException(this.operation, this.characteristic, this.cause);
+
+  final String operation;
+  final String characteristic;
+  final Object cause;
+
+  @override
+  String toString() => '$cause ($operation $characteristic)';
+}
+
 /// `universal_ble`-backed [SramTransport]. Notifications flow through the app's
 /// existing pipeline; the owning device calls [onNotification] from its
 /// `processCharacteristic` callback.
+///
+/// Every GATT call rethrows its failure with the operation and characteristic
+/// attached. A [TimeoutException] (universal_ble gives up on a command after
+/// 10 s) stays a [TimeoutException] — `SramAxs` keys its wedged-link recovery
+/// off the type — with the context appended to its message; anything else is
+/// wrapped in a [SramTransportException].
 class SramBleTransport implements SramTransport {
   SramBleTransport(this.deviceId, this.services);
 
@@ -28,26 +48,43 @@ class SramBleTransport implements SramTransport {
       .firstOrNullWhere((s) => s.characteristics.any((c) => c.uuid == characteristic.toLowerCase()))
       ?.uuid;
 
+  Future<T> _withContext<T>(String operation, String characteristic, Future<T> Function() call) async {
+    try {
+      return await call();
+    } on TimeoutException catch (e, st) {
+      final message = '${e.message ?? 'timed out'} ($operation $characteristic)';
+      Error.throwWithStackTrace(TimeoutException(message, e.duration), st);
+    } catch (e, st) {
+      Error.throwWithStackTrace(SramTransportException(operation, characteristic, e), st);
+    }
+  }
+
   @override
   Future<void> subscribe(String characteristic) async {
-    final service = _serviceFor(characteristic);
+    final char = characteristic.toLowerCase();
+    final service = _serviceFor(char);
     if (service == null) return;
-    await UniversalBle.subscribeNotifications(deviceId, service, characteristic.toLowerCase());
+    await _withContext('subscribe', char, () => UniversalBle.subscribeNotifications(deviceId, service, char));
   }
 
   @override
   Future<void> write(String characteristic, Uint8List data, {bool withoutResponse = false}) async {
-    final service = _serviceFor(characteristic);
+    final char = characteristic.toLowerCase();
+    final service = _serviceFor(char);
     if (service == null) throw StateError('SRAM: no service for $characteristic');
-    await UniversalBle.write(deviceId, service, characteristic.toLowerCase(), data,
-        withoutResponse: withoutResponse);
+    await _withContext(
+      'write',
+      char,
+      () => UniversalBle.write(deviceId, service, char, data, withoutResponse: withoutResponse),
+    );
   }
 
   @override
   Future<Uint8List> read(String characteristic) async {
-    final service = _serviceFor(characteristic);
+    final char = characteristic.toLowerCase();
+    final service = _serviceFor(char);
     if (service == null) throw StateError('SRAM: no service for $characteristic');
-    return UniversalBle.read(deviceId, service, characteristic.toLowerCase());
+    return _withContext('read', char, () => UniversalBle.read(deviceId, service, char));
   }
 
   @override

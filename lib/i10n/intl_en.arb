@@ -1766,6 +1766,7 @@
   "sramAuthorizeBody": "Hold the AXS button on your derailleur until its light flashes, then tap Retry.",
   "sramErrorTitle": "That didn't work",
   "sramGenericError": "Something went wrong. Please try again.",
+  "sramLinkResetError": "The derailleur stopped responding, so BikeControl is reconnecting to it. Wait until it shows as connected again, then retry.",
   "sramShiftingOff": "On-device shifting is off — BikeControl controls your gears.",
   "sramSettingUp": "Setting up",
   "sramRestoringShifting": "Restoring shifting",
