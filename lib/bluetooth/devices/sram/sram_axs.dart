@@ -16,6 +16,7 @@ import 'package:prop/prop.dart' as sram_proto show SramAxs;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:universal_ble/universal_ble.dart';
 
+import '../base_device.dart' show DeviceSetupNeed;
 import '../bluetooth_device.dart';
 import 'sram_ble_transport.dart';
 import 'sram_link_errors.dart';
@@ -469,6 +470,16 @@ class SramAxs extends BluetoothDevice {
   /// flow re-bonds ([restoreConfig] calls `ensureBonded`). Presence gating (the
   /// derailleur must be here for BLE to reach it) is the caller's job.
   bool get canRestoreShifting => isShiftingDisabled && core.settings.getSramBackup(_serialKey) != null;
+
+  /// The guided setup, while it has not run and the derailleur is here for it
+  /// to talk to: until then the derailleur shifts itself and sends nothing.
+  @override
+  DeviceSetupNeed? get setupNeed => isConnected && needsGuidedSetup ? DeviceSetupNeed.setup : null;
+
+  @override
+  Future<void> openSetup(BuildContext context) async {
+    if (setupNeed == DeviceSetupNeed.setup) await showGuidedSetup(context);
+  }
 
   /// Opens the same guided setup sheet as the device card's
   /// "Set up SRAM control" button. Used by the onboarding wizard.

@@ -24,6 +24,19 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../../utils/keymap/buttons.dart';
 import '../messages/notification.dart';
 
+/// Something the rider has to do on a controller before its buttons do
+/// anything — see [BaseDevice.setupNeed].
+enum DeviceSetupNeed {
+  /// A one-time setup: the Zwift Click V2's unlock-mode choice, the SRAM AXS
+  /// guided "disable on-device shifting" setup. Offered once, right away, when
+  /// such a controller turns up.
+  setup,
+
+  /// A recurring unlock: a controller Zwift locks to its own app, until it has
+  /// been unlocked again. A chore every day, so it is shown, never pushed.
+  unlock,
+}
+
 abstract class BaseDevice {
   final String? _name;
   final bool isBeta;
@@ -530,6 +543,26 @@ abstract class BaseDevice {
   /// A device returning false must also return early from [connect] so no
   /// transport is opened; the queue still runs its listener wiring.
   bool get shouldAutoConnect => true;
+
+  /// What the rider still has to do on this controller before its buttons
+  /// work, or null when nothing — see [DeviceSetupNeed].
+  ///
+  /// Only needs the rider can act on right now are reported: a setup that
+  /// talks to the device over its link is not one while it is out of reach.
+  /// Ride's warning and the one-time setup prompt read this, never the device
+  /// class, so a new kind of controller with a setup of its own only overrides
+  /// this and [openSetup].
+  DeviceSetupNeed? get setupNeed => null;
+
+  /// Identifies the setup behind [setupNeed], so it is offered once rather than
+  /// once per device: a decision that covers several devices (the Zwift Click
+  /// V2's two pucks share one unlock-mode choice) shares one key.
+  String get setupPromptKey => uniqueId;
+
+  /// Runs the flow that clears [setupNeed] — the same sheet or page the
+  /// device's own screens and the onboarding open. Completes once the rider
+  /// has left it, done or not.
+  Future<void> openSetup(BuildContext context) async {}
 
   List<Widget> showMetaInformation(BuildContext context, {required bool showFull}) {
     return [];

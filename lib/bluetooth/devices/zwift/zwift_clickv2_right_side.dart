@@ -1,7 +1,9 @@
+import 'package:bike_control/bluetooth/devices/base_device.dart';
 import 'package:bike_control/bluetooth/devices/zwift/constants.dart';
 import 'package:bike_control/bluetooth/devices/zwift/zwift_clickv2_left_side.dart';
 import 'package:bike_control/bluetooth/devices/zwift/zwift_ride.dart';
 import 'package:bike_control/main.dart';
+import 'package:bike_control/pages/click_v2_onboarding.dart';
 import 'package:bike_control/utils/click_v2_onboarding.dart';
 import 'package:bike_control/utils/core.dart';
 import 'package:bike_control/utils/i18n_extension.dart';
@@ -54,6 +56,23 @@ class ZwiftClickV2RightSide extends ZwiftRide {
   bool get shouldAutoConnect =>
       !ClickV2Onboarding.isPending &&
       (core.settings.getClickV2RightSideOnly() || core.settings.getUnlockWithZwift());
+
+  /// The same single unlock-mode choice as the left puck — see
+  /// [ZwiftClickV2.setupNeed]. This puck is never locked itself.
+  @override
+  DeviceSetupNeed? get setupNeed => ClickV2Onboarding.isPending ? DeviceSetupNeed.setup : super.setupNeed;
+
+  @override
+  String get setupPromptKey => ClickV2Onboarding.setupPromptKey;
+
+  @override
+  Future<void> openSetup(BuildContext context) async {
+    if (ClickV2Onboarding.isPending) {
+      await context.push(const ClickV2OnboardingPage());
+      return;
+    }
+    await super.openSetup(context);
+  }
 
   @override
   Future<void> connect() async {
