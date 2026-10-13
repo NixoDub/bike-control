@@ -8,6 +8,7 @@ import 'package:bike_control/utils/keymap/apps/training_peaks.dart';
 import 'package:bike_control/utils/keymap/apps/zwift.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prop/emulators/dircon_emulator.dart';
+import 'package:prop/prop.dart' show mdnsSerialNumber;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:universal_ble/universal_ble.dart';
 
@@ -136,5 +137,57 @@ void main() {
 
     core.settings.setTrainerApp(Zwift());
     expect(deviceNamed('Wahoo KICKR 1EB7').rouvyNeedsIPv4(), isFalse);
+  });
+
+  group('serial number', () {
+    const deviceId = 'E4:3B:1C:73:D3:01';
+    String serialOf(ProxyDevice device) => String.fromCharCodes(device.trainerMdnsTxt()['serial-number']!);
+    ProxyDevice deviceIn(RetrofitMode mode, {String id = deviceId}) =>
+        ProxyDevice(BleDevice(deviceId: id, name: 'KICKR CORE 73D3'))..setRetrofitMode(mode);
+
+    test('the Zwift-named bridge gets its own stable, all-digit serial', () {
+      core.settings.setTrainerApp(Zwift());
+      for (final mode in [RetrofitMode.wifi, RetrofitMode.bluetooth]) {
+        final serial = serialOf(deviceIn(mode));
+        expect(serial, matches(RegExp(r'^[0-9]+$')), reason: mode.name);
+        expect(serial, isNot(mdnsSerialNumber(deviceId)), reason: mode.name);
+        expect(serialOf(deviceIn(mode)), serial, reason: 'same trainer, same serial');
+      }
+      expect(serialOf(deviceIn(RetrofitMode.wifi, id: 'other')), isNot(serialOf(deviceIn(RetrofitMode.wifi))));
+    });
+
+    test('proxy mode keeps the device serial for Zwift', () {
+      core.settings.setTrainerApp(Zwift());
+      expect(serialOf(deviceIn(RetrofitMode.proxy)), mdnsSerialNumber(deviceId));
+    });
+
+    test('every other trainer app keeps the device serial', () {
+      for (final app in [MyWhoosh(), Rouvy(), TrainingPeaks(), Tacx()]) {
+        core.settings.setTrainerApp(app);
+        for (final mode in RetrofitMode.values) {
+          expect(serialOf(deviceIn(mode)), mdnsSerialNumber(deviceId), reason: '${app.name} ${mode.name}');
+        }
+      }
+    });
+
+    test('follows the trainer app as it changes', () {
+      final device = deviceIn(RetrofitMode.wifi);
+
+      core.settings.setTrainerApp(MyWhoosh());
+      expect(serialOf(device), mdnsSerialNumber(deviceId));
+
+      core.settings.setTrainerApp(Zwift());
+      expect(serialOf(device), isNot(mdnsSerialNumber(deviceId)));
+
+      core.settings.setTrainerApp(Rouvy());
+      expect(serialOf(device), mdnsSerialNumber(deviceId));
+    });
+
+    test('keeps the mac-address and app fields alongside it', () {
+      core.settings.setTrainerApp(Zwift());
+      expect(deviceIn(RetrofitMode.wifi).trainerMdnsTxt().keys, containsAll(['mac-address', 'serial-number']));
+      core.settings.setTrainerApp(Tacx());
+      expect(deviceIn(RetrofitMode.wifi).trainerMdnsTxt().keys, contains('product-id'));
+    });
   });
 }

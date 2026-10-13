@@ -518,10 +518,21 @@ class ProxyDevice extends BluetoothDevice {
   /// getter.
   String get advertisementName => emulator.advertisementName;
 
-  Map<String, Uint8List> _trainerMdnsTxt() => trainerMdnsTxtFor(
+  /// The bridge's TXT record for the selected trainer app. Passed to the
+  /// emulator as a builder, so a re-advertise after an app change picks up
+  /// the fields of the new app.
+  @visibleForTesting
+  Map<String, Uint8List> trainerMdnsTxt() => trainerMdnsTxtFor(
     core.settings.getTrainerApp(),
-    serialNumber: mdnsSerialNumber(scanResult.deviceId),
+    serialNumber: _bridgeSerialNumber(),
   );
+
+  /// The Zwift-named bridge ([zwiftAdvertisementNameFor]) gets its own serial
+  /// so it shows up as a new device. Everything else keeps the device serial.
+  String _bridgeSerialNumber() {
+    final zwiftNamed = _retrofitModeN.value != RetrofitMode.proxy && core.settings.getTrainerApp() is Zwift;
+    return mdnsSerialNumber(zwiftNamed ? 'zwift:${scanResult.deviceId}' : scanResult.deviceId);
+  }
 
   /// Whether the bridge advertises 16-bit services bare (`1826`) or in the
   /// `0x1826` form. Rouvy (and Zwift, MyWhoosh, TPV) parse the `0x` form and
@@ -813,7 +824,7 @@ class ProxyDevice extends BluetoothDevice {
         _proxyEmulator.bareShortServiceUuids = _bareShortServiceUuids;
         await _proxyEmulator.startServer(
           mode: RetrofitMode.proxy,
-          mdnsTxt: _trainerMdnsTxt(),
+          mdnsTxtBuilder: trainerMdnsTxt,
         );
       } else {
         // VS modes (wifi / bluetooth): the FBD lives in the shared ftmsEmulator.
@@ -830,7 +841,7 @@ class ProxyDevice extends BluetoothDevice {
         }
         await ftmsEmulator.startServer(
           mode: mode,
-          mdnsTxt: _trainerMdnsTxt(),
+          mdnsTxtBuilder: trainerMdnsTxt,
         );
       }
 
@@ -1382,7 +1393,7 @@ class ProxyDevice extends BluetoothDevice {
 
       await ftmsEmulator.startServer(
         mode: next,
-        mdnsTxt: _trainerMdnsTxt(),
+        mdnsTxtBuilder: trainerMdnsTxt,
       );
     } else if (old != RetrofitMode.proxy && next == RetrofitMode.proxy) {
       // VS → proxy: detach from shared, start per-instance
@@ -1408,14 +1419,14 @@ class ProxyDevice extends BluetoothDevice {
       _proxyEmulator.bareShortServiceUuids = _bareShortServiceUuids;
       await _proxyEmulator.startServer(
         mode: RetrofitMode.proxy,
-        mdnsTxt: _trainerMdnsTxt(),
+        mdnsTxtBuilder: trainerMdnsTxt,
       );
     } else {
       // VS wifi ↔ VS bluetooth: restart the shared emulator with the new mode
       _retrofitModeN.value = next;
       await ftmsEmulator.startServer(
         mode: next,
-        mdnsTxt: _trainerMdnsTxt(),
+        mdnsTxtBuilder: trainerMdnsTxt,
       );
     }
   }
