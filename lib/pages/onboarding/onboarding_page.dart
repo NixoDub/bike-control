@@ -39,6 +39,7 @@ import 'package:bike_control/pages/onboarding/steps/step_where.dart';
 import 'package:bike_control/pages/network_troubleshooting_page.dart';
 import 'package:bike_control/pages/settings/virtual_shifting_settings_page.dart' show openTrainerSelfTest;
 import 'package:bike_control/utils/core.dart';
+import 'package:bike_control/utils/device_setup_prompt.dart';
 import 'package:bike_control/utils/reduced_motion.dart';
 import 'package:bike_control/utils/trainer_connect.dart';
 import 'package:bike_control/utils/i18n_extension.dart';
@@ -630,6 +631,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
   /// auto-prompt AND the row's "Setup needed" button (the sub-flow can be
   /// cancelled, so it must always be re-openable).
   Future<void> _openSetupFor(BaseDevice d) async {
+    // Shared with Ride's own offer, so a setup the rider closed here is not
+    // opened again the moment the onboarding ends — see [DeviceSetupPrompt].
+    DeviceSetupPrompt.markOffered(d);
     try {
       final isClickV2Side = d is ZwiftClickV2 || d is ZwiftClickV2RightSide;
       if (isClickV2Side && ClickV2Onboarding.isPending) {

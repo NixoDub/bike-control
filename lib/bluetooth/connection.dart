@@ -1402,6 +1402,12 @@ class Connection {
     }).toList();
     devices.addAll(newDevices);
     _connectionQueue.addAll(newDevices);
+    // A device held back for its setup (a Zwift Click V2 before its
+    // unlock-mode choice) never connects, so no connect event would ever tell
+    // the screens it is here — and they are where that setup is offered.
+    for (final device in newDevices) {
+      if (!device.shouldAutoConnect && device.setupNeed != null) _connectionStreams.add(device);
+    }
 
     // A device kept in the list during an automatic reset cycle reappeared in
     // the scan: its fresh instance is filtered out above (same id), so queue
