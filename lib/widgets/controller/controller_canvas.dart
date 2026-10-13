@@ -1,6 +1,7 @@
 import 'package:bike_control/utils/keymap/buttons.dart';
 import 'package:bike_control/widgets/controller/controller_contour_painter.dart';
 import 'package:bike_control/widgets/controller/controller_layout.dart';
+import 'package:bike_control/widgets/ui/bk_motion.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
@@ -16,6 +17,15 @@ class ControllerCanvas extends StatelessWidget {
   /// and 250 for everything else; Ride's wider layouts give it more.
   final double? maxHeight;
 
+  /// Pinned to the outline's own top-right corner — not the canvas', which on
+  /// a wide card runs far past the controller — and left at full strength
+  /// when [dimmed] fades the rest.
+  final Widget? cornerBadge;
+
+  /// Fades the outline and its buttons, for a controller whose buttons do not
+  /// work yet.
+  final bool dimmed;
+
   const ControllerCanvas({
     super.key,
     required this.layout,
@@ -23,6 +33,8 @@ class ControllerCanvas extends StatelessWidget {
     required this.buttonBuilder,
     this.buttonSize = 56,
     this.maxHeight,
+    this.cornerBadge,
+    this.dimmed = false,
   });
 
   /// When a device sets `allowMultiple: true`, its `availableButtons` are
@@ -53,7 +65,7 @@ class ControllerCanvas extends StatelessWidget {
             builder: (context, constraints) {
               final w = constraints.maxWidth;
               final h = constraints.maxHeight;
-              return Stack(
+              final picture = Stack(
                 clipBehavior: Clip.none,
                 children: [
                   Positioned.fill(
@@ -95,6 +107,22 @@ class ControllerCanvas extends StatelessWidget {
                         top: (pos.dy * h) - buttonSize / 2,
                         child: buttonBuilder(btn),
                       ),
+                ],
+              );
+              final badge = cornerBadge;
+              if (badge == null && !dimmed) return picture;
+              return Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Positioned.fill(
+                    child: AnimatedOpacity(
+                      opacity: dimmed ? 0.45 : 1,
+                      duration: BkMotion.of(context),
+                      curve: BkMotion.curve,
+                      child: picture,
+                    ),
+                  ),
+                  if (badge != null) PositionedDirectional(top: 0, end: 0, child: badge),
                 ],
               );
             },

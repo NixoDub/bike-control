@@ -79,6 +79,12 @@ class RideSectionHeader extends StatelessWidget {
   }
 }
 
+/// Whether [device] has anything for [controllerButtonsPicture] to draw: an
+/// outline, buttons, or a steering angle. A SRAM derailleur has none until its
+/// guided setup has heard its paddles.
+bool hasButtonsPicture(BaseDevice device) =>
+    device is SteeringDevice || device.controllerLayout != null || device.availableButtons.isNotEmpty;
+
 /// The controller's own picture with its real buttons, each wearing the
 /// action it sends — so the picture doubles as the button map. Tapping a
 /// button opens its assignment. Null when there is nothing to draw (a SRAM
@@ -92,10 +98,10 @@ Widget? controllerButtonsPicture({
   required double buttonSize,
   required VoidCallback onUpdate,
   double? maxHeight,
+  Widget? cornerBadge,
+  bool dimmed = false,
 }) {
-  if (device is! SteeringDevice && device.controllerLayout == null && device.availableButtons.isEmpty) {
-    return null;
-  }
+  if (!hasButtonsPicture(device)) return null;
 
   Widget buttonFor(ControllerButton button) {
     return ValueListenableBuilder<ControllerPress>(
@@ -113,15 +119,25 @@ Widget? controllerButtonsPicture({
   }
 
   // An angle, not buttons: the live gauge and the two actions it drives.
+  // Without an outline of its own the badge goes on the picture's corner.
+  Widget decorated(Widget picture) => cornerBadge == null && !dimmed
+      ? picture
+      : Stack(
+          children: [
+            Opacity(opacity: dimmed ? 0.45 : 1, child: picture),
+            if (cornerBadge != null) PositionedDirectional(top: 0, end: 0, child: cornerBadge),
+          ],
+        );
+
   if (device is SteeringDevice) {
     final steering = device as SteeringDevice;
-    return SteeringGauge(
+    return decorated(SteeringGauge(
       angle: steering.steeringAngle,
       calibrated: steering.steeringCalibrated,
       threshold: steering.steeringThreshold,
       leftAction: steeringActionFor(keymap, steering.steerLeftButton),
       rightAction: steeringActionFor(keymap, steering.steerRightButton),
-    );
+    ));
   }
   final layout = device.controllerLayout;
   if (layout != null) {
@@ -131,9 +147,11 @@ Widget? controllerButtonsPicture({
       buttonBuilder: buttonFor,
       buttonSize: buttonSize,
       maxHeight: maxHeight,
+      cornerBadge: cornerBadge,
+      dimmed: dimmed,
     );
   }
-  return Wrap(spacing: 9, runSpacing: 9, children: device.availableButtons.map(buttonFor).toList());
+  return decorated(Wrap(spacing: 9, runSpacing: 9, children: device.availableButtons.map(buttonFor).toList()));
 }
 
 /// The single-click action [button] sends, or null when it sends nothing.
@@ -200,6 +218,7 @@ class ControllerButtonsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final needsSetup = setupNeed != null;
     final rawPicture = controllerButtonsPicture(
       device: device,
       keymap: keymap,
@@ -207,39 +226,28 @@ class ControllerButtonsCard extends StatelessWidget {
       buttonSize: 52 / Theme.of(context).scaling,
       onUpdate: onUpdate,
       maxHeight: wide ? 260 : null,
+      // On the outline itself, at full strength over the faded picture:
+      // these buttons are not live yet.
+      cornerBadge: needsSetup ? _SetupBadge(key: ValueKey('ride-setup-badge-${device.uniqueId}')) : null,
+      dimmed: needsSetup,
     );
     // Faded while it connects, then up to full strength and a touch larger:
     // the pods and their badges arrive rather than appear.
     final duration = BkMotion.of(context);
-    final needsSetup = setupNeed != null;
-    final faded = AnimatedOpacity(
-      key: const ValueKey('ride-buttons-picture'),
-      opacity: connecting || needsSetup ? 0.45 : 1,
-      duration: duration,
-      curve: BkMotion.curve,
-      child: AnimatedScale(
-        scale: connecting ? 0.97 : 1,
-        duration: duration,
-        curve: BkMotion.curve,
-        child: connecting && rawPicture != null ? BkShimmer(child: rawPicture) : rawPicture,
-      ),
-    );
     final picture = rawPicture == null
         ? null
-        : needsSetup
-        // The badge on the outline itself, at full strength over the faded
-        // picture: these buttons are not live yet.
-        ? Stack(
-            children: [
-              faded,
-              PositionedDirectional(
-                top: 0,
-                end: 0,
-                child: _SetupBadge(key: ValueKey('ride-setup-badge-${device.uniqueId}')),
-              ),
-            ],
-          )
-        : faded;
+        : AnimatedOpacity(
+            key: const ValueKey('ride-buttons-picture'),
+            opacity: connecting ? 0.45 : 1,
+            duration: duration,
+            curve: BkMotion.curve,
+            child: AnimatedScale(
+              scale: connecting ? 0.97 : 1,
+              duration: duration,
+              curve: BkMotion.curve,
+              child: connecting ? BkShimmer(child: rawPicture) : rawPicture,
+            ),
+          );
     final warning = setupNeed == null
         ? null
         : _SetupWarning(
@@ -405,7 +413,7 @@ class _SetupWarning extends StatelessWidget {
     final accent = bkAccentText(context);
     final (message, action) = switch (need) {
       DeviceSetupNeed.setup => (l.onboardingSetupNeeded, l.chainSetUp),
-      DeviceSetupNeed.unlock => (l.unlock_deviceIsCurrentlyLocked, l.unlock_unlockNow),
+      DeviceSetupNeed.unlock => (l.rideControllerLocked, l.unlock_unlockNow),
     };
     return DecoratedBox(
       decoration: BoxDecoration(color: status.warningWash, borderRadius: BorderRadius.circular(10)),

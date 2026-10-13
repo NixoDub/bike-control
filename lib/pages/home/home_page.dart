@@ -1023,11 +1023,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      buttons,
+                      ?buttons,
                       // While a ride records: where the record card was;
                       // the finished ride's card takes its place.
                       const RideRecordingSlot(key: ValueKey('ride-recording-slot'), textActions: true, spacing: 20),
-                      if (widget.activityPreview case final preview?) ...[const Gap(20), preview],
+                      if (widget.activityPreview case final preview?) ...[if (buttons != null) const Gap(20), preview],
                     ],
                   ),
                 ),
@@ -1044,7 +1044,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               if (vs != null) vs,
               RideRecordingSlot(key: const ValueKey('ride-recording-slot'), spacing: vs != null ? 12 : 0),
               if (vs != null) const Gap(20) else const _GapWhenRecording(),
-              buttons,
+              ?buttons,
               if (widget.showHelpRow) ...[const Gap(20), _helpRow()],
             ],
           );
@@ -1365,7 +1365,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   /// [wide] lets a controller list its buttons beside its picture;
   /// [showButtonList] lists them at all — beside the picture where the column
   /// has room, else under it.
-  Widget _yourButtons({required bool wide, required bool showButtonList}) {
+  Widget? _yourButtons({required bool wide, required bool showButtonList}) {
     final l = context.i18n;
     // Right after launch the remembered controllers stand in until they are
     // back (see [Connection.startupReconnecting]) — on the cards they will
@@ -1375,7 +1375,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     // held back for its unlock-mode choice never connects until then — with
     // the warning that leads into it. Only one the scanner has found: a
     // remembered stand-in is not here to set up.
-    final shown = _knownControllers
+    final present = _knownControllers
         .where(
           (d) =>
               d.isConnected ||
@@ -1384,6 +1384,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         )
         .distinctBy((d) => d.uniqueId)
         .toList();
+    // One that still needs its setup and has nothing to draw yet (a SRAM
+    // derailleur before its guided setup has heard its paddles) would be a
+    // card with a warning and nothing else — the banner already lists the
+    // step, and its setup has opened by itself. It comes back as soon as it
+    // has buttons.
+    final shown = present.where((d) => d.setupNeed == null || hasButtonsPicture(d)).toList();
+    // Only such controllers: no section at all, rather than one saying there
+    // is no controller.
+    if (shown.isEmpty && present.isNotEmpty) return null;
     final keymap = core.actionHandler.supportedApp?.keymap;
     final single = shown.length == 1 ? shown.single : null;
     return Column(

@@ -18,6 +18,8 @@ import 'package:bike_control/pages/home/home_page.dart';
 import 'package:bike_control/utils/core.dart';
 import 'package:bike_control/utils/device_setup_prompt.dart';
 import 'package:bike_control/utils/keymap/apps/my_whoosh.dart';
+import 'package:bike_control/utils/keymap/buttons.dart';
+import 'package:bike_control/widgets/controller/controller_canvas.dart';
 import 'package:bike_control/widgets/home/your_buttons.dart' show ControllerButtonsCard;
 import 'package:bike_control/widgets/ui/app_theme.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -46,8 +48,8 @@ Finder get _anyWarning => find.byWidgetPredicate(
   (w) => w.key is ValueKey<String> && (w.key! as ValueKey<String>).value.startsWith('ride-setup-warning-'),
 );
 
-Future<void> _pumpRide(WidgetTester tester) async {
-  tester.view.physicalSize = const Size(390, 844);
+Future<void> _pumpRide(WidgetTester tester, {Size size = const Size(390, 844)}) async {
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
@@ -134,8 +136,33 @@ Future<void> main() async {
       expect(_warning(click), findsOneWidget);
     });
 
-    testWidgets('a SRAM AXS before its guided setup carries the warning', (tester) async {
+    testWidgets('a SRAM AXS before its guided setup, with no buttons to draw yet, gets no card', (tester) async {
+      // Nothing to picture until the guided setup has heard its paddles; the
+      // banner's step already says what to do.
+      _connectedPlay();
       final sram = _connectedSram();
+      core.connection.devices.add(sram);
+      DeviceSetupPrompt.markOffered(sram);
+      await _pumpRide(tester);
+
+      expect(find.byKey(ValueKey('ride-buttons-${sram.uniqueId}')), findsNothing);
+      expect(_warning(sram), findsNothing);
+      expect(find.byType(ControllerButtonsCard), findsOneWidget);
+    });
+
+    testWidgets('a SRAM AXS alone before its guided setup: no "connect a controller" prompt', (tester) async {
+      final sram = _connectedSram();
+      core.connection.devices.add(sram);
+      DeviceSetupPrompt.markOffered(sram);
+      await _pumpRide(tester);
+
+      expect(find.byKey(const ValueKey('ride-no-controller')), findsNothing);
+      expect(find.byType(ControllerButtonsCard), findsNothing);
+    });
+
+    testWidgets('a SRAM AXS that needs setup but already has buttons is back, with the warning', (tester) async {
+      final sram = _connectedSram();
+      sram.availableButtons.add(ControllerButton('sramPaddleTest', sourceDeviceId: sram.device.deviceId));
       core.connection.devices.add(sram);
       DeviceSetupPrompt.markOffered(sram);
       await _pumpRide(tester);
@@ -154,6 +181,28 @@ Future<void> main() async {
       expect(find.byType(ControllerButtonsCard), findsNWidgets(2));
       expect(_anyWarning, findsNothing);
     });
+  });
+
+  group('the warning badge sits on the controller outline', () {
+    for (final size in const [Size(390, 844), Size(1024, 768), Size(1440, 900)]) {
+      testWidgets('at ${size.width.toInt()} wide', (tester) async {
+        await core.settings.setClickV2OnboardingDone(true);
+        await core.settings.setUnlockWithZwift(true);
+        final click = _heldBackClick()..isConnected = true;
+        core.connection.devices.add(click);
+        await _pumpRide(tester, size: size);
+
+        final badge = find.byKey(ValueKey('ride-setup-badge-${click.uniqueId}'));
+        expect(badge, findsOneWidget);
+        final outline = find.descendant(of: find.byType(ControllerCanvas), matching: find.byType(AspectRatio));
+        final outlineRect = tester.getRect(outline.first);
+        final badgeCenter = tester.getCenter(badge);
+        // On the outline's top-right corner, not out at the card's edge.
+        expect(outlineRect.inflate(8).contains(badgeCenter), isTrue, reason: 'badge $badgeCenter, outline $outlineRect');
+        expect(badgeCenter.dx, greaterThan(outlineRect.center.dx));
+        expect(badgeCenter.dy, lessThan(outlineRect.center.dy));
+      });
+    }
   });
 
   group('the one-time setup opens by itself', () {

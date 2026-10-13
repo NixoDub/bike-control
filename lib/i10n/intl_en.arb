@@ -2984,6 +2984,7 @@
   "rideRatio": "Ratio",
   "@rideRatio": {"description": "Ride tab: label under the current gear ratio (e.g. ×2.4)."},
   "rideYourButtons": "Your buttons",
+  "rideControllerLocked": "Locked",
   "@rideYourButtons": {"description": "Ride tab: section header above the controller picture with its button actions."},
   "rideEditButtons": "Edit buttons",
   "@rideEditButtons": {"description": "Ride tab: link next to 'Your buttons' that opens the controller's button mapping."},
