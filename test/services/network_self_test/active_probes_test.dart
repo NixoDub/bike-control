@@ -84,6 +84,35 @@ void main() {
       expect(check.detail.containsKey('latencyMs'), isTrue);
     });
 
+    test('pass: our own address twice (one per resolver path) is fine', () async {
+      final check = await resolveOwnHostnameCheck(
+        ctx(
+          advertisedHostname: 'bikecontrol.local',
+          snapshot: _diag(
+            addressReport: AddressPickReport(chosen: InternetAddress('192.168.1.5'), candidates: const []),
+          ),
+          resolve: (host) async => [InternetAddress('192.168.1.5'), InternetAddress('192.168.1.5')],
+        ),
+      );
+      expect(check.verdict, NetworkVerdict.pass);
+    });
+
+    test('warn: our address plus another one — MyWhoosh may connect to or check the other', () async {
+      final check = await resolveOwnHostnameCheck(
+        ctx(
+          advertisedHostname: 'bikecontrol.local',
+          snapshot: _diag(
+            addressReport: AddressPickReport(chosen: InternetAddress('192.168.1.5'), candidates: const []),
+          ),
+          resolve: (host) async => [InternetAddress('192.168.1.77'), InternetAddress('192.168.1.5')],
+        ),
+      );
+      expect(check.verdict, NetworkVerdict.warn);
+      expect(check.detail['address'], '192.168.1.5');
+      expect(check.detail['others'], '192.168.1.77');
+      expect(check.detail['first'], '192.168.1.77');
+    });
+
     test('warn: resolved to a different, non-empty set of addresses', () async {
       final check = await resolveOwnHostnameCheck(
         ctx(

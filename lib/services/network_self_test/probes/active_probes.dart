@@ -46,6 +46,24 @@ Future<NetworkCheck> resolveOwnHostnameCheck(NetworkProbeContext ctx) async {
   final latencyMs = ctx.now().difference(start).inMilliseconds;
   final addresses = resolved.map((a) => a.address).toList();
   if (expected != null && addresses.contains(expected)) {
+    // Duplicates of our own address are normal (one per resolver path). Any
+    // OTHER address is not: MyWhoosh connects to the first address of its
+    // lookup, and on a later lookup checks that the newest one is still
+    // reachable. An address that is not ours and not reachable makes it drop
+    // a working connection and reconnect, over and over (measured on 6.2.3).
+    final others = addresses.where((a) => a != expected).toSet();
+    if (others.isNotEmpty) {
+      return NetworkCheck(
+        id: NetworkCheckId.resolveOwnHostname,
+        verdict: NetworkVerdict.warn,
+        detail: {
+          'address': expected,
+          'others': others.join(', '),
+          'first': addresses.first,
+          'latencyMs': '$latencyMs',
+        },
+      );
+    }
     return NetworkCheck(
       id: NetworkCheckId.resolveOwnHostname,
       verdict: NetworkVerdict.pass,
