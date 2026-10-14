@@ -46,6 +46,13 @@ Future<NetworkCheck> bonjourServiceCheck(NetworkProbeContext ctx) async {
   final stdout = _capStdout(result.stdout);
 
   if (stdout.contains('RUNNING')) {
+    if (await _myWhooshStartedBeforeBonjour(ctx)) {
+      return const NetworkCheck(
+        id: NetworkCheckId.bonjourService,
+        verdict: NetworkVerdict.fail,
+        detail: {'state': 'started after MyWhoosh'},
+      );
+    }
     return const NetworkCheck(id: NetworkCheckId.bonjourService, verdict: NetworkVerdict.pass);
   }
   if (stdout.contains('1060') || exitCode != 0) {
@@ -62,6 +69,47 @@ Future<NetworkCheck> bonjourServiceCheck(NetworkProbeContext ctx) async {
     detail: {'state': 'stopped', 'note': 'start it, then restart the trainer app — MyWhoosh checks once at startup'},
     fixes: [NetworkFixId.openBonjourDownload],
   );
+}
+
+/// Whether a running MyWhoosh was started before Bonjour's daemon was.
+///
+/// MyWhoosh asks once, when it creates its discovery managers, whether the
+/// Bonjour Service runs, and never again. Measured on 6.2.3: with Bonjour
+/// started after MyWhoosh, MyWhoosh put not one browse on the wire and the
+/// BikeControl button stayed dead until MyWhoosh was restarted — although the
+/// service then reads as running. Riders get here by installing or repairing
+/// Bonjour with MyWhoosh still open.
+///
+/// Process creation times come from CIM, which (unlike `Get-Process`) reads a
+/// SYSTEM process's start time without elevation. Anything unreadable — no
+/// MyWhoosh running, a failed or slow query — is "no", so this can only add a
+/// finding, never hide the pass.
+Future<bool> _myWhooshStartedBeforeBonjour(NetworkProbeContext ctx) async {
+  const script =
+      "Get-CimInstance Win32_Process -Filter \"Name='mDNSResponder.exe' or Name='MyWhoosh.exe'\" | "
+      "ForEach-Object { Write-Output (\$_.Name + '=' + \$_.CreationDate.ToUniversalTime().ToString('o')) }";
+  final ProcessResult result;
+  try {
+    result = await ctx.runProcess('powershell', ['-NoProfile', '-NonInteractive', '-Command', script]);
+  } on ProcessException {
+    return false;
+  } on TimeoutException {
+    return false;
+  }
+  final starts = <String, DateTime>{};
+  for (final line in _capStdout(result.stdout).split('\n')) {
+    final split = line.indexOf('=');
+    if (split <= 0) continue;
+    final time = DateTime.tryParse(line.substring(split + 1).trim());
+    if (time == null) continue;
+    final name = line.substring(0, split).trim().toLowerCase();
+    // Several MyWhoosh processes: the earliest is the one that made the check.
+    final known = starts[name];
+    if (known == null || time.isBefore(known)) starts[name] = time;
+  }
+  final myWhoosh = starts['mywhoosh.exe'];
+  final bonjour = starts['mdnsresponder.exe'];
+  return myWhoosh != null && bonjour != null && myWhoosh.isBefore(bonjour);
 }
 
 /// Check 11 (NEW, §12): does the Winsock catalog list Bonjour's `mdnsNSP`

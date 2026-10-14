@@ -2070,6 +2070,7 @@
   "networkOverallFail": "Nous avons trouvé ce qui bloque la connexion",
   "networkOverallUnknown": "Certaines vérifications n'ont pas pu s'exécuter",
   "networkHintBonjourService": "MyWhoosh a besoin du service Bonjour d'Apple. Démarre-le, puis redémarre MyWhoosh.",
+  "networkHintBonjourStartedAfterApp": "Bonjour a été démarré après MyWhoosh, qui ne le vérifie qu'au lancement. Redémarre MyWhoosh.",
   "networkHintBonjourNsp": "Le hook du résolveur de Bonjour est absent. Réinstalle Bonjour — sans lui, le bouton BikeControl dans MyWhoosh ne peut pas fonctionner.",
   "networkHintResolveFail": "Cet ordinateur n'a pas pu résoudre l'adresse de BikeControl — précisément l'étape où l'appli d'entraînement échoue. Sous Windows, une installation de Bonjour corrompue peut en être la cause même si son service tourne ; une réinstallation propre corrige le problème.",
   "networkHintVpn": "Un VPN est actif et peut empêcher {app} de joindre BikeControl. Désactive le VPN, ou autorise l'accès au réseau local dans l'appli du VPN.",
