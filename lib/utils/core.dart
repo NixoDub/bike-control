@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:bike_control/bluetooth/app_connection_latch.dart';
@@ -49,6 +50,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:prop/prop.dart';
 import 'package:prop/services/bridge_usage_tracker.dart';
+import 'package:prop/utils/network_address.dart' show AdvertisedAddressPicker;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:universal_ble/universal_ble.dart';
@@ -573,6 +575,30 @@ class CoreLogic {
     }
   }
 
+  /// Polls for a usable network address while a network method is waiting to
+  /// start; null otherwise.
+  Timer? _networkWaitTimer;
+
+  /// Whether a network method's start failure is just "no network yet". When it
+  /// is, the methods are started again once an address appears and the caller
+  /// must leave the method enabled.
+  ///
+  /// BikeControl often launches before Wi-Fi is up (autostart at login). The
+  /// start then fails with no usable address, and the failure handler used to
+  /// switch the method off for good, so MyWhoosh's BikeControl button stayed
+  /// dead until the rider found and re-enabled it.
+  @visibleForTesting
+  Future<bool> waitForNetworkIfOffline() async {
+    if (await AdvertisedAddressPicker.pick() != null) return false;
+    _networkWaitTimer ??= Timer.periodic(const Duration(seconds: 5), (timer) async {
+      if (await AdvertisedAddressPicker.pick() == null || !timer.isActive) return;
+      timer.cancel();
+      _networkWaitTimer = null;
+      startEnabledConnectionMethod();
+    });
+    return true;
+  }
+
   /// [userInitiated] opts out of the onboarding deferral below. Use it when the
   /// rider just did something that should visibly take effect — granting a
   /// permission, finishing the wizard — as opposed to the unsolicited call at
@@ -610,7 +636,8 @@ class CoreLogic {
 
     if (isZwiftMdnsEnabled && localNetworkOk) {
       if (core.settings.getTrainerApp() is Rouvy && !core.rouvyMdnsEmulator.isStarted.value) {
-        core.rouvyMdnsEmulator.startServer().catchError((e, s) {
+        core.rouvyMdnsEmulator.startServer().catchError((e, s) async {
+          if (await waitForNetworkIfOffline()) return;
           recordError(e, s, context: 'Rouvy mDNS Emulator');
           core.settings.setZwiftMdnsEmulatorEnabled(false);
           core.connection.signalNotification(
@@ -618,7 +645,8 @@ class CoreLogic {
           );
         });
       } else if (!core.zwiftMdnsEmulator.isStarted.value) {
-        core.zwiftMdnsEmulator.startServer().catchError((e, s) {
+        core.zwiftMdnsEmulator.startServer().catchError((e, s) async {
+          if (await waitForNetworkIfOffline()) return;
           recordError(e, s, context: 'Zwift mDNS Emulator');
           core.settings.setZwiftMdnsEmulatorEnabled(false);
           core.connection.signalNotification(
@@ -634,7 +662,8 @@ class CoreLogic {
     }
 
     if (isObpMdnsEnabled && localNetworkOk && !core.obpMdnsEmulator.isStarted.value) {
-      core.obpMdnsEmulator.startServer().catchError((e, s) {
+      core.obpMdnsEmulator.startServer().catchError((e, s) async {
+        if (await waitForNetworkIfOffline()) return;
         recordError(e, s, context: 'OBP mDNS Emulator');
         core.settings.setObpMdnsEnabled(false);
         core.connection.signalNotification(
