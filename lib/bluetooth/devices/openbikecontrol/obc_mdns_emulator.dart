@@ -60,6 +60,10 @@ class OpenBikeControlMdnsEmulator extends TrainerConnection implements OnMessage
   /// disagree about which advertiser is actually serving.
   ServiceAdvertiser? _activeAdvertiser;
 
+  /// The host label the running registration asked the in-process responder
+  /// for. Null while stopped.
+  String? _pinnedHostLabel;
+
   /// The advertiser's [ServiceAdvertiser.advertisedAddress] we are watching for
   /// mid-session network moves, and the listener + last value that let us fire
   /// a single alert per change. Null while the server is stopped.
@@ -134,8 +138,11 @@ class OpenBikeControlMdnsEmulator extends TrainerConnection implements OnMessage
     if (!isStarted.value) return null;
     final advertiser = _activeAdvertiser;
     if (advertiser is ResponderServiceAdvertiser || advertiser is DnsSdServiceAdvertiser) {
+      // The responder serves one host per service and reports the label of
+      // whichever registered last — the DirCon bridge's, once a trainer is
+      // bridged — so read ours from what we asked for.
       final label = advertiser is ResponderServiceAdvertiser
-          ? advertiser.hostLabel
+          ? (advertiser.fixedHostLabel ?? _pinnedHostLabel)
           : (advertiser as DnsSdServiceAdvertiser).hostLabel;
       return label == null ? null : '$label.local';
     }
@@ -196,12 +203,21 @@ class OpenBikeControlMdnsEmulator extends TrainerConnection implements OnMessage
           ? core.settings.getObpMdnsBackend()
           : ObpMdnsBackend.platformDefault;
       final selection = resolveAdvertiser(requestedBackend);
+      // Every install advertises the instance "BikeControl", so a hostname
+      // derived from it is the same on every install too: with BikeControl on
+      // a phone and a PC, both answer for `BikeControl.local`, and MyWhoosh's
+      // address lookup returns whichever spoke last — often the other device.
+      // The OBC path never matches the hostname against the name, so it gets
+      // this install's own label. The DirCon variant keeps the derived one:
+      // DirCon clients do match them.
+      final hostLabel = _useDirCon ? null : MdnsHostLabel.storedRandom();
       _mdnsRegistration = await selection.advertiser.register(
         AdvertisedService(
           name: 'BikeControl',
           type: _useDirCon ? '_wahoo-fitness-tnp._tcp' : '_openbikecontrol._tcp',
           port: boundPort,
           address: localIP,
+          hostLabel: hostLabel,
           txt: _useDirCon
               ? {
                   'ble-service-uuids': Uint8List.fromList(OpenBikeControlConstants.SERVICE_UUID.codeUnits),
@@ -223,6 +239,7 @@ class OpenBikeControlMdnsEmulator extends TrainerConnection implements OnMessage
       );
       _activeBackend = selection.resolved;
       _activeAdvertiser = selection.advertiser;
+      _pinnedHostLabel = hostLabel ?? MdnsHostLabel.derivedFrom('BikeControl');
       _watchAdvertisedAddress(selection.advertiser);
       _registeredEntry = (name: 'BikeControl', port: boundPort);
       SelfAdvertisementRegistry.instance.add(name: 'BikeControl', port: boundPort);
@@ -269,6 +286,7 @@ class OpenBikeControlMdnsEmulator extends TrainerConnection implements OnMessage
     connectedApp.value = null;
     _activeBackend = ObpMdnsBackend.platformDefault;
     _activeAdvertiser = null;
+    _pinnedHostLabel = null;
     _stopWatchingAdvertisedAddress();
     if (reg != null) {
       try {
