@@ -17,6 +17,7 @@ import 'package:bike_control/utils/core.dart';
 import 'package:bike_control/widgets/controller/controller_canvas.dart';
 import 'package:bike_control/widgets/ui/animated_button_widget.dart';
 import 'package:bike_control/widgets/guided_operation_sheet.dart';
+import 'package:bike_control/widgets/ignored_devices_nearby_hint.dart';
 import 'package:bike_control/widgets/ui/bk_touch_target.dart';
 import 'package:bike_control/widgets/ui/bk_grouped_section.dart' show BkIconTile;
 import 'package:bike_control/widgets/ui/bk_status_dot.dart';
@@ -267,6 +268,8 @@ Widget onboardingControllerBody(
           // The subtitle already says to power it on and bring it close — no
           // second caption repeating it under the animation.
           Center(child: SmoothWifiAnimation()),
+          // The controller may be here and simply on the ignore list.
+          const IgnoredDevicesNearbyHint(alignment: MainAxisAlignment.center, padding: EdgeInsets.only(top: 16)),
         ]),
       );
     case ControllerPhase.empty:
@@ -276,6 +279,9 @@ Widget onboardingControllerBody(
           OnboardingHeadline(context.i18n.onboardingScanEmptyTitle),
           Gap(6),
           Text(context.i18n.onboardingScanEmptySubtitle).small.muted,
+          // Ahead of the wake/closer tips: none of them help a controller
+          // that is on the ignore list.
+          const IgnoredDevicesNearbyHint(padding: EdgeInsets.only(top: 12)),
           Gap(18),
           _infoRow(
             context,

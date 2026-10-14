@@ -300,6 +300,20 @@ Future<void> main() async {
     expect(find.descendant(of: ignored, matching: find.text('2')), findsOneWidget);
   });
 
+  testWidgets('an ignored device the scan sees is called out under the controllers', (tester) async {
+    debugHostPlatformOverride = TargetPlatform.android;
+    addTearDown(() => core.connection.ignoredDevicesNearby.value = const {});
+    await _pumpDevices(tester);
+
+    final hint = find.byKey(const ValueKey('ignored-devices-nearby-hint'));
+    expect(hint, findsNothing);
+
+    core.connection.ignoredDevicesNearby.value = {'neighbour-click'};
+    await tester.pump();
+    final section = find.byKey(const ValueKey('devices-controllers'));
+    expect(find.descendant(of: section, matching: hint), findsOneWidget);
+  });
+
   testWidgets('ride feedback, Health and Quit are no longer on Devices', (tester) async {
     debugHostPlatformOverride = TargetPlatform.android;
     await _pumpDevices(tester);

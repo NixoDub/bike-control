@@ -3308,5 +3308,6 @@
   "chainHintVeryBigGear": "Your chain on the trainer is in a very big gear (gear ratio about {ratio}). Virtual gears feel realistic with the chain in a middle gear, e.g. 34/17 or 50/25. Leave it there and only shift virtually.",
   "@chainHintVeryBigGear": {"placeholders": {"ratio": {"type": "String"}}},
   "chainHintVerySmallGear": "Your chain on the trainer is in a very small gear (gear ratio about {ratio}). Virtual gears feel realistic with the chain in a middle gear, e.g. 34/17 or 50/25. Leave it there and only shift virtually.",
-  "@chainHintVerySmallGear": {"placeholders": {"ratio": {"type": "String"}}}
+  "@chainHintVerySmallGear": {"placeholders": {"ratio": {"type": "String"}}},
+  "ignoredDevicesNearby": "Found ignored devices nearby"
 }
