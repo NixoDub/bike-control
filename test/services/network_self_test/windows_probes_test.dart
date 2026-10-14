@@ -321,6 +321,38 @@ void main() {
       expect(result.firewall.verdict, NetworkVerdict.pass);
     });
 
+    test('firewall warn: the only Allow rules are for Private while the network is Public', () async {
+      // Windows' first-run prompt often creates the rule for Private only; on
+      // a Public connection that rule lets nothing in.
+      final result = await windowsNetworkProfileAndFirewallChecks(
+        ctx(
+          runProcess: _stub(
+            '#PROFILE\nWLAN=Public\n#FWSTATE\nDomain=True\nPrivate=True\nPublic=True\n#FIREWALL\nTrue=Allow=2\nTrue=Allow=2\n',
+          ),
+        ),
+      );
+      expect(result.firewall.verdict, NetworkVerdict.warn);
+      expect(result.firewall.detail['rules'], 'none allow Public');
+    });
+
+    test('firewall pass: an Allow rule covers the current profile', () async {
+      final result = await windowsNetworkProfileAndFirewallChecks(
+        ctx(
+          runProcess: _stub(
+            '#PROFILE\nWLAN=Public\n#FWSTATE\nDomain=True\nPrivate=True\nPublic=True\n#FIREWALL\nTrue=Allow=2\nTrue=Allow=4\n',
+          ),
+        ),
+      );
+      expect(result.firewall.verdict, NetworkVerdict.pass);
+    });
+
+    test('firewall warn: a disabled Allow rule does not count', () async {
+      final result = await windowsNetworkProfileAndFirewallChecks(
+        ctx(runProcess: _stub('#PROFILE\n#FIREWALL\nFalse=Allow=7\n')),
+      );
+      expect(result.firewall.verdict, NetworkVerdict.warn);
+    });
+
     test('firewall warn: an enabled Block rule exists', () async {
       final result = await windowsNetworkProfileAndFirewallChecks(
         ctx(runProcess: _stub('#PROFILE\n#FIREWALL\nTrue=Block\n')),
