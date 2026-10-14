@@ -47,6 +47,10 @@ Future<NetworkCheck> guidedWatchCheck(
   var addressAsks = 0;
 
   void classify(MdnsQueryLogEntry entry) {
+    // Possibly BikeControl's own scan (the self-test's discovery snapshot, the
+    // Wi-Fi trainer scan): counting it would report a trainer app that never
+    // asked as having browsed and resolved us.
+    if (entry.duringOwnBrowse) return;
     for (final question in entry.questions) {
       if (question.startsWith('PTR _openbikecontrol') || question.startsWith('PTR _wahoo-fitness-tnp')) {
         browsed = true;

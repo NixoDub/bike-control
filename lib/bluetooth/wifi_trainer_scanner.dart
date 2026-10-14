@@ -6,6 +6,7 @@ import 'package:dartx/dartx.dart';
 import 'package:flutter/foundation.dart';
 import 'package:nsd/nsd.dart' as nsd;
 import 'package:prop/emulators/definitions/fitness_bike_definition.dart';
+import 'package:prop/mdns/mdns_responder.dart' show OwnMdnsBrowsing;
 import 'package:prop/utils/constants.dart';
 import 'package:prop/utils/self_advertisement_registry.dart';
 import 'package:universal_ble/universal_ble.dart';
@@ -55,6 +56,7 @@ class WifiTrainerScanner {
     final discovery = await nsd.startDiscovery(serviceType, autoResolve: true);
     discovery.addServiceListener(handleService);
     _discovery = discovery;
+    OwnMdnsBrowsing.begin();
   }
 
   Future<void> stop() async {
@@ -62,6 +64,7 @@ class WifiTrainerScanner {
     _discovery = null;
     _known.clear();
     if (discovery != null) {
+      OwnMdnsBrowsing.end();
       discovery.removeServiceListener(handleService);
       try {
         await nsd.stopDiscovery(discovery);

@@ -46,7 +46,7 @@ NetworkProbeContext ctx({
   );
 }
 
-MdnsQueryLogEntry _entry(List<String> questions, {int count = 1}) => MdnsQueryLogEntry(
+MdnsQueryLogEntry _entry(List<String> questions, {int count = 1, bool duringOwnBrowse = false}) => MdnsQueryLogEntry(
   at: DateTime(2026, 8, 21),
   source: '192.168.1.50',
   sourcePort: 5353,
@@ -54,6 +54,7 @@ MdnsQueryLogEntry _entry(List<String> questions, {int count = 1}) => MdnsQueryLo
   questions: questions,
   answeredUnicast: false,
   answeredMulticast: true,
+  duringOwnBrowse: duringOwnBrowse,
   count: count,
 );
 
@@ -131,6 +132,18 @@ void main() {
           expect(check.fixes, [NetworkFixId.switchToLocal]);
         });
       }
+    });
+
+    test('our own scan browsing and resolving does not count as the trainer app asking', () async {
+      final browse = _entry(const ['PTR _openbikecontrol._tcp.local'], duringOwnBrowse: true);
+      final resolve = _entry(const ['SRV BikeControl._openbikecontrol._tcp.local'], duringOwnBrowse: true);
+      final check = await guidedWatchCheck(
+        ctx(queryLog: _scriptedLog([const [], [browse, resolve]])),
+        window: _defaultWindow,
+        tick: _defaultTick,
+      );
+      expect(check.verdict, NetworkVerdict.fail);
+      expect(check.detail['hint'], 'no query arrived');
     });
 
     test('warn: browsed but never resolved', () async {
