@@ -157,6 +157,15 @@ abstract class BluetoothDevice extends BaseDevice {
     FitnessBikeDefinition.FEC_BLE_SERVICE_UUID,
   ]);
 
+  /// Whether [name] is a Decathlon Van Rysel HT smart trainer
+  /// (`VANRYSEL-HT…` — the D100/D500 FE-C units as well as the RCR). Like the
+  /// Tacx Neo, these can reach a Windows scan with no advertised services at
+  /// all, leaving the name as the only usable signal, so `fromScanResult`
+  /// matches it by name in both branches and builds a [ProxyDevice] whose real
+  /// services (FE-C or FTMS) are discovered on connect. Kept to the `-HT`
+  /// prefix so other Van Rysel products (straps, power meters) are untouched.
+  static bool _isVanRyselTrainerName(String name) => name.toUpperCase().startsWith('VANRYSEL-HT');
+
   /// Test seam: overrides the effective [kIsWeb] check so `fromScanResult`'s
   /// web-specific classification branch can be exercised from a normal
   /// (Dart VM) test run, where the real compile-time [kIsWeb] is always
@@ -259,6 +268,8 @@ abstract class BluetoothDevice extends BaseDevice {
         // Windows' universal_ble surfaces the Tacx Neo with an empty
         // advertisement (no services/serviceData), so match on name alone.
         _ when scanResult.name!.toUpperCase().startsWith('TACX NEO') => ProxyDevice(scanResult),
+        // Same for Decathlon Van Rysel HT trainers — see [_isVanRyselTrainerName].
+        _ when _isVanRyselTrainerName(scanResult.name!) => ProxyDevice(scanResult),
         _ when scanResult.name!.toUpperCase().startsWith('RDR') => ShimanoDi2(scanResult),
         _ when scanResult.name!.toUpperCase().startsWith('SRAM') && _sramIsConnectable(scanResult) => SramAxs(
           scanResult,
@@ -339,6 +350,8 @@ abstract class BluetoothDevice extends BaseDevice {
         // match on it and build a ProxyDevice (real services discovered on
         // connect). Must win over the services-based ProxyDevice branch below.
         _ when scanResult.name!.toUpperCase().startsWith('TACX NEO') => ProxyDevice(scanResult),
+        // Same for Decathlon Van Rysel HT trainers — see [_isVanRyselTrainerName].
+        _ when _isVanRyselTrainerName(scanResult.name!) => ProxyDevice(scanResult),
         //_ when scanResult.services.contains(CycplusBc2Constants.SERVICE_UUID.toLowerCase()) => CycplusBc2(scanResult),
         _ when scanResult.services.contains(ShimanoDi2Constants.SERVICE_UUID.toLowerCase()) => ShimanoDi2(scanResult),
         _ when scanResult.services.contains(ShimanoDi2Constants.SERVICE_UUID_ALTERNATIVE.toLowerCase()) => ShimanoDi2(
