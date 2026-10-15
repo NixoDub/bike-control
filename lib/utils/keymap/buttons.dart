@@ -267,6 +267,17 @@ class ControllerButton {
   /// Uses the raw [name] (not [displayName]) so the multi-device `(HASH)`
   /// suffix never leaks into the label.
   String get initials {
+    // Generic gamepads send numbered keys ("button-7", "axis-1_-1"); keep the
+    // number, or every button reads "B" and every axis "A".
+    final generic = _genericKeyPattern.firstMatch(name);
+    if (generic != null) {
+      final direction = switch (generic.group(3)) {
+        '1' => '+',
+        '-1' => '−',
+        _ => '',
+      };
+      return '${generic.group(1)![0].toUpperCase()}${generic.group(2)}$direction';
+    }
     final words = name.splitByUpperCase().split(' ');
     return words
         .where((w) => w.isNotEmpty)
@@ -280,6 +291,8 @@ class ControllerButton {
         )
         .join();
   }
+
+  static final _genericKeyPattern = RegExp(r'^(button|axis)-(\d+)(?:_(-?\d+))?$');
 
   /// What the button's face reads when it has no icon.
   String get shortLabel => label ?? initials;

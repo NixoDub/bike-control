@@ -13,5 +13,12 @@ void main() {
       expect(const ControllerButton('a').initials, 'A');
       expect(const ControllerButton('paddleLeft').initials, 'P←');
     });
+
+    test('generic gamepad keys keep their number', () {
+      expect(const ControllerButton('button-7').initials, 'B7');
+      expect(const ControllerButton('button-12').initials, 'B12');
+      expect(const ControllerButton('axis-1_1').initials, 'A1+');
+      expect(const ControllerButton('axis-1_-1').initials, 'A1−');
+    });
   });
 }
