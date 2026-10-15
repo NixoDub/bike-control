@@ -40,12 +40,14 @@ class AccessibilityPlugin: FlutterPlugin, Accessibility {
     Accessibility.setUp(flutterPluginBinding.binaryMessenger, this)
     StreamEventsStreamHandler.register(flutterPluginBinding.binaryMessenger, windowEventHandler)
     HidKeyPressedStreamHandler.register(flutterPluginBinding.binaryMessenger, hidEventHandler)
-    Observable.fromServiceWindow = windowEventHandler
-    Observable.fromServiceKeys = hidEventHandler
+    Observable.fromServiceWindow.add(windowEventHandler)
+    Observable.fromServiceKeys.add(hidEventHandler)
   }
 
   override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
     channel.setMethodCallHandler(null)
+    Observable.fromServiceWindow.remove(windowEventHandler)
+    Observable.fromServiceKeys.remove(hidEventHandler)
   }
 
   override fun hasPermission(): Boolean {

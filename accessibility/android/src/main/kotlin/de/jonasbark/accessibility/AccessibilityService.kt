@@ -43,7 +43,7 @@ class AccessibilityService : AccessibilityService(), Listener {
         }
         val currentPackageName = event.packageName.toString()
         val windowSize = getWindowSize()
-        Observable.fromServiceWindow?.onChange(packageName = currentPackageName, window = windowSize)
+        Observable.fromServiceWindow.forEach { it.onChange(packageName = currentPackageName, window = windowSize) }
     }
 
     private fun getWindowSize(): Rect {
@@ -81,7 +81,7 @@ class AccessibilityService : AccessibilityService(), Listener {
             )
 
             // Forward key events to the plugin (Flutter) and swallow them so they don't propagate.
-            Observable.fromServiceKeys?.onKeyEvent(event)
+            Observable.fromServiceKeys.forEach { it.onKeyEvent(event) }
             // Return true to indicate we've handled the event and it should be swallowed.
             return true
         } else {
