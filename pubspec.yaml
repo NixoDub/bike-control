@@ -129,11 +129,11 @@ dev_dependencies:
 
 dependency_overrides:
   path_provider_foundation: ">=2.3.0 <2.6.0"
+  # Vendored: GameInput v2 with background input, so gamepads keep working
+  # while the trainer app has focus. Keep in sync with pubspec_overrides*.yaml, which
+  # replace this whole section.
   gamepads_windows:
-    git:
-      url: https://github.com/lea108/gamepads.git
-      ref: windows-api-rework
-      path: packages/gamepads_windows
+    path: packages/gamepads_windows
 
 flutter:
   uses-material-design: true

@@ -22,45 +22,57 @@ class GamepadDevice extends BaseDevice {
   Future<void> connect() async {
     isConnected = true;
 
-    Gamepads.normalizedEvents.where((pad) => pad.gamepadId == id).listen((event) async {
-      if (event.axis != null && event.value.abs().round() != 1 && event.value.abs().round() != 0) {
-        // ignore axis events that are not fully pressed to avoid accidental triggers from analog drift or light touches
-        return;
-      }
-      final buttonKey = event.button?.name ?? '${event.axis!.name}_${event.value.round()}';
+    Gamepads.normalizedEvents.where((pad) => pad.gamepadId == id).listen((event) {
+      _handleEvent(event.button?.name ?? event.axis!.name, isAxis: event.axis != null, value: event.value);
+    });
 
-      actionStreamInternal.add(
-        LogNotification('Gamepad event: ${event.button?.name ?? event.axis!.name} value ${event.value}'),
-      );
+    // Generic controllers (no gamepad mapping, e.g. DirectInput pads on Windows) send raw keys like
+    // "button-3" or "axis-1" that normalization drops.
+    Gamepads.events
+        .where((event) => event.gamepadId == id && _rawKeyPattern.hasMatch(event.key))
+        .listen((event) => _handleEvent(event.key, isAxis: event.type == KeyType.analog, value: event.value));
+  }
 
-      if (event.axis != null) {
-        if (event.value.round().abs() != 0) {
-          ControllerButton button = getOrAddButton(
-            buttonKey,
-            () => ControllerButton(buttonKey, sourceDeviceId: id),
-          );
-          final buttonsClicked = [button];
-          if (_lastButtonsClicked.contentEquals(buttonsClicked) == false) {
-            handleButtonsClicked(buttonsClicked);
-          }
-          _lastButtonsClicked = buttonsClicked;
-        } else {
-          _lastButtonsClicked = [];
-          handleButtonsClicked([]);
-        }
-      } else {
+  static final _rawKeyPattern = RegExp(r'^(button-|axis-|switch\d+-)');
+
+  void _handleEvent(String name, {required bool isAxis, required double value}) {
+    if (isAxis && value.abs().round() != 1 && value.abs().round() != 0) {
+      // ignore axis events that are not fully pressed to avoid accidental triggers from analog drift or light touches
+      return;
+    }
+    final buttonKey = isAxis ? '${name}_${value.round()}' : name;
+
+    actionStreamInternal.add(
+      LogNotification('Gamepad event: $name value $value'),
+    );
+
+    if (isAxis) {
+      if (value.round().abs() != 0) {
         ControllerButton button = getOrAddButton(
           buttonKey,
           () => ControllerButton(buttonKey, sourceDeviceId: id),
         );
-        final buttonsClicked = event.value.toInt() == 1 ? [button] : <ControllerButton>[];
+        final buttonsClicked = [button];
         if (_lastButtonsClicked.contentEquals(buttonsClicked) == false) {
-          Logger.info("Buttons clicked: ${buttonsClicked.map((b) => b.name).join(', ')}");
           handleButtonsClicked(buttonsClicked);
         }
         _lastButtonsClicked = buttonsClicked;
+      } else {
+        _lastButtonsClicked = [];
+        handleButtonsClicked([]);
       }
-    });
+    } else {
+      ControllerButton button = getOrAddButton(
+        buttonKey,
+        () => ControllerButton(buttonKey, sourceDeviceId: id),
+      );
+      final buttonsClicked = value.toInt() == 1 ? [button] : <ControllerButton>[];
+      if (_lastButtonsClicked.contentEquals(buttonsClicked) == false) {
+        Logger.info("Buttons clicked: ${buttonsClicked.map((b) => b.name).join(', ')}");
+        handleButtonsClicked(buttonsClicked);
+      }
+      _lastButtonsClicked = buttonsClicked;
+    }
   }
 
   @override
