@@ -206,6 +206,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   ValueNotifier<ControllerPress> _pressesFor(String deviceId) =>
       _presses.putIfAbsent(deviceId, () => ValueNotifier((button: null, generation: 0)));
 
+  /// How many buttons Ride last drew for each controller, to spot one it
+  /// added since.
+  final Map<String, int> _buttonCounts = {};
+
   bool get _isRide => widget.view == HomeView.ride;
 
   /// Last measured Local Network status, kept here rather than read off
@@ -312,8 +316,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _syncProxyListeners();
     _actionListener = core.connection.actionStream.listen((notification) {
       if (notification is ButtonNotification && notification.buttonsClicked.isNotEmpty) {
-        final presses = _pressesFor(notification.device.uniqueId);
+        final device = notification.device;
+        final presses = _pressesFor(device.uniqueId);
         presses.value = (button: notification.buttonsClicked.first, generation: presses.value.generation + 1);
+        // Controllers without a fixed layout (gamepads, keyboards) add a button
+        // on its first press; the picture and the list only show it on a rebuild.
+        final shownCount = _buttonCounts[device.uniqueId];
+        if (shownCount != null && shownCount != device.availableButtons.length && mounted) setState(() {});
       }
     });
 
@@ -1393,6 +1402,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     // Only such controllers: no section at all, rather than one saying there
     // is no controller.
     if (shown.isEmpty && present.isNotEmpty) return null;
+    for (final device in present) {
+      _buttonCounts[device.uniqueId] = device.availableButtons.length;
+    }
     final keymap = core.actionHandler.supportedApp?.keymap;
     final single = shown.length == 1 ? shown.single : null;
     return Column(
