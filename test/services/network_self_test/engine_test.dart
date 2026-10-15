@@ -391,4 +391,22 @@ void main() {
       expect(runProcessCalls, 1, reason: 'both specs must share the one powershell invocation');
     });
   });
+
+  test('the result records the app version the run happened on', () async {
+    final engine = NetworkSelfTestEngine(
+      contextBuilder: _ctx,
+      probes: [
+        ProbeSpec(
+          id: NetworkCheckId.vpn,
+          timeout: const Duration(seconds: 1),
+          run: (ctx) async => _pass(NetworkCheckId.vpn),
+        ),
+      ],
+      appVersion: () => '7.2.0',
+    );
+
+    final result = await engine.run();
+
+    expect(result.appVersion, '7.2.0');
+  });
 }

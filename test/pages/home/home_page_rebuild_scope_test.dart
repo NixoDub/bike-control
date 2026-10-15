@@ -59,4 +59,37 @@ Future<void> main() async {
     expect(pressGeneration(), 1, reason: 'the pressed button still lights up');
     expect(homeRebuilds, isEmpty, reason: 'a press must not rebuild the whole home page');
   });
+
+  testWidgets('a button a controller adds on its first press shows up', (tester) async {
+    const first = ControllerButton('button-0');
+    const added = ControllerButton('button-1');
+    final device = HidDevice('Gamepad')..isConnected = true;
+    device.availableButtons.add(first);
+    core.connection.devices.add(device);
+
+    await tester.pumpWidget(
+      ShadcnApp(
+        localizationsDelegates: [
+          ...ShadcnLocalizations.localizationsDelegates,
+          AppLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('en')],
+        home: Scaffold(
+          child: SingleChildScrollView(child: HomePage(isMobile: true, onUpdate: () {})),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    Iterable<String> shown() =>
+        tester.widgetList<AnimatedButtonWidget>(find.byType(AnimatedButtonWidget)).map((b) => b.button.name);
+    expect(shown(), [first.name]);
+
+    // Gamepads and keyboards add a button when it is first pressed.
+    device.availableButtons.add(added);
+    core.connection.signalNotification(ButtonNotification(device: device, buttonsClicked: [added]));
+    await tester.pump();
+
+    expect(shown(), [first.name, added.name]);
+  });
 }

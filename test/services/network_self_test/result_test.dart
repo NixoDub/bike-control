@@ -140,4 +140,55 @@ void main() {
     expect(bundle, contains('vpn=pass'));
     expect(bundle, isNot(contains('multicastLock')));
   });
+
+  test('toBundleString appends the time of the run and the app version to the header', () {
+    final result = NetworkSelfTestResult(
+      at: DateTime(2026, 10, 12, 9, 5, 7),
+      platform: 'macos',
+      obcBackend: 'platformDefault',
+      hostname: 'jonas-mbp.local',
+      appVersion: '7.2.0',
+      checks: const [NetworkCheck(id: NetworkCheckId.vpn, verdict: NetworkVerdict.pass)],
+      completed: true,
+    );
+
+    // Existing positions stay put; the new fields are appended as key=value
+    // tokens so a stale stored run is recognisable in a later bundle.
+    expect(
+      result.toBundleString().split('\n').first,
+      'NETWORK PASS,2026-10-12,macos,platformDefault,host=jonas-mbp.local,time=09:05:07,app=7.2.0',
+    );
+  });
+
+  test('json round trip preserves the app version', () {
+    final result = NetworkSelfTestResult(
+      at: DateTime(2026, 10, 12, 9, 5, 7),
+      platform: 'macos',
+      obcBackend: 'platformDefault',
+      appVersion: '7.2.0',
+      checks: const [],
+      completed: true,
+    );
+
+    final back = NetworkSelfTestResult.tryParse(result.toJsonString())!;
+
+    expect(back.appVersion, '7.2.0');
+    expect(back.at, DateTime(2026, 10, 12, 9, 5, 7));
+  });
+
+  test('a result stored before the app version was recorded still parses and omits app=', () {
+    final stored = jsonEncode({
+      'at': DateTime(2026, 10, 1, 18, 30).toIso8601String(),
+      'platform': 'macos',
+      'obcBackend': 'platformDefault',
+      'checks': <dynamic>[],
+      'completed': true,
+    });
+
+    final result = NetworkSelfTestResult.tryParse(stored);
+
+    expect(result, isNotNull);
+    expect(result!.appVersion, isNull);
+    expect(result.toBundleString(), 'NETWORK PASS,2026-10-01,macos,platformDefault,time=18:30:00');
+  });
 }

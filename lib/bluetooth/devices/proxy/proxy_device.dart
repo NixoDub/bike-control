@@ -464,18 +464,44 @@ class ProxyDevice extends BluetoothDevice {
     return core.settings.getTrainerApp() is Zwift;
   }
 
-  /// The name Rouvy needs the bridge to advertise under; null for every other
-  /// app, leaving the usual name in place. Reasoning in `prop`
-  /// ([DirconEmulator.advertisementNameOverride]).
+  /// The name the bridge advertises under for the selected trainer app; null
+  /// leaves the usual `<trainer> - BikeControl` in place. Read on every
+  /// advertisement, so it follows the trainer app as it changes.
   @visibleForTesting
-  String? rouvyAdvertisementName() {
-    if (core.settings.getTrainerApp() is! Rouvy) return null;
-    final name = scanResult.name;
-    final composed = name == null || name.isEmpty ? _bridgeSuffix : '$name - $_bridgeSuffix';
+  String? bridgeAdvertisementName() => switch (core.settings.getTrainerApp()) {
+    Rouvy() => rouvyAdvertisementNameFor(scanResult.name),
+    Zwift() => zwiftAdvertisementNameFor(scanResult.name),
+    _ => null,
+  };
+
+  /// Rouvy: the trainer name with a neutral suffix. Reasoning in `prop`
+  /// ([DirconEmulator.advertisementNameOverride]).
+  static String rouvyAdvertisementNameFor(String? trainerName) {
+    final composed = trainerName == null || trainerName.isEmpty ? _bridgeSuffix : '$trainerName - $_bridgeSuffix';
     return composed.toLowerCase().contains('bikecontrol') ? _bridgeSuffix : composed;
   }
 
   static const _bridgeSuffix = 'Bridge';
+
+  /// Zwift: advertise the bridge under a name that doesn't embed the trainer's
+  /// name — "BikeControl" plus the trainer's trailing identifier
+  /// ("KICKR CORE 73D3" → "BikeControl 73D3"), so several trainers stay
+  /// distinguishable. The first candidate that neither contains the trainer
+  /// name nor is contained in it wins.
+  static String zwiftAdvertisementNameFor(String? trainerName) {
+    final name = trainerName?.trim() ?? '';
+    final tokens = name.split(RegExp(r'[\s_-]+')).where((t) => t.isNotEmpty).toList();
+    final id = tokens.length > 1 && RegExp(r'^[A-Za-z0-9]*[0-9][A-Za-z0-9]*$').hasMatch(tokens.last)
+        ? tokens.last
+        : null;
+    final candidates = [if (id != null) 'BikeControl $id', 'BikeControl', _bridgeSuffix, 'Virtual Trainer'];
+    if (name.isEmpty) return candidates.first;
+    final lower = name.toLowerCase();
+    return candidates.firstWhere((c) {
+      final candidate = c.toLowerCase();
+      return !candidate.contains(lower) && !lower.contains(candidate);
+    }, orElse: () => candidates.last);
+  }
 
   /// Rouvy needs an IPv4-only listener; the controller endpoint has bound one
   /// for it for a while. Reasoning in `prop` ([DirconEmulator.forceIPv4]).
@@ -492,10 +518,21 @@ class ProxyDevice extends BluetoothDevice {
   /// getter.
   String get advertisementName => emulator.advertisementName;
 
-  Map<String, Uint8List> _trainerMdnsTxt() => trainerMdnsTxtFor(
+  /// The bridge's TXT record for the selected trainer app. Passed to the
+  /// emulator as a builder, so a re-advertise after an app change picks up
+  /// the fields of the new app.
+  @visibleForTesting
+  Map<String, Uint8List> trainerMdnsTxt() => trainerMdnsTxtFor(
     core.settings.getTrainerApp(),
-    serialNumber: mdnsSerialNumber(scanResult.deviceId),
+    serialNumber: _bridgeSerialNumber(),
   );
+
+  /// The Zwift-named bridge ([zwiftAdvertisementNameFor]) gets its own serial
+  /// so it shows up as a new device. Everything else keeps the device serial.
+  String _bridgeSerialNumber() {
+    final zwiftNamed = _retrofitModeN.value != RetrofitMode.proxy && core.settings.getTrainerApp() is Zwift;
+    return mdnsSerialNumber(zwiftNamed ? 'zwift:${scanResult.deviceId}' : scanResult.deviceId);
+  }
 
   /// Whether the bridge advertises 16-bit services bare (`1826`) or in the
   /// `0x1826` form. Rouvy (and Zwift, MyWhoosh, TPV) parse the `0x` form and
@@ -546,6 +583,7 @@ class ProxyDevice extends BluetoothDevice {
     def.setRiderWeightKg(cfg.riderWeightKg);
     def.setGradeSmoothingEnabled(cfg.gradeSmoothing);
     def.setCadenceFilterEnabled(cfg.cadenceFilterEnabled);
+    def.setDifficultyPct(cfg.difficultyPct);
     // A rider who saved a config chose their mode; honour it. With no saved
     // config, let the definition manage the capability-based default (Track
     // Resistance on a grade-capable trainer) rather than the generic Target
@@ -610,6 +648,7 @@ class ProxyDevice extends BluetoothDevice {
 
     _wireGearEchoLog(def);
     _wireSimRefusalLog(def);
+    _wireChainHintLog(def);
   }
 
   /// Puts this trainer back in the gear it was left in, and keeps
@@ -712,6 +751,39 @@ class ProxyDevice extends BluetoothDevice {
     _simRefusalLogListener = onRefused;
   }
 
+  /// Same idempotency contract as [_wireGearEchoLog], for the chain-position
+  /// hint: the first time it shows on a definition (one per connection) goes
+  /// in the support log, so a "shifts barely felt" report says where the real
+  /// chain was.
+  FitnessBikeDefinition? _chainHintLoggedDef;
+  VoidCallback? _chainHintLogListener;
+
+  void _wireChainHintLog(FitnessBikeDefinition def) {
+    if (identical(_chainHintLoggedDef, def)) return;
+    final previous = _chainHintLogListener;
+    if (previous != null) {
+      _chainHintLoggedDef?.chainPositionHint.removeListener(previous);
+    }
+    var logged = false;
+    void onHint() {
+      final hint = def.chainPositionHint.value;
+      if (logged || hint == ChainPositionHint.none) return;
+      logged = true;
+      final side = hint == ChainPositionHint.veryBigGear ? 'very big' : 'very small';
+      final ratio = def.estimatedChainRatio.value?.toStringAsFixed(1) ?? '?';
+      core.connection.signalNotification(
+        LogNotification(
+          '${scanResult.name}: the real chain on the trainer is on a $side gear (ratio about $ratio), '
+          'asked the rider to move it to a middle gear',
+        ),
+      );
+    }
+
+    def.chainPositionHint.addListener(onHint);
+    _chainHintLoggedDef = def;
+    _chainHintLogListener = onHint;
+  }
+
   /// Is the connected trainer reporting any sign of riding right now? Used to
   /// gate the bridge-usage tracker so coast / paused minutes don't burn the
   /// non-Pro daily budget. Any of cadence, speed or power being non-zero is
@@ -752,13 +824,13 @@ class ProxyDevice extends BluetoothDevice {
         _proxyEmulator.bareShortServiceUuids = _bareShortServiceUuids;
         await _proxyEmulator.startServer(
           mode: RetrofitMode.proxy,
-          mdnsTxt: _trainerMdnsTxt(),
+          mdnsTxtBuilder: trainerMdnsTxt,
         );
       } else {
         // VS modes (wifi / bluetooth): the FBD lives in the shared ftmsEmulator.
         ftmsEmulator.shouldAdvertise = () => !_isBridgeTrialOver;
         ftmsEmulator.deviceName = () => scanResult.name;
-        ftmsEmulator.advertisementNameOverride = rouvyAdvertisementName;
+        ftmsEmulator.advertisementNameOverride = bridgeAdvertisementName;
         ftmsEmulator.forceIPv4 = rouvyNeedsIPv4;
         ftmsEmulator.bareShortServiceUuids = _bareShortServiceUuids;
         _fbd = fbd;
@@ -769,7 +841,7 @@ class ProxyDevice extends BluetoothDevice {
         }
         await ftmsEmulator.startServer(
           mode: mode,
-          mdnsTxt: _trainerMdnsTxt(),
+          mdnsTxtBuilder: trainerMdnsTxt,
         );
       }
 
@@ -1306,7 +1378,7 @@ class ProxyDevice extends BluetoothDevice {
       _retrofitModeN.value = next;
       ftmsEmulator.shouldAdvertise = () => !_isBridgeTrialOver;
       ftmsEmulator.deviceName = () => scanResult.name;
-      ftmsEmulator.advertisementNameOverride = rouvyAdvertisementName;
+      ftmsEmulator.advertisementNameOverride = bridgeAdvertisementName;
       ftmsEmulator.forceIPv4 = rouvyNeedsIPv4;
       ftmsEmulator.bareShortServiceUuids = _bareShortServiceUuids;
       _bindToActiveEmulator();
@@ -1321,7 +1393,7 @@ class ProxyDevice extends BluetoothDevice {
 
       await ftmsEmulator.startServer(
         mode: next,
-        mdnsTxt: _trainerMdnsTxt(),
+        mdnsTxtBuilder: trainerMdnsTxt,
       );
     } else if (old != RetrofitMode.proxy && next == RetrofitMode.proxy) {
       // VS → proxy: detach from shared, start per-instance
@@ -1347,14 +1419,14 @@ class ProxyDevice extends BluetoothDevice {
       _proxyEmulator.bareShortServiceUuids = _bareShortServiceUuids;
       await _proxyEmulator.startServer(
         mode: RetrofitMode.proxy,
-        mdnsTxt: _trainerMdnsTxt(),
+        mdnsTxtBuilder: trainerMdnsTxt,
       );
     } else {
       // VS wifi ↔ VS bluetooth: restart the shared emulator with the new mode
       _retrofitModeN.value = next;
       await ftmsEmulator.startServer(
         mode: next,
-        mdnsTxt: _trainerMdnsTxt(),
+        mdnsTxtBuilder: trainerMdnsTxt,
       );
     }
   }

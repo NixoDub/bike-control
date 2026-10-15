@@ -142,7 +142,7 @@ class _AppGuide extends StatelessWidget {
 /// trainer app hasn't picked the virtual trainer up yet. That is a different
 /// problem from "no trainer connected", and it wants the onboarding connection
 /// step's pairing instructions, not the trainer picker.
-Future<void> openPairAsTrainerSheet(BuildContext context, {required String? trainerName}) {
+Future<void> openPairAsTrainerSheet(BuildContext context, {required String? trainerName, String? bridgeName}) {
   final app = core.settings.getTrainerApp();
   if (app == null) return openOnboardingHelpSheet(context, OnboardingStep.connection);
 
@@ -163,7 +163,7 @@ Future<void> openPairAsTrainerSheet(BuildContext context, {required String? trai
           const Gap(14),
           Text(sheetContext.i18n.onboardingPairAsTrainer).h4,
           const Gap(12),
-          OnboardingPairAsTrainerCard(app: app, trainerName: trainerName),
+          OnboardingPairAsTrainerCard(app: app, trainerName: trainerName, bridgeName: bridgeName),
           const Gap(16),
           SizedBox(
             width: double.infinity,

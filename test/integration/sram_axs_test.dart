@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:bike_control/bluetooth/devices/sram/sram_axs.dart' show SramAxs;
 import 'package:bike_control/bluetooth/emulation/emulated_ble_platform.dart';
@@ -139,6 +141,78 @@ Future<void> main() async {
     await device.restoreShifting();
     expect(device.isShiftingDisabled, isFalse);
     expect(core.settings.getSramBackup(derailleur.deviceId), isNull, reason: 'restore clears the backup for a fresh future capture');
+  });
+
+  test('a GATT timeout while clearing the shifting config resets the link so a retry runs on a fresh one', () async {
+    final (derailleur, device) = await connectSram();
+    final reactionChars = {prop.SramAxs.reactionChar1.toLowerCase(), prop.SramAxs.reactionChar2.toLowerCase()};
+    // The derailleur stops answering config writes, exactly like a wedged
+    // link: universal_ble's queue gives up after 10 s with a TimeoutException.
+    var wedged = true;
+    derailleur.peripheral.onWrite = (service, characteristic, value) {
+      if (wedged && reactionChars.contains(characteristic.toLowerCase())) {
+        throw TimeoutException('Future not completed', const Duration(seconds: 10));
+      }
+      derailleur.fake.handleWrite(service, characteristic, value);
+    };
+
+    await expectLater(
+      device.setupControl(),
+      throwsA(isA<TimeoutException>().having((e) => e.toString(), 'message', contains('(write '))),
+    );
+    expect(device.isShiftingDisabled, isFalse);
+    final backup = core.settings.getSramBackup(derailleur.deviceId);
+    expect(backup, isNotNull, reason: 'the original config captured before the hang must survive');
+
+    // The wedged link is torn down; the same device entry stays listed and is
+    // reconnected by the regular rediscovery path.
+    expect(device.isResetting, isTrue);
+    await IntegrationEnv.waitFor(() => !derailleur.peripheral.isConnected, description: 'wedged link torn down');
+    expect(core.connection.devices, contains(device));
+
+    wedged = false;
+    // The still-running scan sees the derailleur advertising again.
+    env.ble.updateScanResult(derailleur.peripheral.scanResult);
+    await IntegrationEnv.waitFor(
+      () => device.isConnected && !device.isResetting,
+      description: 'same device reconnected on a fresh link',
+    );
+
+    await device.setupControl();
+    expect(device.isShiftingDisabled, isTrue);
+    expect(derailleur.derailleurUnassigned, isTrue);
+    expect(
+      jsonEncode(core.settings.getSramBackup(derailleur.deviceId)!.map((k, v) => MapEntry(k, v.toJson()))),
+      jsonEncode(backup!.map((k, v) => MapEntry(k, v.toJson()))),
+      reason: 'the retry must not overwrite the saved backup',
+    );
+  });
+
+  test('a refused authorization (create-bond decrypt failed) keeps the connection up', () async {
+    final (derailleur, device) = await connectSram();
+    final bondChar = prop.SramAxs.bondChar.toLowerCase();
+    bool isInit(List<int> v) => v.length == 16 && [for (var i = 0; i < 16; i++) v[i] == i].every((b) => b);
+    // AXS button not held: the derailleur answers the app's public key with a
+    // create-bond frame that doesn't decrypt.
+    derailleur.peripheral.onWrite = (service, characteristic, value) {
+      if (characteristic.toLowerCase() == bondChar && value.length == 16 && !isInit(value)) {
+        env.ble.notify(derailleur.deviceId, prop.SramAxs.bondChar, Uint8List(48));
+        return;
+      }
+      derailleur.fake.handleWrite(service, characteristic, value);
+    };
+
+    await expectLater(
+      device.setupControl(),
+      throwsA(isA<prop.SramBondException>().having((e) => e.message, 'message', contains('decrypt failed'))),
+    );
+
+    // Give a (wrongly) triggered disconnect time to land (the fake platform
+    // delivers it 400 ms later).
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    expect(device.isResetting, isFalse);
+    expect(derailleur.peripheral.isConnected, isTrue);
+    expect(device.isConnected, isTrue);
   });
 
   // NOTE on trigger semantics: SramAxs no longer resolves its own tap-count

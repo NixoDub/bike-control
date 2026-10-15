@@ -184,6 +184,7 @@ Widget onboardingConnectionBody(
   required Target target,
   required bool hasTrainer,
   required String? trainerName,
+  String? bridgeName,
   required VoidCallback onUpdate,
   Widget? networkStatus,
 }) {
@@ -268,7 +269,7 @@ Widget onboardingConnectionBody(
     if (hasTrainer) ...[
       Gap(20),
       OnboardingGroupLabel(context.i18n.onboardingPairAsTrainer),
-      OnboardingPairAsTrainerCard(app: app, trainerName: trainerName),
+      OnboardingPairAsTrainerCard(app: app, trainerName: trainerName, bridgeName: bridgeName),
     ],
   ]));
 }

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:bike_control/bluetooth/devices/openbikecontrol/obp_mdns_backend.dart';
 import 'package:bike_control/main.dart' show recordError;
+import 'package:bike_control/widgets/title.dart' show packageInfoValue;
 import 'package:flutter/foundation.dart';
 
 import 'network_check.dart';
@@ -56,9 +57,14 @@ class ProbeSpec {
 /// — probes themselves stay pure functions over that context (see
 /// [NetworkProbeContext]).
 class NetworkSelfTestEngine {
-  NetworkSelfTestEngine({required NetworkProbeContext Function() contextBuilder, List<ProbeSpec>? probes, DateTime Function()? now})
-    : _contextBuilder = contextBuilder,
-      _now = now ?? DateTime.now {
+  NetworkSelfTestEngine({
+    required NetworkProbeContext Function() contextBuilder,
+    List<ProbeSpec>? probes,
+    DateTime Function()? now,
+    String? Function()? appVersion,
+  }) : _contextBuilder = contextBuilder,
+       _now = now ?? DateTime.now,
+       _appVersion = appVersion ?? (() => packageInfoValue?.version) {
     // Built here, not in the initializer list, because the default probe
     // list needs a closure over `this` (to read `_watchCancelled` live on
     // every guided-watch poll) — instance members aren't reachable from an
@@ -70,6 +76,10 @@ class NetworkSelfTestEngine {
 
   final NetworkProbeContext Function() _contextBuilder;
   final DateTime Function() _now;
+
+  /// The running app's version, stamped onto the result (the same source the
+  /// support bundle's "App Version" line reads).
+  final String? Function() _appVersion;
   late final List<ProbeSpec> _probes;
 
   final ValueNotifier<NetworkSelfTestState> _state = ValueNotifier(const NetworkSelfTestState());
@@ -133,6 +143,7 @@ class NetworkSelfTestEngine {
       platform: ctx.platform,
       obcBackend: ctx.backend.name,
       hostname: ctx.advertisedHostname,
+      appVersion: _appVersion(),
       checks: List.unmodifiable(_checks),
       completed: !_cancelled,
     );

@@ -4,6 +4,8 @@ import 'package:bike_control/widgets/ui/type_scale.dart';
 import 'package:prop/prop.dart' show SramBondException;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
+import 'sram_link_errors.dart';
+
 /// The staged setup/restore bottom-sheet UI for [SramAxs]. Kept out of the
 /// device file so that stays focused on device/BLE logic. The reusable
 /// building blocks (step rail, stage badge, progress checklist) live in
@@ -56,20 +58,35 @@ class SramGuidedSheet extends StatefulWidget {
 class _SramGuidedSheetState extends State<SramGuidedSheet> {
   var _stage = SramSetupStage.confirm;
 
+  /// Error-stage body override; null → the generic error copy.
+  String? _errorMessage;
+
   Future<void> _attempt() async {
     setState(() => _stage = SramSetupStage.running);
     try {
       await widget.operation();
       if (!mounted) return;
       setState(() => _stage = SramSetupStage.success);
-    } on SramBondException {
-      // A fresh bond is needed (no valid key). Only NOW do we ask the user to
-      // authorize — when already bonded this never shows.
+    } catch (e) {
+      // The operation already logged the failure (and, for a wedged link,
+      // started the reconnect); here we only pick what to tell the rider.
       if (!mounted) return;
-      setState(() => _stage = SramSetupStage.authorize);
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _stage = SramSetupStage.error);
+      setState(() {
+        if (isSramLinkUnresponsive(e)) {
+          // The derailleur stopped answering (including a bond handshake that
+          // timed out) — holding the AXS button won't help; the link is being
+          // re-established, so say that and let them retry once it's back.
+          _stage = SramSetupStage.error;
+          _errorMessage = context.i18n.sramLinkResetError;
+        } else if (e is SramBondException) {
+          // A fresh bond is needed (no valid key). Only NOW do we ask the user
+          // to authorize — when already bonded this never shows.
+          _stage = SramSetupStage.authorize;
+        } else {
+          _stage = SramSetupStage.error;
+          _errorMessage = null;
+        }
+      });
     }
   }
 
@@ -102,6 +119,7 @@ class _SramGuidedSheetState extends State<SramGuidedSheet> {
               runningTitle: widget.runningTitle,
               successTitle: widget.successTitle,
               checklistItems: widget.checklistItems,
+              errorMessage: _errorMessage,
               onClose: () => closeSheet(context),
               onProceed: _attempt,
             ),
@@ -130,6 +148,7 @@ Widget sramGuidedBody(
   required VoidCallback onProceed,
   int runningStep = 0,
   bool checklistAutoAdvance = true,
+  String? errorMessage,
 }) {
   final scheme = Theme.of(context).colorScheme;
   final l = context.i18n;
@@ -208,7 +227,7 @@ Widget sramGuidedBody(
       tone = scheme.destructive;
       wash = dark ? const Color(0x1AEF4444) : _sramErrorWash;
       heading = l.sramErrorTitle;
-      body = l.sramGenericError;
+      body = errorMessage ?? l.sramGenericError;
       stepIndex = null;
       extra = null;
       actions = [

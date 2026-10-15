@@ -78,6 +78,8 @@ String? networkCheckHint(BuildContext context, NetworkCheck check, {String? app}
   if (check.verdict != NetworkVerdict.fail) return null;
   return switch (check.id) {
     NetworkCheckId.guidedWatch when check.detail['hint'] == 'no query arrived' => l10n.networkHintNoQuery(appName),
+    NetworkCheckId.bonjourService when check.detail['state'] == 'started after MyWhoosh' =>
+      l10n.networkHintBonjourStartedAfterApp,
     NetworkCheckId.bonjourService => l10n.networkHintBonjourService,
     NetworkCheckId.bonjourNsp => l10n.networkHintBonjourNsp,
     NetworkCheckId.resolveOwnHostname => l10n.networkHintResolveFail,

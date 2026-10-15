@@ -39,6 +39,7 @@ import 'package:bike_control/services/sensors/sensor_quantity.dart';
 import 'package:bike_control/pages/trainer_connection_settings.dart';
 import 'package:bike_control/services/overlay/trainer_overlay_service.dart';
 import 'package:bike_control/utils/core.dart';
+import 'package:bike_control/utils/device_setup_prompt.dart';
 import 'package:bike_control/utils/i18n_extension.dart';
 import 'package:bike_control/utils/iap/iap_manager.dart';
 import 'package:bike_control/utils/keymap/apps/bike_control.dart';
@@ -205,6 +206,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   ValueNotifier<ControllerPress> _pressesFor(String deviceId) =>
       _presses.putIfAbsent(deviceId, () => ValueNotifier((button: null, generation: 0)));
 
+  /// How many buttons Ride last drew for each controller, to spot one it
+  /// added since.
+  final Map<String, int> _buttonCounts = {};
+
   bool get _isRide => widget.view == HomeView.ride;
 
   /// Last measured Local Network status, kept here rather than read off
@@ -306,12 +311,18 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       _syncProxyListeners();
       if (mounted) setState(() {});
       _maybeShowRideFirmwareDialog();
+      _maybeOfferSetup();
     });
     _syncProxyListeners();
     _actionListener = core.connection.actionStream.listen((notification) {
       if (notification is ButtonNotification && notification.buttonsClicked.isNotEmpty) {
-        final presses = _pressesFor(notification.device.uniqueId);
+        final device = notification.device;
+        final presses = _pressesFor(device.uniqueId);
         presses.value = (button: notification.buttonsClicked.first, generation: presses.value.generation + 1);
+        // Controllers without a fixed layout (gamepads, keyboards) add a button
+        // on its first press; the picture and the list only show it on a rebuild.
+        final shownCount = _buttonCounts[device.uniqueId];
+        if (shownCount != null && shownCount != device.availableButtons.length && mounted) setState(() {});
       }
     });
 
@@ -343,6 +354,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     core.connection.isScanning.addListener(_onSettlingChanged);
 
     _maybeShowRideFirmwareDialog();
+    _maybeOfferSetup();
     if (!_isRide) widget.reveal?.addListener(_onRevealRequested);
   }
 
@@ -420,6 +432,31 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         recordError(e, s, context: 'HomePage.rideV2Explainer');
       } finally {
         _rideV2ExplainerPending = false;
+      }
+    });
+  }
+
+  bool _setupOfferPending = false;
+
+  /// A controller that turns up needing its one-time setup gets it right away
+  /// — see [DeviceSetupPrompt]. Ride asks, so the rider is asked once; and only
+  /// while nothing else is on top of the shell, so it never lands on the
+  /// onboarding (which offers it itself) or in the middle of another screen.
+  /// A controller found meanwhile is offered on the next event after that.
+  void _maybeOfferSetup() {
+    if (!_isRide || screenshotMode || _setupOfferPending) return;
+    if (DeviceSetupPrompt.next(core.connection.controllerDevices) == null) return;
+    _setupOfferPending = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        if (!mounted || !(ModalRoute.of(context)?.isCurrent ?? true)) return;
+        final device = DeviceSetupPrompt.next(core.connection.controllerDevices);
+        if (device == null) return;
+        await _openSetup(device);
+      } catch (e, s) {
+        recordError(e, s, context: 'HomePage.offerSetup');
+      } finally {
+        _setupOfferPending = false;
       }
     });
   }
@@ -792,9 +829,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   /// The outstanding cards as last built — the chain as it is on screen.
   List<String> _outstandingLinkIds = const [];
 
-  /// The bridged trainer's own name, which the pairing instructions use to
-  /// spell out the entry to look for ("KICKR CORE - BikeControl").
-  String? get _bridgedTrainerName => core.connection.proxyDevices.firstOrNullWhere((p) => p.isBridged)?.name;
+  /// The bridged trainer, whose advertised name the pairing instructions use
+  /// to spell out the entry to look for ("KICKR CORE - BikeControl").
+  ProxyDevice? get _bridgedTrainer => core.connection.proxyDevices.firstOrNullWhere((p) => p.isBridged);
 
   // ── Build ─────────────────────────────────────────────────────────────
 
@@ -995,11 +1032,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      buttons,
+                      ?buttons,
                       // While a ride records: where the record card was;
                       // the finished ride's card takes its place.
                       const RideRecordingSlot(key: ValueKey('ride-recording-slot'), textActions: true, spacing: 20),
-                      if (widget.activityPreview case final preview?) ...[const Gap(20), preview],
+                      if (widget.activityPreview case final preview?) ...[if (buttons != null) const Gap(20), preview],
                     ],
                   ),
                 ),
@@ -1016,7 +1053,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               if (vs != null) vs,
               RideRecordingSlot(key: const ValueKey('ride-recording-slot'), spacing: vs != null ? 12 : 0),
               if (vs != null) const Gap(20) else const _GapWhenRecording(),
-              buttons,
+              ?buttons,
               if (widget.showHelpRow) ...[const Gap(20), _helpRow()],
             ],
           );
@@ -1337,16 +1374,37 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   /// [wide] lets a controller list its buttons beside its picture;
   /// [showButtonList] lists them at all — beside the picture where the column
   /// has room, else under it.
-  Widget _yourButtons({required bool wide, required bool showButtonList}) {
+  Widget? _yourButtons({required bool wide, required bool showButtonList}) {
     final l = context.i18n;
     // Right after launch the remembered controllers stand in until they are
     // back (see [Connection.startupReconnecting]) — on the cards they will
     // have, so the one that connects swaps in where it already stands.
     final reconnecting = core.connection.startupReconnecting.value;
-    final shown = _knownControllers
-        .where((d) => d.isConnected || reconnecting.contains(d.uniqueId))
+    // And a controller that is here but waits for its setup — a Click V2
+    // held back for its unlock-mode choice never connects until then — with
+    // the warning that leads into it. Only one the scanner has found: a
+    // remembered stand-in is not here to set up.
+    final present = _knownControllers
+        .where(
+          (d) =>
+              d.isConnected ||
+              reconnecting.contains(d.uniqueId) ||
+              (d.setupNeed != null && core.connection.devices.contains(d)),
+        )
         .distinctBy((d) => d.uniqueId)
         .toList();
+    // One that still needs its setup and has nothing to draw yet (a SRAM
+    // derailleur before its guided setup has heard its paddles) would be a
+    // card with a warning and nothing else — the banner already lists the
+    // step, and its setup has opened by itself. It comes back as soon as it
+    // has buttons.
+    final shown = present.where((d) => d.setupNeed == null || hasButtonsPicture(d)).toList();
+    // Only such controllers: no section at all, rather than one saying there
+    // is no controller.
+    if (shown.isEmpty && present.isNotEmpty) return null;
+    for (final device in present) {
+      _buttonCounts[device.uniqueId] = device.availableButtons.length;
+    }
     final keymap = core.actionHandler.supportedApp?.keymap;
     final single = shown.length == 1 ? shown.single : null;
     return Column(
@@ -1402,7 +1460,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   onUpdate: _update,
                   onEdit: () => _openController(device),
                   showDeviceHeader: single == null,
-                  connecting: !device.isConnected,
+                  // Held back for its setup is not on its way.
+                  connecting: !device.isConnected && device.setupNeed == null,
+                  setupNeed: device.setupNeed,
+                  onSetup: () => _openSetup(device),
                   wide: wide,
                   showButtonList: showButtonList,
                 ),
@@ -1411,6 +1472,18 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         ),
       ],
     );
+  }
+
+  /// The flow that clears [device]'s [BaseDevice.setupNeed] — the one its own
+  /// screens and the onboarding open.
+  Future<void> _openSetup(BaseDevice device) async {
+    DeviceSetupPrompt.markOffered(device);
+    try {
+      await device.openSetup(context);
+    } catch (e, s) {
+      recordError(e, s, context: 'HomePage.openSetup');
+    }
+    if (mounted) _update();
   }
 
   void _update() {
@@ -2003,7 +2076,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         } else if (activeStep == SetupStepId.trainerAppBridged) {
           // The bridge is up and the app hasn't picked it up: show how to pair
           // BikeControl as the trainer, not how to connect a trainer.
-          await openPairAsTrainerSheet(context, trainerName: _bridgedTrainerName);
+          final bridged = _bridgedTrainer;
+          await openPairAsTrainerSheet(context, trainerName: bridged?.name, bridgeName: bridged?.advertisementName);
         } else if (link.status == LinkStatus.ready) {
           await openTrainerHelpSheet(context);
         } else {

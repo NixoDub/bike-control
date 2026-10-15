@@ -1,7 +1,7 @@
 name: bike_control
 description: "BikeControl - Control your virtual riding"
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
-version: 7.2.0+157
+version: 7.2.1+158
 
 environment:
   sdk: ^3.9.0
@@ -129,11 +129,14 @@ dev_dependencies:
 
 dependency_overrides:
   path_provider_foundation: ">=2.3.0 <2.6.0"
+  # Vendored: GameInput v2 with background input, so gamepads keep working
+  # while the trainer app has focus. Keep in sync with pubspec_overrides*.yaml, which
+  # replace this whole section.
   gamepads_windows:
-    git:
-      url: https://github.com/lea108/gamepads.git
-      ref: windows-api-rework
-      path: packages/gamepads_windows
+    path: packages/gamepads_windows
+  # Vendored: background input + generic HID pads on macOS (see its pubspec).
+  gamepads_darwin:
+    path: packages/gamepads_darwin
 
 flutter:
   uses-material-design: true

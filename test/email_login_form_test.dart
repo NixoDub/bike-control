@@ -18,8 +18,11 @@ class _FakeEmailOtpAuth implements EmailOtpAuth {
   final List<String> sentTo = <String>[];
   final List<({String email, String code})> verified = <({String email, String code})>[];
 
+  final List<({String email, String password})> passwordSignIns = <({String email, String password})>[];
+
   Object? sendError;
   Object? verifyError;
+  Object? passwordError;
 
   @override
   Future<void> sendCode(String email) async {
@@ -31,6 +34,12 @@ class _FakeEmailOtpAuth implements EmailOtpAuth {
   Future<void> verifyCode({required String email, required String code}) async {
     verified.add((email: email, code: code));
     if (verifyError != null) throw verifyError!;
+  }
+
+  @override
+  Future<void> signInWithPassword({required String email, required String password}) async {
+    passwordSignIns.add((email: email, password: password));
+    if (passwordError != null) throw passwordError!;
   }
 }
 
@@ -195,7 +204,9 @@ Future<void> main() async {
     expect(auth.sentTo, hasLength(2));
   });
 
-  testWidgets('code sent: the resend countdown and "use a different address" sit centred under the code', (tester) async {
+  testWidgets('code sent: the resend countdown and "use a different address" sit centred under the code', (
+    tester,
+  ) async {
     await pumpForm(tester);
     await submitEmail(tester, 'rider@example.com');
 
@@ -205,5 +216,72 @@ Future<void> main() async {
       final label = find.descendant(of: find.byKey(key), matching: find.byType(RichText)).first;
       expect(tester.getCenter(label).dx, moreOrLessEquals(centre, epsilon: 1));
     }
+  });
+
+  group('App Review account', () {
+    Future<void> typeEmail(WidgetTester tester, String email) async {
+      await tester.enterText(find.byKey(EmailLoginForm.emailFieldKey), email);
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> submitPassword(WidgetTester tester, String password) async {
+      await tester.enterText(find.byKey(EmailLoginForm.passwordFieldKey), password);
+      await tester.tap(find.byKey(EmailLoginForm.passwordSignInButtonKey));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('typing the address shows the password field right away, no code is mailed', (tester) async {
+      await pumpForm(tester);
+
+      await typeEmail(tester, ' BikeControlAppReview@gmail.com ');
+
+      expect(find.byKey(EmailLoginForm.emailFieldKey), findsOneWidget);
+      expect(find.byKey(EmailLoginForm.passwordFieldKey), findsOneWidget);
+      expect(find.byKey(EmailLoginForm.sendButtonKey), findsNothing);
+      expect(auth.sentTo, isEmpty);
+    });
+
+    testWidgets('any other address shows no password field', (tester) async {
+      await pumpForm(tester);
+
+      await typeEmail(tester, 'rider@example.com');
+
+      expect(find.byKey(EmailLoginForm.passwordFieldKey), findsNothing);
+      expect(find.byKey(EmailLoginForm.sendButtonKey), findsOneWidget);
+    });
+
+    testWidgets('the password signs the reviewer in', (tester) async {
+      await pumpForm(tester);
+      await typeEmail(tester, EmailLoginForm.appReviewEmail);
+
+      await submitPassword(tester, 'hunter2');
+
+      expect(auth.passwordSignIns, <({String email, String password})>[
+        (email: EmailLoginForm.appReviewEmail, password: 'hunter2'),
+      ]);
+      expect(signedIn, 1);
+    });
+
+    testWidgets('a wrong password keeps the reviewer on the form with an error', (tester) async {
+      await pumpForm(tester);
+      await typeEmail(tester, EmailLoginForm.appReviewEmail);
+      auth.passwordError = const AuthException('Invalid login credentials');
+
+      await submitPassword(tester, 'nope');
+
+      expect(signedIn, 0);
+      expect(find.byKey(EmailLoginForm.passwordFieldKey), findsOneWidget);
+      expect(find.byKey(EmailLoginForm.errorKey), findsOneWidget);
+    });
+
+    testWidgets('editing the address away hides the password field again', (tester) async {
+      await pumpForm(tester);
+      await typeEmail(tester, EmailLoginForm.appReviewEmail);
+
+      await typeEmail(tester, 'rider@example.com');
+
+      expect(find.byKey(EmailLoginForm.passwordFieldKey), findsNothing);
+      expect(find.byKey(EmailLoginForm.sendButtonKey), findsOneWidget);
+    });
   });
 }

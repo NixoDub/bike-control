@@ -10,6 +10,7 @@ import 'package:bike_control/widgets/controller/trigger_assignment_popup.dart';
 import 'package:bike_control/widgets/keymap/hold_action_warning.dart';
 import 'package:bike_control/widgets/keymap/mapping.dart';
 import 'package:bike_control/widgets/ui/animated_button_widget.dart';
+import 'package:bike_control/widgets/ui/app_theme.dart' show BkStatusColors;
 import 'package:bike_control/utils/reduced_motion.dart';
 import 'package:bike_control/widgets/ui/bk_motion.dart';
 import 'package:bike_control/widgets/ui/bk_skeleton.dart';
@@ -78,6 +79,12 @@ class RideSectionHeader extends StatelessWidget {
   }
 }
 
+/// Whether [device] has anything for [controllerButtonsPicture] to draw: an
+/// outline, buttons, or a steering angle. A SRAM derailleur has none until its
+/// guided setup has heard its paddles.
+bool hasButtonsPicture(BaseDevice device) =>
+    device is SteeringDevice || device.controllerLayout != null || device.availableButtons.isNotEmpty;
+
 /// The controller's own picture with its real buttons, each wearing the
 /// action it sends — so the picture doubles as the button map. Tapping a
 /// button opens its assignment. Null when there is nothing to draw (a SRAM
@@ -91,10 +98,10 @@ Widget? controllerButtonsPicture({
   required double buttonSize,
   required VoidCallback onUpdate,
   double? maxHeight,
+  Widget? cornerBadge,
+  bool dimmed = false,
 }) {
-  if (device is! SteeringDevice && device.controllerLayout == null && device.availableButtons.isEmpty) {
-    return null;
-  }
+  if (!hasButtonsPicture(device)) return null;
 
   Widget buttonFor(ControllerButton button) {
     return ValueListenableBuilder<ControllerPress>(
@@ -112,15 +119,25 @@ Widget? controllerButtonsPicture({
   }
 
   // An angle, not buttons: the live gauge and the two actions it drives.
+  // Without an outline of its own the badge goes on the picture's corner.
+  Widget decorated(Widget picture) => cornerBadge == null && !dimmed
+      ? picture
+      : Stack(
+          children: [
+            Opacity(opacity: dimmed ? 0.45 : 1, child: picture),
+            if (cornerBadge != null) PositionedDirectional(top: 0, end: 0, child: cornerBadge),
+          ],
+        );
+
   if (device is SteeringDevice) {
     final steering = device as SteeringDevice;
-    return SteeringGauge(
+    return decorated(SteeringGauge(
       angle: steering.steeringAngle,
       calibrated: steering.steeringCalibrated,
       threshold: steering.steeringThreshold,
       leftAction: steeringActionFor(keymap, steering.steerLeftButton),
       rightAction: steeringActionFor(keymap, steering.steerRightButton),
-    );
+    ));
   }
   final layout = device.controllerLayout;
   if (layout != null) {
@@ -130,9 +147,11 @@ Widget? controllerButtonsPicture({
       buttonBuilder: buttonFor,
       buttonSize: buttonSize,
       maxHeight: maxHeight,
+      cornerBadge: cornerBadge,
+      dimmed: dimmed,
     );
   }
-  return Wrap(spacing: 9, runSpacing: 9, children: device.availableButtons.map(buttonFor).toList());
+  return decorated(Wrap(spacing: 9, runSpacing: 9, children: device.availableButtons.map(buttonFor).toList()));
 }
 
 /// The single-click action [button] sends, or null when it sends nothing.
@@ -159,6 +178,11 @@ bool get _touchPlatform => switch (defaultTargetPlatform) {
 /// same card, its picture faded under a slow shimmer and its name with
 /// "Connecting…" where the hint goes — so when it connects nothing moves, the
 /// picture just comes up to full strength.
+///
+/// [setupNeed] is a controller that does nothing until the rider has set it up
+/// or unlocked it (see [BaseDevice.setupNeed]): a warning above the picture
+/// says so and [onSetup] leads into that setup, and the picture wears a
+/// warning badge and stays faded, since its buttons do not work yet.
 class ControllerButtonsCard extends StatelessWidget {
   const ControllerButtonsCard({
     super.key,
@@ -171,6 +195,8 @@ class ControllerButtonsCard extends StatelessWidget {
     this.wide = false,
     this.showButtonList = false,
     this.connecting = false,
+    this.setupNeed,
+    this.onSetup,
   });
 
   final BaseDevice device;
@@ -182,6 +208,8 @@ class ControllerButtonsCard extends StatelessWidget {
   final bool wide;
   final bool showButtonList;
   final bool connecting;
+  final DeviceSetupNeed? setupNeed;
+  final VoidCallback? onSetup;
 
   /// Below this a list beside the picture would squeeze both; the list goes
   /// under it instead.
@@ -190,6 +218,7 @@ class ControllerButtonsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final needsSetup = setupNeed != null;
     final rawPicture = controllerButtonsPicture(
       device: device,
       keymap: keymap,
@@ -197,6 +226,10 @@ class ControllerButtonsCard extends StatelessWidget {
       buttonSize: 52 / Theme.of(context).scaling,
       onUpdate: onUpdate,
       maxHeight: wide ? 260 : null,
+      // On the outline itself, at full strength over the faded picture:
+      // these buttons are not live yet.
+      cornerBadge: needsSetup ? _SetupBadge(key: ValueKey('ride-setup-badge-${device.uniqueId}')) : null,
+      dimmed: needsSetup,
     );
     // Faded while it connects, then up to full strength and a touch larger:
     // the pods and their badges arrive rather than appear.
@@ -214,6 +247,13 @@ class ControllerButtonsCard extends StatelessWidget {
               curve: BkMotion.curve,
               child: connecting ? BkShimmer(child: rawPicture) : rawPicture,
             ),
+          );
+    final warning = setupNeed == null
+        ? null
+        : _SetupWarning(
+            key: ValueKey('ride-setup-warning-${device.uniqueId}'),
+            need: setupNeed!,
+            onSetup: onSetup,
           );
     // A steering input has no buttons to tap, no presses to show and no
     // list of them: it says what it does and shows its angle.
@@ -280,6 +320,7 @@ class ControllerButtonsCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (showDeviceHeader) ...[_DeviceHeader(device: device, onEdit: onEdit), const Gap(4)],
+              if (warning != null) ...[warning, const Gap(8)],
               content,
             ],
           );
@@ -352,6 +393,78 @@ class ControllerButtonsCard extends StatelessWidget {
         children: [...previous, ?current],
       ),
       child: KeyedSubtree(key: ValueKey(connecting), child: slot),
+    );
+  }
+}
+
+/// "Setup needed · Set up ›" or "Device is currently locked · Unlock now ›" at
+/// the top of a controller's card: what stands between the rider and these
+/// buttons, and the way into it.
+class _SetupWarning extends StatelessWidget {
+  const _SetupWarning({super.key, required this.need, this.onSetup});
+
+  final DeviceSetupNeed need;
+  final VoidCallback? onSetup;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.i18n;
+    final status = BkStatusColors.of(context);
+    final accent = bkAccentText(context);
+    final (message, action) = switch (need) {
+      DeviceSetupNeed.setup => (l.onboardingSetupNeeded, l.chainSetUp),
+      DeviceSetupNeed.unlock => (l.rideControllerLocked, l.unlock_unlockNow),
+    };
+    return DecoratedBox(
+      decoration: BoxDecoration(color: status.warningWash, borderRadius: BorderRadius.circular(10)),
+      child: BkTouchTarget(
+        child: Button.ghost(
+          style: ButtonStyle.ghost().withPadding(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
+          onPressed: onSetup,
+          child: Row(
+            children: [
+              Icon(LucideIcons.triangleAlert, size: 18, color: status.warning),
+              const Gap(8),
+              Expanded(
+                child: Text(
+                  message,
+                  style: context.typography.small.copyWith(
+                    color: Theme.of(context).colorScheme.foreground,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              if (onSetup != null) ...[
+                const Gap(8),
+                Text(
+                  action,
+                  style: context.typography.small.copyWith(color: accent, fontWeight: FontWeight.w600),
+                ),
+                Icon(LucideIcons.chevronRight, size: 16, color: accent),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The warning on a not-yet-working controller's picture.
+class _SetupBadge extends StatelessWidget {
+  const _SetupBadge({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final status = BkStatusColors.of(context);
+    return ExcludeSemantics(
+      // The warning row above says it in words; this is the same news on the
+      // outline, for the eye.
+      child: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(color: status.warningWash, shape: BoxShape.circle),
+        child: Icon(LucideIcons.triangleAlert, size: 20, color: status.warning),
+      ),
     );
   }
 }

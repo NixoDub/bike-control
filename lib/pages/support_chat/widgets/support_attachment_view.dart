@@ -79,13 +79,17 @@ class _SupportAttachmentViewState extends State<SupportAttachmentView> {
               constraints: BoxConstraints(maxHeight: widget.maxImageHeight ?? 220),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: LayoutBuilder(
-                  builder: (context, constraints) => Image.network(
-                    url,
-                    fit: BoxFit.cover,
-                    cacheWidth: decodeWidthFor(context, constraints.maxWidth),
-                    errorBuilder: (_, __, ___) => _chip(context, onTap: () => launchUrlString(url)),
-                  ),
+                // No LayoutBuilder here: shadcn's ChatGroup sizes each group
+                // via IntrinsicHeight, and LayoutBuilder can't report
+                // intrinsic dimensions (0 in release), so the group ignored
+                // the image and the next message was painted over it. The
+                // preview can never be wider than the window, so decode at
+                // most at the window width.
+                child: Image.network(
+                  url,
+                  fit: BoxFit.cover,
+                  cacheWidth: decodeWidthFor(context, MediaQuery.sizeOf(context).width),
+                  errorBuilder: (_, _, _) => _chip(context, onTap: () => launchUrlString(url)),
                 ),
               ),
             ),

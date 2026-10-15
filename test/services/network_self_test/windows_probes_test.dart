@@ -72,6 +72,49 @@ void main() {
       expect(check.verdict, NetworkVerdict.pass);
     });
 
+    // MyWhoosh checks for Bonjour once, when it starts; started first, it never
+    // browses, although the service reads RUNNING by the time we look.
+    group('running, compared with when MyWhoosh started', () {
+      const running = 'SERVICE_NAME: Bonjour Service\n        STATE : 4  RUNNING';
+      Future<ProcessResult> Function(String, List<String>) runs(String starts) =>
+          (executable, arguments) async =>
+              ProcessResult(0, 0, executable == 'sc' ? running : starts, '');
+
+      test('fail: MyWhoosh started before Bonjour', () async {
+        final check = await bonjourServiceCheck(ctx(
+          runProcess: runs(
+            'mDNSResponder.exe=2026-10-14T10:09:16.2674790Z\r\nMyWhoosh.exe=2026-10-14T10:08:44.6823970Z\r\n',
+          ),
+        ));
+        expect(check.verdict, NetworkVerdict.fail);
+        expect(check.detail['state'], 'started after MyWhoosh');
+      });
+
+      test('pass: MyWhoosh started after Bonjour', () async {
+        final check = await bonjourServiceCheck(ctx(
+          runProcess: runs(
+            'mDNSResponder.exe=2026-10-14T10:09:16.2674790Z\r\nMyWhoosh.exe=2026-10-14T10:09:44.6823970Z\r\n',
+          ),
+        ));
+        expect(check.verdict, NetworkVerdict.pass);
+      });
+
+      test('pass: MyWhoosh not running', () async {
+        final check = await bonjourServiceCheck(ctx(runProcess: runs('mDNSResponder.exe=2026-10-14T10:09:16Z\r\n')));
+        expect(check.verdict, NetworkVerdict.pass);
+      });
+
+      test('pass: the start-time query fails', () async {
+        final check = await bonjourServiceCheck(ctx(
+          runProcess: (executable, arguments) async {
+            if (executable == 'sc') return ProcessResult(0, 0, running, '');
+            throw TimeoutException('slow CIM');
+          },
+        ));
+        expect(check.verdict, NetworkVerdict.pass);
+      });
+    });
+
     test('fail(missing): sc query fails with 1060 (service does not exist)', () async {
       final check = await bonjourServiceCheck(
         ctx(runProcess: _stub('The specified service does not exist as an installed service.\n1060', exitCode: 1060)),
@@ -319,6 +362,38 @@ void main() {
         ctx(runProcess: _stub('#PROFILE\n#FIREWALL\nTrue=Allow\n')),
       );
       expect(result.firewall.verdict, NetworkVerdict.pass);
+    });
+
+    test('firewall warn: the only Allow rules are for Private while the network is Public', () async {
+      // Windows' first-run prompt often creates the rule for Private only; on
+      // a Public connection that rule lets nothing in.
+      final result = await windowsNetworkProfileAndFirewallChecks(
+        ctx(
+          runProcess: _stub(
+            '#PROFILE\nWLAN=Public\n#FWSTATE\nDomain=True\nPrivate=True\nPublic=True\n#FIREWALL\nTrue=Allow=2\nTrue=Allow=2\n',
+          ),
+        ),
+      );
+      expect(result.firewall.verdict, NetworkVerdict.warn);
+      expect(result.firewall.detail['rules'], 'none allow Public');
+    });
+
+    test('firewall pass: an Allow rule covers the current profile', () async {
+      final result = await windowsNetworkProfileAndFirewallChecks(
+        ctx(
+          runProcess: _stub(
+            '#PROFILE\nWLAN=Public\n#FWSTATE\nDomain=True\nPrivate=True\nPublic=True\n#FIREWALL\nTrue=Allow=2\nTrue=Allow=4\n',
+          ),
+        ),
+      );
+      expect(result.firewall.verdict, NetworkVerdict.pass);
+    });
+
+    test('firewall warn: a disabled Allow rule does not count', () async {
+      final result = await windowsNetworkProfileAndFirewallChecks(
+        ctx(runProcess: _stub('#PROFILE\n#FIREWALL\nFalse=Allow=7\n')),
+      );
+      expect(result.firewall.verdict, NetworkVerdict.warn);
     });
 
     test('firewall warn: an enabled Block rule exists', () async {

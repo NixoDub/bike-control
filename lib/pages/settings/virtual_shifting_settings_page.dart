@@ -1,4 +1,14 @@
+import 'dart:async';
+
+import 'package:bike_control/bluetooth/devices/base_device.dart';
 import 'package:bike_control/bluetooth/devices/proxy/proxy_device.dart';
+import 'package:bike_control/main.dart' show screenshotMode;
+import 'package:bike_control/pages/proxy_device_details.dart';
+import 'package:bike_control/pages/proxy_device_details/self_test_card.dart';
+import 'package:bike_control/pages/proxy_device_details/self_test_page.dart';
+import 'package:bike_control/services/trainer_self_test/self_test_result.dart';
+import 'package:bike_control/pages/proxy_device_details/vs_calibration_page.dart';
+import 'package:bike_control/utils/i18n_extension.dart';
 import 'package:bike_control/gen/l10n.dart';
 import 'package:bike_control/models/shifting_config.dart';
 import 'package:bike_control/pages/proxy_device_details/gear_ratio_curve.dart';
@@ -17,6 +27,20 @@ import 'package:prop/emulators/definitions/fitness_bike_definition.dart';
 import 'package:bike_control/widgets/ui/colors.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:bike_control/widgets/ui/bk_page_column.dart';
+
+/// Opens the resistance self-test page for [device].
+///
+/// The way in for everything that offers "run the self-test" (the "Check and
+/// calibrate" row below, the support intake, the setup guide's done step). A
+/// trainer with no virtual-shifting definition has no self-test to run, so it
+/// lands on the trainer's own page, where the connection is.
+Future<void> openTrainerSelfTest(BuildContext context, ProxyDevice device) async {
+  if (device.fitnessBike == null) {
+    await context.push(ProxyDeviceDetailsPage(device: device));
+    return;
+  }
+  await context.push(SelfTestPage(device: device));
+}
 
 /// "24 gears · Smoothing on · Custom ratios": what the Settings row says about
 /// the trainer's active shifting config.
@@ -55,9 +79,21 @@ String rideVirtualShiftingSummary(BuildContext context, FitnessBikeDefinition de
 /// front derailleur, smoothing, cadence filter, and the per-gear steppers one
 /// screen deeper) and Physics. Everything applies to the trainer's active
 /// shifting config and to the live definition at once.
+///
+/// Last, "Check and calibrate": the resistance self-test and, right under it,
+/// the shifting calibrator, two rows that each open their own page. Both are
+/// about how this trainer shifts, so they sit at the end of its shifting
+/// settings rather than on its hardware page.
 class VirtualShiftingSettingsPage extends StatefulWidget {
-  const VirtualShiftingSettingsPage({super.key, required this.definition, required this.device});
+  const VirtualShiftingSettingsPage({
+    super.key,
+    required this.definition,
+    required this.device,
+  });
 
+  /// The definition the page was opened for. A reconnect (the self-test's
+  /// protocol switch causes one) rebuilds it; the page then follows
+  /// [ProxyDevice.fitnessBike].
   final FitnessBikeDefinition definition;
   final ProxyDevice device;
 
@@ -66,11 +102,19 @@ class VirtualShiftingSettingsPage extends StatefulWidget {
 }
 
 class _VirtualShiftingSettingsPageState extends State<VirtualShiftingSettingsPage> {
-  FitnessBikeDefinition get def => widget.definition;
+  FitnessBikeDefinition get def => widget.device.fitnessBike ?? widget.definition;
+
+  late final StreamSubscription<BaseDevice> _connectionSub;
 
   @override
   void initState() {
     super.initState();
+    // A (dis)connect changes what the prechecks say and, after a reconnect,
+    // which definition the settings drive.
+    _connectionSub = core.connection.connectionStream.listen((_) {
+      if (mounted) setState(() {});
+    });
+    widget.device.isConnectedListenable.addListener(_onDeviceChanged);
     // After the frame, not during it. Applying the config writes the
     // definition's ValueNotifiers, and the drivetrain above the settings
     // listens to them — marking it dirty mid-build is an error.
@@ -82,8 +126,25 @@ class _VirtualShiftingSettingsPageState extends State<VirtualShiftingSettingsPag
 
   @override
   void dispose() {
+    _connectionSub.cancel();
+    widget.device.isConnectedListenable.removeListener(_onDeviceChanged);
     core.shiftingConfigs.removeListener(_onConfigsChanged);
     super.dispose();
+  }
+
+  void _onDeviceChanged() {
+    if (mounted) setState(() {});
+  }
+
+  /// Back from a test, the row shows its result.
+  Future<void> _openSelfTest() async {
+    await openTrainerSelfTest(context, widget.device);
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _openCalibrator() async {
+    await context.push(VsCalibrationPage(device: widget.device));
+    if (mounted) setState(() {});
   }
 
   /// A config picked, created or edited: the trainer follows it.
@@ -100,6 +161,7 @@ class _VirtualShiftingSettingsPageState extends State<VirtualShiftingSettingsPag
     def.setRiderWeightKg(cfg.riderWeightKg);
     def.setGradeSmoothingEnabled(cfg.gradeSmoothing);
     def.setCadenceFilterEnabled(cfg.cadenceFilterEnabled);
+    def.setDifficultyPct(cfg.difficultyPct);
     def.setVirtualShiftingMode(cfg.mode);
     // The front derailleur belongs to the config too: picking another config
     // brings its rings with it, and the drivetrain above draws them.
@@ -132,14 +194,23 @@ class _VirtualShiftingSettingsPageState extends State<VirtualShiftingSettingsPag
     if (confirmed == true && mounted) await _reset();
   }
 
-  /// Back to the trainer app's gear count, smoothing on, the stock curve.
+  /// Back to the trainer app's gear count, smoothing on, the stock curve and
+  /// the default difficulty (the calibrator's result is part of the feel).
   Future<void> _reset() async {
     final app = core.settings.getTrainerApp();
     final targetMaxGear = app?.virtualGearAmount ?? ShiftingConfig.maxGearDefault;
     def.setMaxGear(targetMaxGear);
     def.setGradeSmoothingEnabled(true);
     def.resetGearRatios();
-    await _update((c) => c.copyWith(maxGear: targetMaxGear, gradeSmoothing: true, clearGearRatios: true));
+    def.setDifficultyPct(FitnessBikeDefinition.defaultDifficultyPct);
+    await _update(
+      (c) => c.copyWith(
+        maxGear: targetMaxGear,
+        gradeSmoothing: true,
+        clearGearRatios: true,
+        difficultyPct: FitnessBikeDefinition.defaultDifficultyPct,
+      ),
+    );
   }
 
   @override
@@ -185,6 +256,10 @@ class _VirtualShiftingSettingsPageState extends State<VirtualShiftingSettingsPag
               _gears(context),
               const Gap(24),
               _physics(context),
+              if (!screenshotMode) ...[
+                const Gap(24),
+                _checkAndCalibrate(context),
+              ],
             ],
           ),
         ),
@@ -421,6 +496,41 @@ class _VirtualShiftingSettingsPageState extends State<VirtualShiftingSettingsPag
             alignment: Alignment.topCenter,
             child: steppers,
           ),
+      ],
+    );
+  }
+
+  /// The resistance self-test, and the calibrator right under it: first "does
+  /// the trainer obey?", then "does it feel right?". Each row opens its own
+  /// page and says where things stand: the last test result, the difficulty.
+  Widget _checkAndCalibrate(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final last = SelfTestResult.tryParse(core.settings.getSelfTestResultJson(widget.device.trainerKey));
+    return BkGroupedSection(
+      key: const ValueKey('vs-check'),
+      header: l10n.vsGroupCheck,
+      children: [
+        BkGroupedRow(
+          key: const ValueKey('vs-self-test'),
+          icon: LucideIcons.activity,
+          title: l10n.selfTestTitle,
+          subtitle: last == null
+              ? l10n.selfTestStart
+              : l10n.selfTestLastResult(SelfTestCard.verdictTitle(l10n, last.verdict)),
+          chevron: true,
+          onPressed: _openSelfTest,
+        ),
+        ValueListenableBuilder<int>(
+          valueListenable: def.difficultyPct,
+          builder: (context, pct, _) => BkGroupedRow(
+            key: const ValueKey('vs-calibrate'),
+            icon: LucideIcons.gauge,
+            title: l10n.vsCalibrateTitle,
+            subtitle: l10n.vsCalibrateRowSubtitle(pct),
+            chevron: true,
+            onPressed: _openCalibrator,
+          ),
+        ),
       ],
     );
   }

@@ -20,6 +20,11 @@ import 'package:prop/prop.dart' show LogLevel;
 /// the onboarding page) reads this class rather than assembling its own
 /// settings checks, so the rule lives in exactly one place.
 abstract final class ClickV2Onboarding {
+  /// The one [BaseDevice.setupPromptKey] every Click V2 side shares: the unlock
+  /// mode is a single choice for the whole controller, so it is offered once,
+  /// whichever puck turned up first.
+  static const setupPromptKey = 'zwift-click-v2-unlock-mode';
+
   /// Whether a discovered Click V2 should be held back for onboarding.
   static bool get isPending {
     // Screenshot frames connect fake controllers directly and must never be

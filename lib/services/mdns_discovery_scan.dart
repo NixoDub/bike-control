@@ -6,6 +6,7 @@ import 'package:bike_control/main.dart' show recordError;
 import 'package:dartx/dartx.dart';
 import 'package:flutter/foundation.dart';
 import 'package:nsd/nsd.dart' as nsd;
+import 'package:prop/mdns/mdns_responder.dart' show OwnMdnsBrowsing;
 import 'package:prop/utils/advertised_service_registry.dart';
 
 /// One mDNS service seen on the LAN during a diagnostics scan.
@@ -83,6 +84,7 @@ class MdnsDiscoveryScan {
     }
 
     final discoveries = <nsd.Discovery>[];
+    OwnMdnsBrowsing.begin();
     try {
       for (final type in types) {
         final discovery = await nsd.startDiscovery(type, autoResolve: true);
@@ -99,6 +101,7 @@ class MdnsDiscoveryScan {
           recordError(e, s, context: 'MdnsDiscoveryScan.stop');
         }
       }
+      OwnMdnsBrowsing.end();
     }
     return found.values.toList();
   }

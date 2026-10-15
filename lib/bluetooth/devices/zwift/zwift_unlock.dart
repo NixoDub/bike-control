@@ -1,3 +1,4 @@
+import 'package:bike_control/bluetooth/devices/base_device.dart' show DeviceSetupNeed;
 import 'package:bike_control/bluetooth/devices/zwift/constants.dart';
 import 'package:bike_control/bluetooth/devices/zwift/zwift_device.dart';
 import 'package:bike_control/gen/l10n.dart';
@@ -289,6 +290,25 @@ mixin ZwiftUnlock on ZwiftDevice {
       }
     }
     await super.disconnect();
+  }
+
+  /// Locked while it is here to be unlocked — the same rule as
+  /// [unlockWarnings]: out of reach there is nothing to unlock, and the store
+  /// boards stage a finished setup.
+  @override
+  DeviceSetupNeed? get setupNeed {
+    if (!requiresZwiftUnlock || !isConnected || screenshotMode) return null;
+    return isPersistedUnlocked ? null : DeviceSetupNeed.unlock;
+  }
+
+  @override
+  Future<void> openSetup(BuildContext context) async {
+    if (setupNeed != DeviceSetupNeed.unlock) return;
+    await openDrawer(
+      context: context,
+      position: OverlayPosition.bottom,
+      builder: (_) => UnlockPage(device: this),
+    );
   }
 
   /// Opens the unlock flow for this controller.

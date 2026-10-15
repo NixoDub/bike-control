@@ -1,0 +1,28 @@
+name: gamepads_windows
+description: Windows implementation of gamepads, a Flutter plugin to handle gamepad input across multiple platforms.
+version: 0.3.0+1
+publish_to: none
+homepage: https://github.com/flame-engine/gamepads
+repository: https://github.com/flame-engine/gamepads/tree/main/packages/gamepads_windows
+
+# Vendored from pub.dev gamepads_windows 0.3.0+1. BikeControl change: uses
+# the GameInput v2 API (Microsoft.GameInput 4.0.300 NuGet, in
+# windows/gameinput/) with background input enabled, so gamepads keep working
+# while another app (Zwift, MyWhoosh, ...) has focus. The Windows SDK v0 API
+# only delivers input to the foreground app.
+
+flutter:
+  plugin:
+    implements: gamepads
+    platforms:
+      windows:
+        pluginClass: GamepadsWindowsPluginCApi
+
+environment:
+  sdk: ">=3.9.0 <4.0.0"
+  flutter: ">=3.35.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  gamepads_platform_interface: ^0.1.3

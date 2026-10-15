@@ -109,6 +109,7 @@ Widget onboardingDoneBody(
   required SupportedApp app,
   required String? controllerName,
   required String? trainerName,
+  String? bridgeName,
   required bool appConnected,
   required bool trainerAppConnected,
   required bool reduceMotion,
@@ -282,7 +283,7 @@ Widget onboardingDoneBody(
       // which entry to pick in its trainer selection.
       if (state == OnboardingDoneState.waitingForTrainerPickup) ...[
         Gap(10),
-        OnboardingPairAsTrainerCard(app: app, trainerName: trainerName),
+        OnboardingPairAsTrainerCard(app: app, trainerName: trainerName, bridgeName: bridgeName),
       ],
       if (showTestMode) ...[
         Gap(10),

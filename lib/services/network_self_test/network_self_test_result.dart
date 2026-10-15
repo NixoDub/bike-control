@@ -7,6 +7,11 @@ class NetworkSelfTestResult {
   final String platform; // Platform.operatingSystem
   final String obcBackend; // ObpMdnsBackend.name
   final String? hostname;
+
+  /// The app version the run happened on; null for a result stored before
+  /// it was recorded. The store keeps the last run across updates, so a
+  /// bundle needs this to tell a stale result from a current one.
+  final String? appVersion;
   final List<NetworkCheck> checks;
   final bool completed; // false when cancelled mid-run
 
@@ -17,6 +22,7 @@ class NetworkSelfTestResult {
     required this.platform,
     required this.obcBackend,
     this.hostname,
+    this.appVersion,
     required this.checks,
     required this.completed,
   });
@@ -27,6 +33,7 @@ class NetworkSelfTestResult {
       'platform': platform,
       'obcBackend': obcBackend,
       if (hostname != null) 'hostname': hostname,
+      if (appVersion != null) 'appVersion': appVersion,
       'checks': checks.map((c) => _checkToJson(c)).toList(),
       'completed': completed,
     };
@@ -57,6 +64,7 @@ class NetworkSelfTestResult {
       platform: json['platform'] as String,
       obcBackend: json['obcBackend'] as String,
       hostname: json['hostname'] as String?,
+      appVersion: json['appVersion'] as String?,
       checks: checks,
       completed: json['completed'] as bool,
     );
@@ -116,7 +124,8 @@ class NetworkSelfTestResult {
 
   /// One line per non-skipped check: `id=verdict[ key=value ...]`, prefixed
   /// by a header line `NETWORK &lt;VERDICT&gt;,&lt;yyyy-mm-dd&gt;,&lt;platform&gt;,&lt;backend&gt;
-  /// [,host=&lt;hostname&gt;]`.
+  /// [,host=&lt;hostname&gt;],time=&lt;HH:MM:SS&gt;[,app=&lt;version&gt;]`. The time (local) and
+  /// app version are appended last so the earlier positions keep their meaning.
   String toBundleString() {
     final lines = <String>[_headerLine()];
     for (final check in checks) {
@@ -133,6 +142,10 @@ class NetworkSelfTestResult {
     if (hostname != null) {
       buffer.write(',host=$hostname');
     }
+    buffer.write(',time=${_formatTime(at)}');
+    if (appVersion != null) {
+      buffer.write(',app=$appVersion');
+    }
     return buffer.toString();
   }
 
@@ -141,6 +154,11 @@ class NetworkSelfTestResult {
     final detailStr = sortedKeys.map((key) => '$key=${check.detail[key]}').join(' ');
     final base = '${check.id.name}=${check.verdict.name}';
     return detailStr.isEmpty ? base : '$base $detailStr';
+  }
+
+  static String _formatTime(DateTime dt) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${two(dt.hour)}:${two(dt.minute)}:${two(dt.second)}';
   }
 
   static String _formatDate(DateTime dt) {

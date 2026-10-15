@@ -40,6 +40,9 @@ class _FakeEmailOtpAuth implements EmailOtpAuth {
   Future<void> verifyCode({required String email, required String code}) async {
     if (verifyError != null) throw verifyError!;
   }
+
+  @override
+  Future<void> signInWithPassword({required String email, required String password}) async {}
 }
 
 class _NoHttp extends http.BaseClient {

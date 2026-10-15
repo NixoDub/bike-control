@@ -46,6 +46,13 @@ Future<NetworkCheck> bonjourServiceCheck(NetworkProbeContext ctx) async {
   final stdout = _capStdout(result.stdout);
 
   if (stdout.contains('RUNNING')) {
+    if (await _myWhooshStartedBeforeBonjour(ctx)) {
+      return const NetworkCheck(
+        id: NetworkCheckId.bonjourService,
+        verdict: NetworkVerdict.fail,
+        detail: {'state': 'started after MyWhoosh'},
+      );
+    }
     return const NetworkCheck(id: NetworkCheckId.bonjourService, verdict: NetworkVerdict.pass);
   }
   if (stdout.contains('1060') || exitCode != 0) {
@@ -62,6 +69,47 @@ Future<NetworkCheck> bonjourServiceCheck(NetworkProbeContext ctx) async {
     detail: {'state': 'stopped', 'note': 'start it, then restart the trainer app — MyWhoosh checks once at startup'},
     fixes: [NetworkFixId.openBonjourDownload],
   );
+}
+
+/// Whether a running MyWhoosh was started before Bonjour's daemon was.
+///
+/// MyWhoosh asks once, when it creates its discovery managers, whether the
+/// Bonjour Service runs, and never again. Measured on 6.2.3: with Bonjour
+/// started after MyWhoosh, MyWhoosh put not one browse on the wire and the
+/// BikeControl button stayed dead until MyWhoosh was restarted — although the
+/// service then reads as running. Riders get here by installing or repairing
+/// Bonjour with MyWhoosh still open.
+///
+/// Process creation times come from CIM, which (unlike `Get-Process`) reads a
+/// SYSTEM process's start time without elevation. Anything unreadable — no
+/// MyWhoosh running, a failed or slow query — is "no", so this can only add a
+/// finding, never hide the pass.
+Future<bool> _myWhooshStartedBeforeBonjour(NetworkProbeContext ctx) async {
+  const script =
+      "Get-CimInstance Win32_Process -Filter \"Name='mDNSResponder.exe' or Name='MyWhoosh.exe'\" | "
+      "ForEach-Object { Write-Output (\$_.Name + '=' + \$_.CreationDate.ToUniversalTime().ToString('o')) }";
+  final ProcessResult result;
+  try {
+    result = await ctx.runProcess('powershell', ['-NoProfile', '-NonInteractive', '-Command', script]);
+  } on ProcessException {
+    return false;
+  } on TimeoutException {
+    return false;
+  }
+  final starts = <String, DateTime>{};
+  for (final line in _capStdout(result.stdout).split('\n')) {
+    final split = line.indexOf('=');
+    if (split <= 0) continue;
+    final time = DateTime.tryParse(line.substring(split + 1).trim());
+    if (time == null) continue;
+    final name = line.substring(0, split).trim().toLowerCase();
+    // Several MyWhoosh processes: the earliest is the one that made the check.
+    final known = starts[name];
+    if (known == null || time.isBefore(known)) starts[name] = time;
+  }
+  final myWhoosh = starts['mywhoosh.exe'];
+  final bonjour = starts['mdnsresponder.exe'];
+  return myWhoosh != null && bonjour != null && myWhoosh.isBefore(bonjour);
 }
 
 /// Check 11 (NEW, §12): does the Winsock catalog list Bonjour's `mdnsNSP`
@@ -178,10 +226,20 @@ Future<({NetworkCheck profile, NetworkCheck firewall})> windowsNetworkProfileAnd
   // and warning about it there (with a button into Defender settings) is noise
   // about a non-problem. The rule query stays last because it is the one whose
   // pipeline legitimately yields nothing.
+  //
+  // Both firewall sections read the firewall's COM API (HNetCfg.FwPolicy2),
+  // not the NetSecurity cmdlets. Without elevation
+  // `Get-NetFirewallApplicationFilter` fails with "access denied", which
+  // `-ErrorAction SilentlyContinue` turned into "no rule" on every normal run;
+  // and `Get-NetFirewallProfile` alone takes seconds on a cold CIM provider,
+  // enough to time the whole probe out on slower machines. The COM API needs
+  // no elevation, answers in well under a second and, unlike `netsh`, is not
+  // localized. Rules print as `Enabled=Action=ProfileMask`.
   const script = '''
 Write-Output '#PROFILE'; Get-NetConnectionProfile | ForEach-Object { Write-Output (\$_.InterfaceAlias + '=' + \$_.NetworkCategory) };
-Write-Output '#FWSTATE'; Get-NetFirewallProfile | ForEach-Object { Write-Output (\$_.Name + '=' + \$_.Enabled) };
-Write-Output '#FIREWALL'; Get-NetFirewallApplicationFilter -Program '*BikeControl*' -ErrorAction SilentlyContinue | Get-NetFirewallRule | Where-Object { \$_.Direction -eq 'Inbound' } | ForEach-Object { Write-Output (\$_.Enabled.ToString() + '=' + \$_.Action.ToString()) }
+\$fw = New-Object -ComObject HNetCfg.FwPolicy2;
+Write-Output '#FWSTATE'; Write-Output ('Domain=' + \$fw.FirewallEnabled(1)); Write-Output ('Private=' + \$fw.FirewallEnabled(2)); Write-Output ('Public=' + \$fw.FirewallEnabled(4));
+Write-Output '#FIREWALL'; \$fw.Rules | Where-Object { \$_.Direction -eq 1 -and (\$_.ApplicationName -like '*bike_control*' -or \$_.ApplicationName -like '*BikeControl*') } | ForEach-Object { Write-Output (\$_.Enabled.ToString() + '=' + \$(if (\$_.Action -eq 1) { 'Allow' } else { 'Block' }) + '=' + \$_.Profiles) }
 ''';
 
   final ProcessResult result;
@@ -237,7 +295,11 @@ Write-Output '#FIREWALL'; Get-NetFirewallApplicationFilter -Program '*BikeContro
   return (
     profile: profile,
     firewall: sawFirewallMarker
-        ? _parseFirewall(firewallLines, enabled: _firewallEnabledFor(profile.detail['category'], fwStateLines))
+        ? _parseFirewall(
+            firewallLines,
+            enabled: _firewallEnabledFor(profile.detail['category'], fwStateLines),
+            category: profile.detail['category'],
+          )
         : NetworkCheck(
             id: NetworkCheckId.firewallRule,
             verdict: NetworkVerdict.unknown,
@@ -326,7 +388,22 @@ NetworkCheck _parseProfile(NetworkProbeContext ctx, List<String> lines) {
   return NetworkCheck(id: NetworkCheckId.networkProfile, verdict: NetworkVerdict.pass, detail: detail);
 }
 
-NetworkCheck _parseFirewall(List<String> lines, {required bool enabled}) {
+/// The firewall API's profile bit for a network category.
+const _profileBits = {'Domain': 1, 'Private': 2, 'Public': 4};
+
+/// Whether a rule line (`Enabled=Action[=ProfileMask]`) allows inbound traffic
+/// on [category]. A missing mask (older script output) or an unknown category
+/// counts as covering it.
+bool _allowsOn(String line, String? category) {
+  final parts = line.split('=');
+  if (parts.length < 2 || parts[0] != 'True' || parts[1] != 'Allow') return false;
+  final bit = _profileBits[category];
+  final mask = parts.length > 2 ? int.tryParse(parts[2]) : null;
+  if (bit == null || mask == null) return true;
+  return mask & bit != 0;
+}
+
+NetworkCheck _parseFirewall(List<String> lines, {required bool enabled, String? category}) {
   // Nothing to allow past a firewall that is switched off. Reporting "no rule
   // found" there is a warning about a non-problem, and it comes with a button
   // into Defender settings that has nothing to do.
@@ -345,12 +422,15 @@ NetworkCheck _parseFirewall(List<String> lines, {required bool enabled}) {
       fixes: [NetworkFixId.openFirewallSettings],
     );
   }
-  if (lines.contains('True=Allow')) {
+  if (lines.any((line) => _allowsOn(line, category))) {
     return const NetworkCheck(id: NetworkCheckId.firewallRule, verdict: NetworkVerdict.pass);
   }
-  return const NetworkCheck(
+  // Rules exist, but none allows inbound on this network — typically allowed
+  // for Private only while the connection is Public.
+  return NetworkCheck(
     id: NetworkCheckId.firewallRule,
     verdict: NetworkVerdict.warn,
-    fixes: [NetworkFixId.openFirewallSettings],
+    detail: {'rules': 'none allow ${category ?? 'this network'}'},
+    fixes: const [NetworkFixId.openFirewallSettings],
   );
 }

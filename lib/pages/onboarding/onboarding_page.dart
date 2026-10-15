@@ -37,8 +37,9 @@ import 'package:bike_control/pages/onboarding/steps/step_trainer.dart';
 import 'package:bike_control/pages/onboarding/steps/step_welcome.dart';
 import 'package:bike_control/pages/onboarding/steps/step_where.dart';
 import 'package:bike_control/pages/network_troubleshooting_page.dart';
-import 'package:bike_control/pages/proxy_device_details.dart';
+import 'package:bike_control/pages/settings/virtual_shifting_settings_page.dart' show openTrainerSelfTest;
 import 'package:bike_control/utils/core.dart';
+import 'package:bike_control/utils/device_setup_prompt.dart';
 import 'package:bike_control/utils/reduced_motion.dart';
 import 'package:bike_control/utils/trainer_connect.dart';
 import 'package:bike_control/utils/i18n_extension.dart';
@@ -630,6 +631,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
   /// auto-prompt AND the row's "Setup needed" button (the sub-flow can be
   /// cancelled, so it must always be re-openable).
   Future<void> _openSetupFor(BaseDevice d) async {
+    // Shared with Ride's own offer, so a setup the rider closed here is not
+    // opened again the moment the onboarding ends — see [DeviceSetupPrompt].
+    DeviceSetupPrompt.markOffered(d);
     try {
       final isClickV2Side = d is ZwiftClickV2 || d is ZwiftClickV2RightSide;
       if (isClickV2Side && ClickV2Onboarding.isPending) {
@@ -861,13 +865,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
     }
   }
 
-  /// The bridged trainer's resistance self-test lives on its details page,
-  /// right under the connection card.
+  /// The bridged trainer's resistance self-test lives in its virtual shifting
+  /// settings, under "Check and calibrate".
   Future<void> _onRunTrainerCheck() async {
     final trainer = core.connection.proxyDevices.where((t) => t.isBridged).firstOrNull;
     if (trainer == null) return;
     try {
-      await context.push(ProxyDeviceDetailsPage(device: trainer, revealSelfTest: true));
+      await openTrainerSelfTest(context, trainer);
       if (mounted) setState(() {});
     } catch (e, s) {
       recordError(e, s, context: 'onboarding done run trainer check');
@@ -939,6 +943,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       target: core.settings.getLastTarget() ?? _selectedTarget ?? Target.otherDevice,
       hasTrainer: onboardingTrainerBridged(core.connection.proxyDevices),
       trainerName: core.connection.proxyDevices.where((t) => t.isBridged).firstOrNull?.name,
+      bridgeName: core.connection.proxyDevices.where((t) => t.isBridged).firstOrNull?.advertisementName,
       onUpdate: () {
         setState(() {});
         _syncNetworkPrecheck();
@@ -958,6 +963,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       app: _selectedApp!,
       controllerName: core.connection.controllerDevices.where((d) => d.isConnected).firstOrNull?.name,
       trainerName: core.connection.proxyDevices.where((t) => t.isBridged).firstOrNull?.name,
+      bridgeName: core.connection.proxyDevices.where((t) => t.isBridged).firstOrNull?.advertisementName,
       // isConnectedListenable mirrors emulator.isConnected — i.e. the
       // trainer app actually holds the virtual trainer, not just "the
       // bridge is running".

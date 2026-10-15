@@ -25,7 +25,8 @@ class NeedHelpCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final cs = Theme.of(context).colorScheme;
-    // Mirrors SelfTestCard's frame so the two read as siblings on the page.
+    // The same card frame as SelfTestCard (in the shifting settings), so the
+    // trainer's cards read as one family.
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
