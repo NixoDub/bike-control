@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:accessibility/accessibility.dart';
 import 'package:android_intent_plus/android_intent.dart';
+import 'package:bike_control/bluetooth/devices/gamepad/gamepad_device.dart';
 import 'package:bike_control/bluetooth/devices/hid/hid_device.dart';
 import 'package:bike_control/gen/l10n.dart';
 import 'package:bike_control/utils/actions/base_actions.dart';
@@ -12,6 +13,7 @@ import 'package:bike_control/utils/keymap/keymap.dart';
 import 'package:bike_control/widgets/keymap_explanation.dart';
 import 'package:dartx/dartx.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart' show AppLifecycleListener, ValueNotifier;
 
 import '../keymap/apps/supported_app.dart';
 import '../single_line_exception.dart';
@@ -23,12 +25,33 @@ class AndroidActions extends BaseActions {
   StreamSubscription<void>? _keymapUpdateSubscription;
   StreamSubscription<WindowEvent>? _accessibilitySubscription;
   StreamSubscription<AKeyEvent>? _hidKeyPressedSubscription;
+  AppLifecycleListener? _lifecycleListener;
+
+  /// Whether BikeControl's accessibility service is switched on, null until
+  /// first checked. Rechecked whenever the app comes back to the front, since
+  /// it is switched on in the system settings.
+  final accessibilityEnabled = ValueNotifier<bool?>(null);
+
+  Future<void> refreshAccessibilityEnabled() async {
+    final bool enabled;
+    try {
+      enabled = await accessibilityHandler.hasPermission();
+    } on PlatformException {
+      return; // Unknown: no gamepad warning rather than a wrong one.
+    }
+    if (enabled == accessibilityEnabled.value) return;
+    accessibilityEnabled.value = enabled;
+    // Gamepads need it to work behind the trainer app (see GamepadDevice.setupNeed).
+    core.connection.gamepadDevices.forEach(core.connection.signalChange);
+  }
 
   AndroidActions({super.supportedModes = const [SupportedMode.touch, SupportedMode.media]});
 
   @override
   void init(SupportedApp? supportedApp) {
     super.init(supportedApp);
+    unawaited(refreshAccessibilityEnabled());
+    _lifecycleListener ??= AppLifecycleListener(onResume: () => unawaited(refreshAccessibilityEnabled()));
     _accessibilitySubscription = streamEvents().listen((windowEvent) {
       if (supportedApp != null) {
         windowInfo = windowEvent;
@@ -45,6 +68,13 @@ class AndroidActions extends BaseActions {
     });
 
     _hidKeyPressedSubscription = hidKeyPressed().listen((keyPressed) async {
+      final gamepad = core.connection.gamepadDevices.firstOrNullWhere((d) => d.name == keyPressed.source);
+      if (gamepad != null) {
+        if (keyPressed.keyDown || keyPressed.keyUp) {
+          gamepad.handleAccessibilityKey(keyPressed.hidKey, keyDown: keyPressed.keyDown);
+        }
+        return;
+      }
       final hidDevice = HidDevice(keyPressed.source);
       final button = hidDevice.getOrAddButton(keyPressed.hidKey, () => ControllerButton(keyPressed.hidKey));
 
@@ -225,7 +255,9 @@ class AndroidActions extends BaseActions {
         .filter((keyPair) => !keyPair.hasNoAction)
         .expand((keyPair) => keyPair.buttons)
         .filter((e) => e.action == null && e.icon == null)
-        .map((button) => button.name)
+        // Gamepad buttons are named after the normalized button ("a"); the
+        // service sees the Android key ("KEYCODE_BUTTON_A").
+        .expand((button) => [button.name, ?GamepadDevice.androidKeyCodes[button.name]])
         .toSet()
         .toList();
 
@@ -237,5 +269,7 @@ class AndroidActions extends BaseActions {
     _accessibilitySubscription?.cancel();
     _keymapUpdateSubscription?.cancel();
     _hidKeyPressedSubscription?.cancel();
+    _lifecycleListener?.dispose();
+    _lifecycleListener = null;
   }
 }
