@@ -77,6 +77,7 @@ import 'package:prop/emulators/dircon_emulator.dart' show RetrofitMode;
 import 'package:prop/mdns/service_advertiser.dart' show ServiceAdvertiser;
 import 'package:prop/prop.dart' show ClickKeepAwakeStatus, ClickLogic, LogLevel;
 import 'package:prop/utils/network_address.dart' show AdvertisedAddressPicker;
+import 'package:bike_control/widgets/ui/trainer_app_logo.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 /// How much the chain card wants to talk about a given trainer. Lower wins.
@@ -1982,7 +1983,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       leading: logo != null
           ? ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.asset(logo, width: BkIconTile.size, height: BkIconTile.size),
+              child: TrainerAppLogo(asset: logo, url: app?.logoUrl, width: BkIconTile.size, height: BkIconTile.size),
             )
           : _tile(LucideIcons.monitor, live: app != null),
       title: link.title.isEmpty ? l.chainAppTitle : link.title,

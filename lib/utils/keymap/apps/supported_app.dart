@@ -88,6 +88,12 @@ abstract class SupportedApp {
   /// Optional asset path for the trainer app logo (only for officially supported apps).
   String? get logoAsset => null;
 
+  /// Where to fetch the logo when [logoAsset] isn't bundled in this build.
+  ///
+  /// An over-the-air patch can't add assets, so a logo introduced after a
+  /// build shipped is missing there; see `TrainerAppLogo`.
+  String? get logoUrl => null;
+
   /// Official website for this trainer app, surfaced as an external-link button
   /// next to the app in the trainer-app chooser. Null for apps without a site
   /// of their own (e.g. the generic custom app).

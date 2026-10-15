@@ -20,6 +20,7 @@ import 'package:bike_control/widgets/ui/openbikecontrol_logo.dart';
 import 'package:bike_control/widgets/ui/warning.dart';
 import 'package:d4rt/d4rt.dart';
 import 'package:dartx/dartx.dart';
+import 'package:bike_control/widgets/ui/trainer_app_logo.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
@@ -223,7 +224,7 @@ class _TrainerAppCard extends StatelessWidget {
               if (logo != null && !screenshotMode)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: Image.asset(logo, width: BkIconTile.size, height: BkIconTile.size),
+                  child: TrainerAppLogo(asset: logo, url: app?.logoUrl, width: BkIconTile.size, height: BkIconTile.size),
                 )
               else
                 const BkIconTile(icon: LucideIcons.monitor),
@@ -309,7 +310,7 @@ class TrainerAppSelect extends StatelessWidget {
           if (app.logoAsset != null)
             ClipRRect(
               borderRadius: BorderRadius.circular(6),
-              child: Image.asset(app.logoAsset!, width: 22, height: 22),
+              child: TrainerAppLogo(asset: app.logoAsset!, url: app.logoUrl, width: 22, height: 22),
             ),
           Expanded(child: Text(showRealName ? app.name : shownTrainerAppName(app.name))),
           if (app.supports(AppConnectionMethod.obpBle) ||
@@ -339,7 +340,7 @@ class TrainerAppSelect extends StatelessWidget {
                     if (app.logoAsset != null)
                       ClipRRect(
                         borderRadius: BorderRadius.circular(6),
-                        child: Image.asset(app.logoAsset!, width: 22, height: 22),
+                        child: TrainerAppLogo(asset: app.logoAsset!, url: app.logoUrl, width: 22, height: 22),
                       ),
                     Expanded(
                       child: app == core.settings.getTrainerApp() ? Text(app.name).semiBold : Text(app.name),

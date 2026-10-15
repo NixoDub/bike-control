@@ -6,7 +6,6 @@ import 'package:bike_control/bluetooth/devices/zwift/zwift_click.dart';
 import 'package:bike_control/bluetooth/devices/zwift/zwift_ride.dart';
 import 'package:bike_control/pages/onboarding/zwift_controller_expectation.dart';
 import 'package:bike_control/utils/keymap/apps/bike_control.dart';
-import 'package:bike_control/utils/keymap/apps/biketerra.dart';
 import 'package:bike_control/utils/keymap/apps/custom_app.dart';
 import 'package:bike_control/utils/keymap/apps/fulgaz.dart';
 import 'package:bike_control/utils/keymap/apps/openbikecontrol.dart';
@@ -15,6 +14,8 @@ import 'package:bike_control/utils/keymap/apps/supported_app.dart';
 import 'package:bike_control/utils/keymap/apps/tacx.dart';
 import 'package:bike_control/utils/keymap/apps/zwift.dart';
 import 'package:bike_control/utils/keymap/buttons.dart';
+import 'package:bike_control/utils/keymap/keymap.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:universal_ble/universal_ble.dart';
 
@@ -75,8 +76,8 @@ void main() {
     expect(e.actions.where((a) => a.isOutsideTrainerApp), isEmpty);
   });
 
-  test('actions are read from the buttons when a key pair carries none (Biketerra)', () {
-    final e = zwiftControllerExpectation(devices: [click], app: Biketerra())!;
+  test('actions are read from the buttons when a key pair carries none', () {
+    final e = zwiftControllerExpectation(devices: [click], app: _ButtonsOnlyApp())!;
     expect(e.variant, ZwiftExpectationVariant.appActions);
     expect(e.actions, containsAll([InGameAction.shiftUp, InGameAction.shiftDown, InGameAction.toggleUi]));
   });
@@ -104,4 +105,23 @@ void main() {
     final e = zwiftControllerExpectation(devices: [other, ride], app: Tacx())!;
     expect(e.device, same(ride));
   });
+}
+
+/// A non-official app whose key pairs carry no in-game action of their own, so
+/// the actions have to be read from the buttons they are bound to.
+class _ButtonsOnlyApp extends SupportedApp {
+  _ButtonsOnlyApp()
+    : super(
+        name: 'Buttons only',
+        packageName: 'ButtonsOnly',
+        officialIntegration: false,
+        keymap: Keymap(
+          keyPairs: [
+            for (final action in [InGameAction.shiftUp, InGameAction.shiftDown, InGameAction.toggleUi])
+              ...ControllerButton.values
+                  .where((b) => b.action == action)
+                  .map((b) => KeyPair(buttons: [b], physicalKey: PhysicalKeyboardKey.keyA, logicalKey: LogicalKeyboardKey.keyA)),
+          ],
+        ),
+      );
 }
