@@ -1716,6 +1716,7 @@
     }
   },
   "wheeltopClaimedByDerailleurHint": "The shifter is likely claimed by its rear derailleur. Power the derailleur down or let it sleep, then press a shifter button while scanning.",
+  "bleSensorConnectGuidance": "The sensor may be in use by another app or device. Pair it directly in your trainer app instead, or tap Reconnect to try again.",
   "unableToConnectToDeviceTimeout": "Unable to connect to {device}: Timeout",
   "@unableToConnectToDeviceTimeout": {
     "placeholders": {

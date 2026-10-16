@@ -1648,7 +1648,16 @@ class Connection {
   Future<void> connectDevice(BaseDevice device) async {
     // An explicit reconnect (e.g. the device picker) clears any battery-saver
     // suppression so the controller auto-reconnects normally again afterwards.
-    if (device is BluetoothDevice) _suppressedAutoReconnect.remove(device.device.deviceId);
+    // It is also a fresh decision by the rider, so any auto-connect backoff
+    // streak starts over: the device gets its full attempt budget again
+    // instead of re-suppressing after one more failure.
+    if (device is BluetoothDevice) {
+      final id = device.device.deviceId;
+      _suppressedAutoReconnect.remove(id);
+      _backoffCooldownTimers.remove(id)?.cancel();
+      _consecutiveConnectFailures.remove(id);
+      _quickDropCounts.remove(id);
+    }
     // The rider is connecting it right now — a pending automatic retry would
     // race this attempt.
     _cancelConnectRetry(device);
