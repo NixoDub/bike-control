@@ -35,7 +35,7 @@ class WahooKickrClimb extends BluetoothDevice with Accessory, ManualInclineDevic
     }
     try {
       await UniversalBle.subscribeNotifications(device.deviceId, service.uuid, ch.uuid);
-      await _write(Uint8List.fromList([wahooClimbRequestControlOpcode]));
+      await _write(Uint8List.fromList([wahooClimbGetTiltModeOpcode]));
     } catch (e, s) {
       recordError(e, s, context: 'WahooKickrClimb: request-control failed');
     }

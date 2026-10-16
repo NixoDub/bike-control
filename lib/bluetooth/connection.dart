@@ -165,6 +165,11 @@ class Connection {
     // call once this sink is set, so recording it costs nothing beyond the
     // bounded buffer.
     Logger.onTrace = _traceLog.add;
+
+    // High-level lines from inside prop (e.g. the KICKR tilt control point's
+    // answers) belong with the shifts and ERG targets in "Logs:". prop's
+    // Logger.info never gets here: it only prints in a debug build.
+    Logger.onEvent = _appendLogEntry;
   }
 
   final Map<BaseDevice, StreamSubscription<bool>> _connectionSubscriptions = {};
