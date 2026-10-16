@@ -20,6 +20,7 @@ import 'package:bike_control/bluetooth/devices/zwift/zwift_play.dart';
 import 'package:bike_control/bluetooth/devices/zwift/zwift_play_fw2.dart';
 import 'package:bike_control/bluetooth/devices/zwift/zwift_ride.dart';
 import 'package:bike_control/gen/l10n.dart';
+import 'package:bike_control/main.dart' show recordError;
 import 'package:bike_control/services/sensors/ble_sensor_source.dart';
 import 'package:bike_control/utils/core.dart';
 import 'package:bike_control/utils/i18n_extension.dart';
@@ -561,10 +562,17 @@ abstract class BluetoothDevice extends BaseDevice {
       (c) => c.uuid == BleUuid.DEVICE_INFORMATION_CHARACTERISTIC_BATTERY_LEVEL.toLowerCase(),
     );
     if (batteryCharacteristic != null) {
-      final batteryData = await readUpstream(batteryService!.uuid, batteryCharacteristic.uuid);
-      if (batteryData.isNotEmpty) {
-        batteryLevel = batteryData.first;
-        core.connection.signalChange(this);
+      // Optional metadata: a read that fails (e.g. an encrypted characteristic
+      // on an unbonded device) must not fail the connect, or the device is
+      // dropped before handleServices and reconnected in a loop.
+      try {
+        final batteryData = await readUpstream(batteryService!.uuid, batteryCharacteristic.uuid);
+        if (batteryData.isNotEmpty) {
+          batteryLevel = batteryData.first;
+          core.connection.signalChange(this);
+        }
+      } catch (e, s) {
+        recordError(e, s, context: 'BluetoothDevice.connect battery level ${device.name ?? device.deviceId}');
       }
     }
 
