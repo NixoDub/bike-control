@@ -209,6 +209,10 @@ class OpenBikeControlBluetoothEmulator extends TrainerConnection
   Future<void> startServiceAdvertising() => _server.startAdvertising(
     services: [OpenBikeControlConstants.SERVICE_UUID],
     localName: 'BikeControl',
+    // The 128-bit service UUID plus the name overflows the 31-byte primary
+    // advertisement (Android "Data too large"); move the service UUID to the
+    // scan response. Only affects Android; active scanners still see both.
+    servicesInScanResponse: true,
   );
 
   Future<void> stopServer() async {
