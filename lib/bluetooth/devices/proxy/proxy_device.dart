@@ -36,8 +36,13 @@ import 'package:universal_ble/universal_ble.dart';
 class ProxyDevice extends BluetoothDevice {
   static final List<String> proxyServiceUUIDs = [
     FitnessBikeDefinition.HEART_RATE_MEASUREMENT_UUID, // Heart Rate
-    FitnessBikeDefinition.CYCLING_POWER_SERVICE_UUID, // Heart Rate
+    FitnessBikeDefinition.CYCLING_POWER_SERVICE_UUID, // Cycling Power
     FitnessBikeDefinition.FITNESS_MACHINE_SERVICE_UUID, // Fitness Machine
+    // FE-C over BLE. Some trainers (e.g. Decathlon Van Rysel D100/D500)
+    // advertise this as their only service; without it here they matched no
+    // trainer rule and never showed up in a scan, even though [isSmartTrainer]
+    // and the transport already handle FE-C.
+    FitnessBikeDefinition.FEC_BLE_SERVICE_UUID,
   ];
 
   /// Per-instance emulator used exclusively in proxy mode. Each proxy-mode

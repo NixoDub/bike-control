@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bike_control/bluetooth/devices/base_device.dart';
 import 'package:bike_control/utils/core.dart';
 import 'package:bike_control/utils/i18n_extension.dart';
+import 'package:bike_control/widgets/ignored_devices_nearby_hint.dart';
 import 'package:bike_control/widgets/ui/connection_method.dart';
 import 'package:bike_control/widgets/ui/wifi_animation.dart';
 import 'package:flutter/foundation.dart';
@@ -100,10 +101,20 @@ class _ScanWidgetState extends State<ScanWidget> with WidgetsBindingObserver {
                           spacing: 14,
                           children: [
                             SmoothWifiAnimation(),
-                            Text(
-                              context.i18n.scanningForDevices,
-                              textAlign: TextAlign.center,
-                            ).small.muted,
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  context.i18n.scanningForDevices,
+                                  textAlign: TextAlign.center,
+                                ).small.muted,
+                                // The controller may be here and simply on the ignore list.
+                                const IgnoredDevicesNearbyHint(
+                                  alignment: MainAxisAlignment.center,
+                                  padding: EdgeInsets.only(top: 10),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       SizedBox(),

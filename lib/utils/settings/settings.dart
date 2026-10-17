@@ -765,6 +765,7 @@ class Settings {
       names.removeAt(index);
       await prefs.setStringList('ignored_device_ids', ids);
       await prefs.setStringList('ignored_device_names', names);
+      core.connection.pruneIgnoredDevicesNearby();
       _triggerAutoSync();
     }
   }

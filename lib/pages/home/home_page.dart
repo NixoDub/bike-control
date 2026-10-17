@@ -21,6 +21,7 @@ import 'package:bike_control/bluetooth/devices/zwift/zwift_clickv2_right_side.da
 import 'package:bike_control/pages/click_v2_onboarding.dart';
 import 'package:bike_control/utils/click_v2_onboarding.dart';
 import 'package:bike_control/pages/unlock.dart';
+import 'package:bike_control/widgets/ignored_devices_nearby_hint.dart';
 import 'package:bike_control/widgets/ui/bk_motion.dart';
 import 'package:bike_control/widgets/ui/bk_touch_target.dart';
 import 'package:bike_control/widgets/ui/type_scale.dart';
@@ -875,14 +876,20 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 24,
       children: [
-        BkGroupedSection(
-          key: const ValueKey('devices-controllers'),
-          header: l.controllers,
-          dividerIndent: chainRowTextInset,
-          children: [
-            for (final link in controllers) keyed(link, _row(link, devicesById[link.deviceId], inputs)),
-            if (!nothingPaired) _connectControllersRow(),
-          ],
+        // A controller on the ignore list never shows up here, however often
+        // the rider wakes it — say so under the list when the scan sees one.
+        ValueListenableBuilder<Set<String>>(
+          valueListenable: core.connection.ignoredDevicesNearby,
+          builder: (context, ignoredNearby, _) => BkGroupedSection(
+            key: const ValueKey('devices-controllers'),
+            header: l.controllers,
+            dividerIndent: chainRowTextInset,
+            footerChild: ignoredNearby.isEmpty ? null : const IgnoredDevicesNearbyHint(),
+            children: [
+              for (final link in controllers) keyed(link, _row(link, devicesById[link.deviceId], inputs)),
+              if (!nothingPaired) _connectControllersRow(),
+            ],
+          ),
         ),
         BkGroupedSection(
           key: ValueKey('devices-${slot.key.name}'),

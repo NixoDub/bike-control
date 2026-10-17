@@ -40,7 +40,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:gamepads/gamepads.dart';
 import 'package:prop/emulators/definitions/fitness_bike_definition.dart';
 import 'package:prop/emulators/definitions/sensor_definition.dart';
-import 'package:prop/prop.dart';
+import 'package:prop/prop.dart' hide Set;
 import 'package:universal_ble/universal_ble.dart';
 
 import 'devices/base_device.dart';
@@ -181,6 +181,23 @@ class Connection {
   final _lastScanResult = <BleDevice>[];
   final ValueNotifier<bool> hasDevices = ValueNotifier(false);
   final ValueNotifier<bool> isScanning = ValueNotifier(false);
+
+  /// Ids of devices on the ignore list that the current scan has seen. They
+  /// are still never added or connected — this only lets the screens tell a
+  /// rider whose controller "won't show up" that it is in fact ignored.
+  /// Cleared when a scan starts; ids leave it when they are un-ignored.
+  final ValueNotifier<Set<String>> ignoredDevicesNearby = ValueNotifier(const {});
+
+  /// Drops ids from [ignoredDevicesNearby] that are no longer on the ignore
+  /// list. Called whenever the ignore list shrinks.
+  void pruneIgnoredDevicesNearby() {
+    if (ignoredDevicesNearby.value.isEmpty) return;
+    final stillIgnored = core.settings.getIgnoredDevices().map((d) => d.id).toSet();
+    final pruned = ignoredDevicesNearby.value.intersection(stillIgnored);
+    if (pruned.length != ignoredDevicesNearby.value.length) {
+      ignoredDevicesNearby.value = Set.unmodifiable(pruned);
+    }
+  }
 
   /// Parsed adverts of nearby SRAM controllers (shifters/blips/pods — NOT the RD),
   /// used to name and pre-register their buttons. Deduped by serial (last wins).
@@ -1224,6 +1241,7 @@ class Connection {
       return;
     }
     isScanning.value = true;
+    ignoredDevicesNearby.value = const {};
     _actionStreams.add(LogNotification(AppLocalizations.current.scanningForDevicesShort));
 
     if (screenshotMode) {
@@ -1387,12 +1405,14 @@ class Connection {
   void addDevices(List<BaseDevice> dev) {
     final ignoredDevices = core.settings.getIgnoredDevices();
     final ignoredDeviceIds = ignoredDevices.map((d) => d.id).toSet();
+    final seenIgnored = <String>{};
     final newDevices = dev.where((device) {
       if (devices.contains(device)) return false;
 
       // Check if device is in the ignored list
       if (device is BluetoothDevice) {
         if (ignoredDeviceIds.contains(device.device.deviceId)) {
+          seenIgnored.add(device.device.deviceId);
           return false;
         }
         // A controller the battery saver disconnected must not silently
@@ -1405,6 +1425,9 @@ class Connection {
 
       return true;
     }).toList();
+    if (seenIgnored.isNotEmpty && !ignoredDevicesNearby.value.containsAll(seenIgnored)) {
+      ignoredDevicesNearby.value = Set.unmodifiable({...ignoredDevicesNearby.value, ...seenIgnored});
+    }
     devices.addAll(newDevices);
     _connectionQueue.addAll(newDevices);
     // A device held back for its setup (a Zwift Click V2 before its

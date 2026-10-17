@@ -147,6 +147,38 @@ Future<void> main() async {
       await Future<void>.delayed(const Duration(milliseconds: 200));
       expect(core.connection.devices, isEmpty);
     });
+
+    test('an ignored device seen in the scan is reported as nearby, never added', () async {
+      await core.settings.addIgnoredDevice('fake-zwift-click', 'Zwift Click');
+      env.ble.addPeripheral(buildZwiftClick());
+
+      await core.connection.performScanning();
+      await IntegrationEnv.waitFor(
+        () => core.connection.ignoredDevicesNearby.value.isNotEmpty,
+        description: 'the ignored Click to be reported nearby',
+      );
+
+      expect(core.connection.ignoredDevicesNearby.value, {'fake-zwift-click'});
+      expect(core.connection.devices, isEmpty);
+    });
+
+    test('a new scan starts with no ignored devices nearby', () async {
+      core.connection.ignoredDevicesNearby.value = {'stale-id'};
+
+      await core.connection.performScanning();
+
+      expect(core.connection.ignoredDevicesNearby.value, isEmpty);
+    });
+
+    test('un-ignoring a device drops it from the nearby set', () async {
+      await core.settings.addIgnoredDevice('a', 'Zwift Click');
+      await core.settings.addIgnoredDevice('b', 'Old remote');
+      core.connection.ignoredDevicesNearby.value = {'a', 'b'};
+
+      await core.settings.removeIgnoredDevice('a');
+
+      expect(core.connection.ignoredDevicesNearby.value, {'b'});
+    });
   });
 
   group('connection lifecycle', () {

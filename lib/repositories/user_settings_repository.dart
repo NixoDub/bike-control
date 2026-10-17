@@ -277,6 +277,7 @@ class UserSettingsRepository {
   Future<void> _applyIgnoredDevices(List<String> ids, List<String> names) async {
     await core.settings.prefs.setStringList('ignored_device_ids', ids);
     await core.settings.prefs.setStringList('ignored_device_names', names);
+    core.connection.pruneIgnoredDevicesNearby();
   }
 
   /// Saves the local version information after successful sync.
