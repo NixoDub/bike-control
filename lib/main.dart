@@ -38,6 +38,7 @@ import 'pages/navigation.dart';
 import 'utils/actions/base_actions.dart';
 import 'utils/core.dart';
 import 'utils/host_platform.dart';
+import 'utils/network_server_teardown.dart';
 import 'utils/window_size.dart';
 import 'widgets/ui/app_theme.dart';
 
@@ -938,6 +939,9 @@ class _StarterState extends State<_Starter> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       unawaited(IAPManager.instance.refreshEntitlementsOnResume());
     }
+    // The process can outlive this engine on Android (foreground service);
+    // release the server ports so the next launch gets them back.
+    if (!kIsWeb && Platform.isAndroid) unawaited(stopNetworkServersOnLifecycleChange(state));
   }
 
   @override

@@ -131,10 +131,13 @@
                     android:resource="@xml/accessibility_service_config" />
         </service>
 
+        <!-- stopWithTask: swiping the app away must end the process. Kept alive by
+             this service, the process outlived the destroyed engine, its server
+             sockets stayed bound, and the next launch found the ports busy. -->
         <service
                 android:name="com.dexterous.flutterlocalnotifications.ForegroundService"
                 android:exported="false"
-                android:stopWithTask="false"
+                android:stopWithTask="true"
                 android:foregroundServiceType="connectedDevice"/>
 
         <service
