@@ -382,6 +382,9 @@ class _DuringRideSectionState extends State<DuringRideSection> {
 class SettingsPlanCard extends StatelessWidget {
   const SettingsPlanCard({super.key, this.client});
 
+  /// Below this content width the actions sit under the plan, not beside it.
+  static const double stackedBelowWidth = 480;
+
   /// Test seam; null uses the app's Supabase client.
   final SupabaseClient? client;
 
@@ -416,51 +419,82 @@ class SettingsPlanCard extends StatelessWidget {
                 child: Builder(
                   builder: (context) {
                     final cs = Theme.of(context).colorScheme;
+                    final plan = Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          l10n.currentPlan,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: context.typography.xSmall.copyWith(color: cs.mutedForeground),
+                        ),
+                        // One word, never broken: shrink before wrapping.
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: AlignmentDirectional.centerStart,
+                          child: Text(
+                            name.toUpperCase(),
+                            maxLines: 1,
+                            softWrap: false,
+                            style: BkDisplay.title(context),
+                          ),
+                        ),
+                        if (status.isNotEmpty && status != name)
+                          Text(
+                            status,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.typography.xSmall.copyWith(color: cs.mutedForeground),
+                          ),
+                      ],
+                    );
+                    final actions = <Widget>[
+                      if (tier == PlanTier.pro)
+                        Button.ghost(
+                          onPressed: () => openPlanAccount(context),
+                          child: Text(l10n.manageAction),
+                        )
+                      else ...[
+                        if (!signedIn)
+                          Button.ghost(
+                            key: const ValueKey('settings-plan-sign-in'),
+                            onPressed: () => openPlanAccount(context, showAccount: true),
+                            child: Text(l10n.signIn),
+                          ),
+                        BkPillButton(
+                          expand: false,
+                          onPressed: () => openPlanAccount(context),
+                          child: Text(l10n.goPro),
+                        ),
+                      ],
+                    ];
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            // On a phone the actions beside the plan would
+                            // squeeze its name; they move underneath instead.
+                            if (constraints.maxWidth < SettingsPlanCard.stackedBelowWidth) {
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text(
-                                    l10n.currentPlan,
-                                    style: context.typography.xSmall.copyWith(color: cs.mutedForeground),
-                                  ),
-                                  Text(name.toUpperCase(), style: BkDisplay.title(context)),
-                                  if (status.isNotEmpty && status != name)
-                                    Text(
-                                      status,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: context.typography.xSmall.copyWith(color: cs.mutedForeground),
-                                    ),
+                                  plan,
+                                  const Gap(12),
+                                  Row(mainAxisAlignment: MainAxisAlignment.end, children: actions),
                                 ],
-                              ),
-                            ),
-                            const Gap(12),
-                            if (tier == PlanTier.pro)
-                              Button.ghost(
-                                onPressed: () => openPlanAccount(context),
-                                child: Text(l10n.manageAction),
-                              )
-                            else ...[
-                              if (!signedIn)
-                                Button.ghost(
-                                  key: const ValueKey('settings-plan-sign-in'),
-                                  onPressed: () => openPlanAccount(context, showAccount: true),
-                                  child: Text(l10n.signIn),
-                                ),
-                              BkPillButton(
-                                expand: false,
-                                onPressed: () => openPlanAccount(context),
-                                child: Text(l10n.goPro),
-                              ),
-                            ],
-                          ],
+                              );
+                            }
+                            return Row(
+                              children: [
+                                Expanded(child: plan),
+                                const Gap(12),
+                                ...actions,
+                              ],
+                            );
+                          },
                         ),
                         const VsTrialMeterSlot(gap: 12),
                       ],
