@@ -291,11 +291,19 @@ Future<({ui.Image image, int addedHeight})> _captureUnrolled(
   double pixelRatio,
 ) async {
   final scroll = _findFirstVerticalScrollable(element);
-  if (scroll != null && scroll.position.maxScrollExtent > 0) {
+  if (scroll != null && scroll.position.maxScrollExtent > 0 && _isOnStage(element)) {
     return _captureStitched(boundary, scroll, pixelRatio);
   }
   return (image: await boundary.toImage(pixelRatio: pixelRatio), addedHeight: 0);
 }
+
+/// Whether [context]'s route is shown, so scrolling it gets laid out and
+/// painted again. A route covered by an opaque one (Home under the Help
+/// Center, which captures Home) is kept offstage by the Navigator's
+/// [Overlay]: scrolling it changes nothing on screen, so every slice would be
+/// the same view and the stitched image would repeat it. The Overlay turns
+/// tickers off for exactly those routes.
+bool _isOnStage(BuildContext context) => TickerMode.valuesOf(context).enabled;
 
 class _ScrollableHit {
   final Element element;
@@ -345,7 +353,8 @@ Future<({ui.Image image, int addedHeight})> _captureStitched(
   }
 
   final position = scroll.position;
-  final viewportTopLogical = scrollableRO.localToGlobal(Offset.zero, ancestor: boundary).dy;
+  final viewportOrigin = scrollableRO.localToGlobal(Offset.zero, ancestor: boundary);
+  final viewportTopLogical = viewportOrigin.dy;
   final viewportHeightLogical = scrollableRO.size.height;
   if (viewportHeightLogical <= 0) {
     return (image: await boundary.toImage(pixelRatio: pixelRatio), addedHeight: 0);
@@ -392,6 +401,8 @@ Future<({ui.Image image, int addedHeight})> _captureStitched(
     final viewportTopPx = (viewportTopLogical * pixelRatio).round();
     final viewportHeightPx = (viewportHeightLogical * pixelRatio).round();
     final viewportBottomPx = viewportTopPx + viewportHeightPx;
+    final viewportLeftPx = max(0, (viewportOrigin.dx * pixelRatio).round());
+    final viewportWidthPx = min(shotWidthPx - viewportLeftPx, (scrollableRO.size.width * pixelRatio).round());
     final chromeBottomPx = max(0, shotHeightPx - viewportBottomPx);
     final contentTotalPx = (cappedMaxScroll * pixelRatio).round() + viewportHeightPx;
     final stitchedHeight = viewportTopPx + contentTotalPx + chromeBottomPx;
@@ -408,7 +419,10 @@ Future<({ui.Image image, int addedHeight})> _captureStitched(
     }
 
     // Body portions: append only the unseen pixels of each shot so the
-    // top of shot[i] doesn't overwrite already-stitched content.
+    // top of shot[i] doesn't overwrite already-stitched content. The first
+    // shot gives the full width; later ones only the scroll view's columns —
+    // whatever sits beside it (the sidebar) did not scroll and is already in.
+    // Below it, beside the unrolled page, stays empty.
     int contentCoveredPx = 0;
     for (int i = 0; i < shots.length; i++) {
       final scrollOffsetPx = (offsets[i] * pixelRatio).round();
@@ -417,16 +431,18 @@ Future<({ui.Image image, int addedHeight})> _captureStitched(
       final overlap = newStartPx - scrollOffsetPx;
       final visibleHeight = newEndPx - newStartPx;
       if (visibleHeight <= 0) continue;
+      final left = i == 0 ? 0.0 : viewportLeftPx.toDouble();
+      final width = i == 0 ? fullWidth : viewportWidthPx.toDouble();
       final src = Rect.fromLTWH(
-        0,
+        left,
         (viewportTopPx + overlap).toDouble(),
-        fullWidth,
+        width,
         visibleHeight.toDouble(),
       );
       final dst = Rect.fromLTWH(
-        0,
+        left,
         (viewportTopPx + newStartPx).toDouble(),
-        fullWidth,
+        width,
         visibleHeight.toDouble(),
       );
       canvas.drawImageRect(shots[i], src, dst, paint);
