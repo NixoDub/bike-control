@@ -41,6 +41,7 @@ import 'utils/host_platform.dart';
 import 'utils/network_server_teardown.dart';
 import 'utils/window_size.dart';
 import 'widgets/ui/app_theme.dart';
+import 'widgets/ui/safe_area_popover_handler.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
 var screenshotMode = false;
@@ -783,8 +784,9 @@ class _BikeControlAppState extends State<BikeControlApp> {
         child: ShadcnApp(
           navigatorKey: navigatorKey,
           debugShowCheckedModeBanner: false,
-          menuHandler: OverlayHandler.popover,
-          popoverHandler: OverlayHandler.popover,
+          // Popovers and menus stay clear of the status and navigation bars.
+          menuHandler: const SafeAreaPopoverHandler(),
+          popoverHandler: const SafeAreaPopoverHandler(),
           localizationsDelegates: [
             ...ShadcnLocalizations.localizationsDelegates,
             OtherLocalizationsDelegate(),
