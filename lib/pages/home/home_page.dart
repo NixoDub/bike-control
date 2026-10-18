@@ -42,11 +42,13 @@ import 'package:bike_control/pages/trainer_connection_settings.dart';
 import 'package:bike_control/services/overlay/trainer_overlay_service.dart';
 import 'package:bike_control/utils/core.dart';
 import 'package:bike_control/utils/device_setup_prompt.dart';
+import 'package:bike_control/pages/button_simulator.dart';
 import 'package:bike_control/utils/i18n_extension.dart';
 import 'package:bike_control/utils/iap/iap_manager.dart';
 import 'package:bike_control/utils/keymap/apps/bike_control.dart';
 import 'package:bike_control/services/local_network_access.dart';
-import 'package:bike_control/services/network_self_test/probes/passive_probes.dart' show AddressWarningKind, advertisedAddressWarning, advertisedAddressWarningKind;
+import 'package:bike_control/services/network_self_test/probes/passive_probes.dart'
+    show AddressWarningKind, advertisedAddressWarning, advertisedAddressWarningKind;
 import 'package:bike_control/utils/requirements/local_network.dart';
 import 'package:bike_control/utils/requirements/multi.dart';
 import 'package:bike_control/widgets/drivetrain/drivetrain_controls.dart';
@@ -1469,6 +1471,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 body: l.rideNoControllerBody,
                 actionLabel: l.connect,
                 onAction: () => _openController(null),
+                // Or press the trainer app's buttons from here, as the
+                // trainer page offers it.
+                secondaryKey: const ValueKey('ride-manual-control'),
+                secondaryLabel: switch (core.settings.getTrainerApp()) {
+                  final app? when app is! BikeControl => l.manualyControllingButton(shownTrainerAppName(app.name)),
+                  _ => null,
+                },
+                onSecondary: () => context.push(const ButtonSimulator()),
               ),
             for (final (i, device) in shown.indexed)
               Padding(

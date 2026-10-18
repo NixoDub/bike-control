@@ -977,7 +977,16 @@ class RidePromptCard extends StatelessWidget {
     this.actionLabel,
     this.onAction,
     this.actionIsSecondary = false,
+    this.secondaryLabel,
+    this.onSecondary,
+    this.secondaryKey,
   });
+
+  /// A quieter way round, under the text: "Control MyWhoosh manually!"
+  /// while no controller is here.
+  final String? secondaryLabel;
+  final VoidCallback? onSecondary;
+  final Key? secondaryKey;
 
   final IconData icon;
   final String title;
@@ -1022,6 +1031,27 @@ class RidePromptCard extends StatelessWidget {
                 Text(title, style: context.typography.base.copyWith(fontWeight: FontWeight.w600)),
                 const Gap(2),
                 Text(body, style: context.typography.small.copyWith(color: bodyColor ?? cs.mutedForeground)),
+                if (secondaryLabel != null && onSecondary != null) ...[
+                  const Gap(4),
+                  // Its text lines up with the body above it.
+                  Transform.translate(
+                    offset: const Offset(-8, 0),
+                    child: Button.ghost(
+                      key: secondaryKey,
+                      style: const ButtonStyle.ghost(
+                        size: ButtonSize.small,
+                      ).withPadding(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10)),
+                      onPressed: onSecondary,
+                      child: Text(
+                        secondaryLabel!,
+                        style: context.typography.small.copyWith(
+                          color: bkAccentText(context),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
