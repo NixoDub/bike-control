@@ -24,8 +24,9 @@ import 'package:flutter/foundation.dart' show ValueListenable, defaultTargetPlat
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 /// The last press of one controller, and how many there have been, so the
-/// same button pressed twice still counts as a new press.
-typedef ControllerPress = ({ControllerButton? button, int generation});
+/// same button pressed twice still counts as a new press. [trigger] is the
+/// gesture it resolved to once known (null until then).
+typedef ControllerPress = ({ControllerButton? button, int generation, ButtonTrigger? trigger});
 
 /// A Ride section title with an optional link at its end ("Edit buttons ›").
 class RideSectionHeader extends StatelessWidget {
@@ -155,8 +156,8 @@ Widget? controllerButtonsPicture({
 }
 
 /// The single-click action [button] sends, or null when it sends nothing.
-String? _actionFor(Keymap? keymap, ControllerButton button) {
-  final pair = keymap?.getKeyPair(button, trigger: ButtonTrigger.singleClick);
+String? _actionFor(Keymap? keymap, ControllerButton button, {ButtonTrigger trigger = ButtonTrigger.singleClick}) {
+  final pair = keymap?.getKeyPair(button, trigger: trigger);
   if (pair == null || pair.hasNoAction) return null;
   final text = pair.toString();
   return text.isEmpty ? null : text;
@@ -546,7 +547,9 @@ class LastPressStrip extends StatelessWidget {
         final button = pressed.button;
         if (button == null) return const SizedBox.shrink();
         final cs = Theme.of(context).colorScheme;
-        final action = _actionFor(keymap, button);
+        // The action of the gesture that ran; until it is known (a double
+        // click or long press is still being told apart), the single click's.
+        final action = _actionFor(keymap, button, trigger: pressed.trigger ?? ButtonTrigger.singleClick);
         // Its single click is an action that only works while held.
         final holdOnClick = keymap?.getKeyPair(button, trigger: ButtonTrigger.singleClick)?.holdActionOnClick == true;
         final muted = context.typography.small.copyWith(color: cs.mutedForeground);

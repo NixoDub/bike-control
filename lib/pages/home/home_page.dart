@@ -8,6 +8,7 @@ import 'package:bike_control/bluetooth/devices/steering_device.dart';
 import 'package:bike_control/bluetooth/devices/bluetooth_device.dart';
 import 'package:bike_control/bluetooth/devices/proxy/proxy_device.dart';
 import 'package:bike_control/bluetooth/devices/sensors/ble_sensor_device.dart';
+import 'package:bike_control/bluetooth/devices/shimano/shimano_di2.dart';
 import 'package:bike_control/bluetooth/devices/sram/sram_axs.dart';
 import 'package:bike_control/bluetooth/devices/zwift/zwift_clickv2.dart';
 import 'package:bike_control/bluetooth/devices/zwift/zwift_device.dart';
@@ -206,7 +207,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   final Map<String, ValueNotifier<ControllerPress>> _presses = {};
 
   ValueNotifier<ControllerPress> _pressesFor(String deviceId) =>
-      _presses.putIfAbsent(deviceId, () => ValueNotifier((button: null, generation: 0)));
+      _presses.putIfAbsent(deviceId, () => ValueNotifier((button: null, generation: 0, trigger: null)));
 
   /// How many buttons Ride last drew for each controller, to spot one it
   /// added since.
@@ -320,11 +321,23 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       if (notification is ButtonNotification && notification.buttonsClicked.isNotEmpty) {
         final device = notification.device;
         final presses = _pressesFor(device.uniqueId);
-        presses.value = (button: notification.buttonsClicked.first, generation: presses.value.generation + 1);
+        presses.value = (
+          button: notification.buttonsClicked.first,
+          generation: presses.value.generation + 1,
+          trigger: null,
+        );
         // Controllers without a fixed layout (gamepads, keyboards) add a button
         // on its first press; the picture and the list only show it on a rebuild.
         final shownCount = _buttonCounts[device.uniqueId];
         if (shownCount != null && shownCount != device.availableButtons.length && mounted) setState(() {});
+      } else if (notification is GestureNotification) {
+        // The press resolved (single / double / long): name its action.
+        final presses = _pressesFor(notification.device.uniqueId);
+        presses.value = (
+          button: notification.button,
+          generation: presses.value.generation,
+          trigger: notification.trigger,
+        );
       }
     });
 
@@ -723,6 +736,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             unlockUncertain: _unlockUncertain(device),
             unlockIsRideV2: device is ZwiftUnlock && device.isRideV2,
             sramSetupDone: device is SramAxs ? !device.needsGuidedSetup : null,
+            shimanoSetupDone: device is ShimanoDi2 && device.hasConfigService ? device.isButtonModeEnabled : null,
             sramCanRestore: device is SramAxs && device.canRestoreShifting,
             needsUnlockModeChoice:
                 (device is ZwiftClickV2 || device is ZwiftClickV2RightSide) && ClickV2Onboarding.isPending,
@@ -2066,6 +2080,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           // The same guided sheet the device card and the onboarding wizard
           // run — the derailleur cannot send anything until it has.
           await device.showGuidedSetup(context);
+        } else if (active == SetupStepId.controllerShimanoSetup && device is ShimanoDi2) {
+          // The same setup sheet the device card runs — until button mode is
+          // on, the Di2 shifts by itself and sends nothing.
+          await device.openSetup(context);
         } else if (active == SetupStepId.controllerSramRestore && device is SramAxs) {
           // The optional "restore original shifting" offer runs the same guided
           // restore sheet the device page does.

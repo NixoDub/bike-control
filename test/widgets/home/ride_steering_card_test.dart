@@ -39,7 +39,7 @@ Future<void> main() async {
   Future<AppLocalizations> pump(
     WidgetTester tester,
     GyroscopeSteering device, {
-    ControllerPress press = (button: null, generation: 0),
+    ControllerPress press = (button: null, generation: 0, trigger: null),
     bool wide = false,
   }) async {
     await AppLocalizations.load(const Locale('de'));
@@ -110,7 +110,7 @@ Future<void> main() async {
     final l = await pump(
       tester,
       calibratedPhone(),
-      press: (button: GyroscopeSteeringButtons.leftSteer, generation: 1),
+      press: (button: GyroscopeSteeringButtons.leftSteer, generation: 1, trigger: null),
       wide: true,
     );
     expect(find.byType(LastPressStrip), findsNothing);

@@ -956,6 +956,20 @@ class Settings {
   Future<void> setSramShiftingDisabled(String serial, bool disabled) async =>
       prefs.setBool('sram_disabled_$serial', disabled);
 
+  // Shimano Di2 button mode: whether the rider opted in (re-entered on every
+  // connect) and the E-TUBE passkey that authenticated it.
+
+  bool getShimanoButtonMode(String serial) => prefs.getBool('shimano_button_mode_$serial') ?? false;
+
+  Future<void> setShimanoButtonMode(String serial, bool enabled) async =>
+      prefs.setBool('shimano_button_mode_$serial', enabled);
+
+  String getShimanoPasskey(String serial) =>
+      prefs.getString('shimano_passkey_$serial') ?? ShimanoAuth.defaultPasskey;
+
+  Future<void> setShimanoPasskey(String serial, String passkey) async =>
+      prefs.setString('shimano_passkey_$serial', passkey);
+
   List<({int serial, int mask, int? deviceType})> getSramButtons(String serial) {
     final raw = prefs.getStringList('sram_buttons_$serial') ?? const [];
     return raw.map((e) {

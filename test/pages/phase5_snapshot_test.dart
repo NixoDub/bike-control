@@ -141,7 +141,7 @@ Future<void> main() async {
     });
 
     testWidgets('onboarding-step3-390x844-$theme', (tester) async {
-      final presses = ValueNotifier<ControllerPress>((button: plus, generation: 1));
+      final presses = ValueNotifier<ControllerPress>((button: plus, generation: 1, trigger: null));
       await shoot(
         tester,
         name: 'onboarding-step3-390x844-$theme',

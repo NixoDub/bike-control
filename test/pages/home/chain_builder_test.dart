@@ -25,6 +25,7 @@ ControllerInput controller({
   bool unlockUncertain = false,
   bool unlockIsRideV2 = false,
   bool? sramSetupDone,
+  bool? shimanoSetupDone,
   bool sramCanRestore = false,
   bool needsUnlockModeChoice = false,
   bool clickV2NeedsLeftSide = false,
@@ -41,6 +42,7 @@ ControllerInput controller({
     unlockUncertain: unlockUncertain,
     unlockIsRideV2: unlockIsRideV2,
     sramSetupDone: sramSetupDone,
+    shimanoSetupDone: shimanoSetupDone,
     sramCanRestore: sramCanRestore,
     needsUnlockModeChoice: needsUnlockModeChoice,
     clickV2NeedsLeftSide: clickV2NeedsLeftSide,
@@ -276,6 +278,25 @@ void main() {
         (s) => s.id == SetupStepId.controllerUnlocked,
       );
       expect(step.uncertain, isFalse);
+    });
+
+    // A Di2 whose button mode is not on yet shifts by itself and sends nothing,
+    // so turning it on is the required step, ahead of mapping.
+    test('a Di2 awaiting button mode carries that step, ahead of mapping', () {
+      final chain = buildChain(
+        ChainInputs(controllers: [controller(shimanoSetupDone: false, hasMappedButtons: false)], app: _readyApp),
+      );
+      final link = chain.byKey(ChainLinkKey.controller);
+      expect(_stepDone(link, SetupStepId.controllerShimanoSetup), isFalse);
+      expect(link.activeStep?.id, SetupStepId.controllerShimanoSetup);
+      expect(link.status, LinkStatus.attention);
+    });
+
+    test('a Di2 with button mode on ticks the step and leaves the card ready', () {
+      final chain = buildChain(ChainInputs(controllers: [controller(shimanoSetupDone: true)], app: _readyApp));
+      final link = chain.byKey(ChainLinkKey.controller);
+      expect(_stepDone(link, SetupStepId.controllerShimanoSetup), isTrue);
+      expect(link.status, LinkStatus.ready);
     });
 
     // A SRAM derailleur whose own shifting is still enabled is connected and

@@ -410,6 +410,7 @@ abstract class BaseDevice {
     ButtonTrigger trigger = ButtonTrigger.longPress,
   }) async {
     for (final action in buttonsClicked) {
+      actionStreamInternal.add(GestureNotification(device: this, button: action, trigger: trigger));
       if (_intercept(action, trigger, isKeyDown: true) != null) continue;
       // Check IAP status before executing command
       if (!_canExecuteCommand()) {
@@ -472,6 +473,7 @@ abstract class BaseDevice {
     ButtonTrigger trigger = ButtonTrigger.singleClick,
   }) async {
     for (final action in buttonsClicked) {
+      actionStreamInternal.add(GestureNotification(device: this, button: action, trigger: trigger));
       if (_intercept(action, trigger, isKeyDown: true) != null) continue;
       // Check IAP status before executing command
       if (!_canExecuteCommand()) {

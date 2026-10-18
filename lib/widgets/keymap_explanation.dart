@@ -57,6 +57,19 @@ class KeymapExplanation extends StatefulWidget {
   State<KeymapExplanation> createState() => _KeymapExplanationState();
 }
 
+/// Which entry a press on this screen opens: the pressed button and the
+/// gesture it resolved to (so a long press opens its long-press entry), or null
+/// for any other notification. A controller that cannot report a long press
+/// itself still opens its long-press entry when only that one is mapped.
+({ControllerButton button, ButtonTrigger trigger})? pressSelection(BaseNotification n, Keymap keymap) {
+  if (n is! GestureNotification) return null;
+  final fallbackLongPress =
+      n.device.supportsLongPress == false &&
+      n.trigger == ButtonTrigger.singleClick &&
+      keymap.getKeyPair(n.button, trigger: ButtonTrigger.longPress)?.hasNoAction == false;
+  return (button: n.button, trigger: fallbackLongPress ? ButtonTrigger.longPress : n.trigger);
+}
+
 class _KeymapExplanationState extends State<KeymapExplanation> {
   late StreamSubscription<void> _updateStreamListener;
 
@@ -66,6 +79,13 @@ class _KeymapExplanationState extends State<KeymapExplanation> {
   MappingSelection get _selection => widget.selection ?? (_ownSelection ??= MappingSelection());
 
   bool _isDrawerOpen = false;
+
+  /// The entry the open editor sheet shows, and a context inside it to close
+  /// it with — so a press that resolves to a different button or gesture
+  /// switches the sheet instead of being ignored.
+  ({String button, ButtonTrigger trigger})? _openEntry;
+  BuildContext? _drawerContext;
+  (BaseDevice, ControllerButton, ButtonTrigger)? _nextEntry;
 
   @override
   void initState() {
@@ -78,17 +98,19 @@ class _KeymapExplanationState extends State<KeymapExplanation> {
       if (!mounted) {
         return;
       }
-      if (data is ButtonNotification && data.buttonsClicked.length == 1) {
-        final clickedButton = data.buttonsClicked.first;
-        final hasFallbackLongPress =
-            data.device.supportsLongPress == false &&
-            widget.keymap.getKeyPair(clickedButton, trigger: ButtonTrigger.longPress)?.hasNoAction == false;
-        final trigger = hasFallbackLongPress ? ButtonTrigger.longPress : ButtonTrigger.singleClick;
+      final picked = pressSelection(data, widget.keymap);
+      if (picked != null && data is GestureNotification) {
+        final (:button, :trigger) = picked;
+        final clickedButton = button;
         if (widget.master) {
           // The detail pane beside the list follows the button just pressed.
           _selection.select(data.device, clickedButton, trigger: trigger);
         } else if (!_isDrawerOpen) {
           _openButtonEditor(data.device, clickedButton, trigger);
+        } else if (_openEntry != (button: clickedButton.name, trigger: trigger) && _drawerContext != null) {
+          // Another button or gesture: swap the open sheet for that entry.
+          _nextEntry = (data.device, clickedButton, trigger);
+          closeDrawer(_drawerContext!);
         }
         setState(() {});
       }
@@ -409,24 +431,33 @@ class _KeymapExplanationState extends State<KeymapExplanation> {
   Future<void> _openEditor(BaseDevice device, ControllerButton button, ButtonTrigger trigger, Keymap keymap) async {
     final selectedKeyPair = keymap.getOrCreateKeyPair(button, trigger: trigger);
     _isDrawerOpen = true;
+    _openEntry = (button: button.name, trigger: trigger);
     await openDrawer(
       context: context,
-      builder: (c) => ButtonEditPage(
-        device: device,
-        keyPair: selectedKeyPair,
-        keymap: keymap,
-        trigger: trigger,
-        onUpdate: () {
-          keymap.signalUpdate();
-          persistMappingEdit();
-          widget.onUpdate();
-        },
-      ),
+      builder: (c) {
+        _drawerContext = c;
+        return ButtonEditPage(
+          device: device,
+          keyPair: selectedKeyPair,
+          keymap: keymap,
+          trigger: trigger,
+          onUpdate: () {
+            keymap.signalUpdate();
+            persistMappingEdit();
+            widget.onUpdate();
+          },
+        );
+      },
       position: OverlayPosition.end,
     );
     persistMappingEdit();
     widget.onUpdate();
     _isDrawerOpen = false;
+    _openEntry = null;
+    _drawerContext = null;
+    final next = _nextEntry;
+    _nextEntry = null;
+    if (next != null && mounted) await _openButtonEditor(next.$1, next.$2, next.$3);
   }
 }
 

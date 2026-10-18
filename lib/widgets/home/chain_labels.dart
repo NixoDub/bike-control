@@ -69,6 +69,9 @@ ChainStepText chainStepText(BuildContext context, SetupStep step, {String? appNa
     SetupStepId.controllerSramSetup => step.done
         ? ChainStepText(l.chainStepSramSetup)
         : ChainStepText(l.sramSetup, l.chainStepSramSetupHint),
+    SetupStepId.controllerShimanoSetup => step.done
+        ? ChainStepText(l.chainStepShimanoSetup)
+        : ChainStepText(l.shimanoSetup, l.chainStepShimanoSetupHint),
     // Optional, so it is only ever emitted while outstanding (restore clears the
     // backup, so it can never sit ticked). The hint is the whole offer — that
     // the derailleur's own shifting comes back — since "restore" alone says

@@ -20,11 +20,23 @@ Future<void> main() async {
   const long = ControllerButton('shiftUpLeftOnTheBigHandlebarRemote', action: InGameAction.shiftDown);
   const short = ControllerButton('plus', action: InGameAction.shiftDown);
 
-  Future<void> pump(WidgetTester tester, double width, ControllerButton button) async {
+  Future<void> pump(
+    WidgetTester tester,
+    double width,
+    ControllerButton button, {
+    ButtonTrigger? trigger,
+  }) async {
     await AppLocalizations.load(const Locale('en'));
     final keymap = Keymap(
       keyPairs: [
         KeyPair(buttons: [button], physicalKey: null, logicalKey: null, inGameAction: InGameAction.shiftDown),
+        KeyPair(
+          buttons: [button],
+          physicalKey: null,
+          logicalKey: null,
+          trigger: ButtonTrigger.longPress,
+          inGameAction: InGameAction.steerLeft,
+        ),
       ],
     );
     final device = ZwiftPlay(
@@ -51,7 +63,7 @@ Future<void> main() async {
               child: LastPressStrip(
                 device: device,
                 keymap: keymap,
-                presses: ValueNotifier((button: button, generation: 1)),
+                presses: ValueNotifier((button: button, generation: 1, trigger: trigger)),
                 onUpdate: () {},
               ),
             ),
@@ -85,4 +97,12 @@ Future<void> main() async {
       });
     }
   }
+
+  // The strip names the action that ran: a long press shows the long-press
+  // action, not the single-click one it would otherwise guess.
+  testWidgets('shows the action of the gesture that ran', (tester) async {
+    await pump(tester, 520, short, trigger: ButtonTrigger.longPress);
+    expect(find.text(InGameAction.steerLeft.title), findsOneWidget);
+    expect(find.text(InGameAction.shiftDown.title), findsNothing);
+  });
 }

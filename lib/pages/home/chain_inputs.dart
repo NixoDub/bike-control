@@ -59,6 +59,7 @@ class ControllerInput {
     this.unlockUncertain = false,
     this.unlockIsRideV2 = false,
     this.sramSetupDone,
+    this.shimanoSetupDone,
     this.sramCanRestore = false,
     this.needsUnlockModeChoice = false,
     this.clickV2NeedsLeftSide = false,
@@ -117,6 +118,12 @@ class ControllerInput {
   /// second device with its own guided setup wants its own id, not this one
   /// silently mislabelled.
   final bool? sramSetupDone;
+
+  /// Whether a wireless Shimano Di2 has its button mode on, or null for
+  /// anything else (including a Di2 without the E-TUBE config service). Until
+  /// it is on the Di2 shifts by itself and sends nothing, so — like
+  /// [sramSetupDone] — it is the step that produces the buttons to map.
+  final bool? shimanoSetupDone;
 
   /// Whether this controller can restore its original on-device shifting — a
   /// SRAM AXS derailleur whose config setup disabled has already updated, with a

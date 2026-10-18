@@ -99,6 +99,9 @@ List<ChainLink> _controllerLinks(ChainInputs inputs) {
             // range", underneath it.
             if (guidedSetupDone != null && (guidedSetupDone || inRange))
               SetupStep(id: SetupStepId.controllerSramSetup, done: guidedSetupDone),
+            // The Di2's counterpart, under the same rule.
+            if (controller.shimanoSetupDone case final done? when done || inRange)
+              SetupStep(id: SetupStepId.controllerShimanoSetup, done: done),
             // Only once there are buttons to map. A derailleur declares none
             // until its paddles have been heard from, so the line would name
             // work with nothing to work on — see [ControllerInput.hasKnownButtons].
