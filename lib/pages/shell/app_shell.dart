@@ -494,6 +494,10 @@ class ShellTopBar extends StatelessWidget {
   /// sidebar to carry them.
   final bool showPlanAndHelp;
 
+  /// The phone bar's content height: one 44 dp touch target, the tallest
+  /// thing any tab puts beside the title.
+  static const double compactHeight = 44;
+
   @override
   Widget build(BuildContext context) {
     final title = compact && section == AppSection.ride ? 'BikeControl' : section.label(context);
@@ -506,6 +510,10 @@ class ShellTopBar extends StatelessWidget {
     final bar = AppBar(
       padding: EdgeInsets.fromLTRB(phone ? 16 : 24, compact ? 10 : 16, phone ? 8 : 20, 8),
       backgroundColor: Theme.of(context).colorScheme.background,
+      // A fixed height on the phone, so the title sits at the same place on
+      // every tab: Ride's plan badge and (?) or Activity's Clear would
+      // otherwise make the bar taller and push the title down.
+      height: compact ? compactHeight : null,
       // The phone's Ride title is the wordmark: the mark leads it — unless the
       // two do not fit (a small phone, with the plan badge, (?) and ⋮ beside
       // them), where the mark steps aside rather than cutting the name to
