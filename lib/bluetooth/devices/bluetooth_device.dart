@@ -36,6 +36,7 @@ import 'package:flutter/foundation.dart';
 import 'package:prop/emulators/definitions/fitness_bike_definition.dart';
 import 'package:prop/prop.dart' show LogLevel, SramAdvertisement;
 import 'package:prop/utils/wahoo_climb.dart';
+import 'package:prop/utils/ble_connection_options.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:universal_ble/universal_ble.dart';
 import 'package:url_launcher/url_launcher_string.dart';
@@ -602,7 +603,7 @@ abstract class BluetoothDevice extends BaseDevice {
 
   @protected
   Future<void> connectUpstream() async {
-    await UniversalBle.connect(device.deviceId);
+    await UniversalBle.connect(device.deviceId, platformConfig: bleConnectionPlatformConfig());
     if (!kIsWeb) {
       try {
         await UniversalBle.requestMtu(device.deviceId, 517);

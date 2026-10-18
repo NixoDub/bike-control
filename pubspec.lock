@@ -648,10 +648,10 @@ packages:
     dependency: transitive
     description:
       name: flutter_web_bluetooth
-      sha256: ad26a1b3fef95b86ea5f63793b9a0cdc1a33490f35d754e4e711046cae3ebbf8
+      sha256: "71fa37f699032b4416d56aeb5214363ba057f6aed4eba544cc26293e2582b85d"
       url: "https://pub.dev"
     source: hosted
-    version: "1.1.0"
+    version: "1.2.0"
   flutter_web_plugins:
     dependency: transitive
     description: flutter
@@ -1980,12 +1980,11 @@ packages:
   universal_ble:
     dependency: "direct main"
     description:
-      path: "."
-      ref: changes
-      resolved-ref: d8961d78cb733526915eeb8a0530218a88d5649b
-      url: "https://github.com/jonasbark/universal_ble.git"
-    source: git
-    version: "2.1.0"
+      name: universal_ble
+      sha256: "6aa8d5a1de5ac8e41133d44b9c35f92bf87079188a0ee9a23a68a97f9068f4a0"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.1.0"
   url_launcher:
     dependency: "direct main"
     description:

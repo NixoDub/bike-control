@@ -36,7 +36,7 @@ void main() {
   test('button input injects an encoded notification frame', () {
     final session = manager.start(zwiftClickProfile);
     Uint8List? received;
-    ble.onValueChange = (deviceId, characteristicId, value, timestamp) => received = value;
+    ble.onValueChange = (change) => received = change.value;
 
     final plus = session.inputs.whereType<EmulatedButton>().first;
     plus.onDown();

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:bike_control/bluetooth/ble_command_queue_config.dart';
 import 'package:bike_control/bluetooth/devices/bluetooth_device.dart';
 import 'package:bike_control/bluetooth/devices/gamepad/gamepad_device.dart';
 import 'package:bike_control/bluetooth/devices/gyroscope/gyroscope_steering.dart';
@@ -838,6 +839,7 @@ class Connection {
   }
 
   void initialize() {
+    configureBleCommandQueues();
     // Show what the rider owns before any radio has said a word.
     loadRememberedDevices();
     // Store renders stage a settled setup, not a launch.
@@ -1151,7 +1153,10 @@ class Connection {
       }
     };
 
-    UniversalBle.onValueChange = (deviceId, characteristicUuid, value, timestamp) async {
+    UniversalBle.onValueChange = (BleCharacteristicValue change) async {
+      final deviceId = change.deviceId;
+      final characteristicUuid = change.characteristicId;
+      final value = change.value;
       final device = bluetoothDevices.firstOrNullWhere((e) => e.device.deviceId == deviceId);
       if (device == null) {
         _actionStreams.add(LogNotification('Device not found: $deviceId'));
@@ -1209,7 +1214,9 @@ class Connection {
       }
     };
 
-    UniversalBle.onConnectionChange = (String deviceId, bool isConnected, String? error) {
+    UniversalBle.onConnectionChange = (BleConnectionChange change) {
+      final deviceId = change.deviceId;
+      final isConnected = change.isConnected;
       final device = bluetoothDevices.firstOrNullWhere((e) => e.device.deviceId == deviceId);
       if (device != null && !isConnected) {
         // allow reconnection

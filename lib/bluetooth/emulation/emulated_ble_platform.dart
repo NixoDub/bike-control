@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:typed_data';
 
 import 'package:universal_ble/universal_ble.dart';
@@ -15,9 +16,9 @@ class FakePeripheral {
     this.manufacturerData,
     Map<String, Uint8List> serviceData = const {},
     this.rssi = -50,
-  })  : advertisedServices = List.of(advertisedServices),
-        services = List.of(services),
-        serviceData = Map.of(serviceData);
+  }) : advertisedServices = List.of(advertisedServices),
+       services = List.of(services),
+       serviceData = Map.of(serviceData);
 
   final String deviceId;
   final String? name;
@@ -37,6 +38,10 @@ class FakePeripheral {
 
   /// Canned read responses, keyed by lowercase characteristic UUID.
   final Map<String, Uint8List> readValues = {};
+
+  /// Descriptor values, keyed by lowercase descriptor UUID. Reads return the
+  /// stored value (empty when unset); writes replace it.
+  final Map<String, Uint8List> descriptorValues = {};
 
   /// Writes received from the app, in order.
   final writes = <({String service, String characteristic, Uint8List value, bool withoutResponse})>[];
@@ -65,20 +70,32 @@ class FakePeripheral {
   int connectAttempts = 0;
 
   BleDevice get scanResult => BleDevice(
-        deviceId: deviceId,
-        name: name,
-        rssi: rssi,
-        services: advertisedServices,
-        manufacturerDataList: [if (manufacturerData != null) manufacturerData!],
-        serviceData: serviceData,
-      );
+    deviceId: deviceId,
+    name: name,
+    rssi: rssi,
+    services: advertisedServices,
+    manufacturerDataList: [if (manufacturerData != null) manufacturerData!],
+    serviceData: serviceData,
+  );
 }
 
 /// In-memory implementation of universal_ble's central role. Install once per
 /// test file via `UniversalBle.setInstance(fake)` BEFORE
 /// `core.connection.initialize()` (the callbacks live on the instance).
 class FakeUniversalBlePlatform extends UniversalBlePlatform {
-  final Map<String, FakePeripheral> peripherals = {};
+  /// Registered peripherals, looked up case-insensitively: universal_ble 3
+  /// canonicalises every id it emits to lower-case, so the app addresses a
+  /// peripheral registered as `AA:BB:..` by `aa:bb:..` afterwards.
+  final Map<String, FakePeripheral> peripherals = LinkedHashMap<String, FakePeripheral>(
+    equals: (a, b) => a.toLowerCase() == b.toLowerCase(),
+    hashCode: (key) => key.toLowerCase().hashCode,
+  );
+
+  /// The [ConnectionPlatformConfig] of the most recent connect call.
+  ConnectionPlatformConfig? lastConnectPlatformConfig;
+
+  /// Every connect call's [ConnectionPlatformConfig], in order.
+  final connectPlatformConfigs = <ConnectionPlatformConfig?>[];
   bool scanning = false;
   AvailabilityState availability = AvailabilityState.poweredOn;
 
@@ -155,7 +172,14 @@ class FakeUniversalBlePlatform extends UniversalBlePlatform {
   Future<bool> isScanning() async => scanning;
 
   @override
-  Future<void> connect(String deviceId, {Duration? connectionTimeout, bool autoConnect = false}) async {
+  Future<void> connect(
+    String deviceId, {
+    Duration? connectionTimeout,
+    bool autoConnect = false,
+    ConnectionPlatformConfig? platformConfig,
+  }) async {
+    lastConnectPlatformConfig = platformConfig;
+    connectPlatformConfigs.add(platformConfig);
     final peripheral = _require(deviceId);
     peripheral.connectAttempts++;
     final error = peripheral.connectError;
@@ -191,7 +215,11 @@ class FakeUniversalBlePlatform extends UniversalBlePlatform {
   }
 
   @override
-  Future<List<BleService>> discoverServices(String deviceId, bool withDescriptors) async =>
+  Future<List<BleService>> discoverServices(
+    String deviceId,
+    bool withDescriptors, {
+    DiscoverServicesPlatformConfig? platformConfig,
+  }) async =>
       // Defensive copy: BluetoothDevice.disconnect() clears the list it was
       // handed, which must not wipe the peripheral's GATT database.
       List.of(_require(deviceId).services);
@@ -232,6 +260,26 @@ class FakeUniversalBlePlatform extends UniversalBlePlatform {
       withoutResponse: bleOutputProperty == BleOutputProperty.withoutResponse,
     ));
     peripheral.onWrite?.call(service, characteristic, value);
+  }
+
+  @override
+  Future<Uint8List> readDescriptorValue(
+    String deviceId,
+    String service,
+    String characteristic,
+    String descriptor, {
+    Duration? timeout,
+  }) async => _require(deviceId).descriptorValues[descriptor.toLowerCase()] ?? Uint8List(0);
+
+  @override
+  Future<void> writeDescriptorValue(
+    String deviceId,
+    String service,
+    String characteristic,
+    String descriptor,
+    Uint8List value,
+  ) async {
+    _require(deviceId).descriptorValues[descriptor.toLowerCase()] = value;
   }
 
   @override
