@@ -229,6 +229,41 @@ Future<void> main() async {
     expect(find.text('Not connected'), findsOneWidget);
   });
 
+  // A rider using BikeControl itself as the trainer app: virtual shifting runs
+  // right here, so there is no bridge for another app to pick up, and the
+  // card must not ask the rider to choose one in a connection screen.
+  group('with BikeControl as the trainer app', () {
+    Future<ProxyDevice> runningTrainer(WidgetTester tester, String app) async {
+      SharedPreferences.setMockInitialValues({'trainer_app': app});
+      core.settings.prefs = await SharedPreferences.getInstance();
+      final device = smartTrainer()..setRetrofitMode(RetrofitMode.wifi);
+      device.emulator.isStarted.value = true;
+      addTearDown(() => device.emulator.isStarted.value = false);
+      return device;
+    }
+
+    testWidgets('shows no bridge waiting to be picked up', (tester) async {
+      final device = await runningTrainer(tester, 'BikeControl');
+
+      await pumpCard(tester, device);
+
+      expect(find.textContaining('Bridge ('), findsNothing);
+      expect(find.textContaining('connection screen'), findsNothing);
+      final status = tester.widget<StatusIcon>(find.byType(StatusIcon));
+      expect(status.status, isTrue, reason: 'running locally is all there is to it, no spinner');
+      expect(find.text(AppLocalizations.current.connected), findsOneWidget);
+    });
+
+    testWidgets('another trainer app still gets the bridge and which entry to choose', (tester) async {
+      final device = await runningTrainer(tester, 'MyWhoosh');
+
+      await pumpCard(tester, device);
+
+      expect(find.textContaining('Bridge ('), findsOneWidget);
+      expect(find.textContaining('${device.advertisementName} in the connection screen'), findsOneWidget);
+    });
+  });
+
   // The virtual-shifting takeover explainer that used to gate this tap is gone:
   // picking a mode is the rider's decision, and acting on it immediately is the
   // point. There is no widget test for its absence because there is nothing left

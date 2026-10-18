@@ -33,6 +33,7 @@ import 'package:bike_control/services/sensors/broadcast_controller.dart';
 import 'package:bike_control/services/sensors/fake_sensor_source.dart';
 import 'package:bike_control/services/sensors/sensor_quantity.dart';
 import 'package:bike_control/utils/core.dart';
+import 'package:bike_control/utils/keymap/apps/bike_control.dart';
 import 'package:bike_control/utils/keymap/apps/my_whoosh.dart';
 import 'package:bike_control/utils/keymap/apps/training_peaks.dart';
 import 'package:bike_control/utils/requirements/multi.dart' show Target;
@@ -204,6 +205,7 @@ Future<void> main() async {
   _sensorsOnlyTests();
   _overlayStepTests();
   _twoPairingsTests();
+  _selfHostedTrainerTests();
   _connectingTrainerTests();
   _networkAddressStepTests();
   _bannerShowTests();
@@ -613,31 +615,96 @@ void _twoPairingsTests() {
     testWidgets('trainer card: with the app already connected, the status says it has not picked the trainer up', (
       tester,
     ) async {
-      bridgedTrainer(heldByApp: false);
+      final trainer = bridgedTrainer(heldByApp: false);
       core.obpMdnsEmulator.isConnected.value = true;
 
       await _pumpHome(tester);
 
-      expect(statusText(l.chainStatusWaitingForPickup('MyWhoosh')), findsOneWidget);
+      expect(statusText(l.chainStatusWaitingForPickup('MyWhoosh', trainer.advertisementName)), findsOneWidget);
       expect(statusText(l.onboardingSummaryWaitingFor('MyWhoosh')), findsNothing);
     });
 
     testWidgets('trainer card: with the app not connected at all, the status keeps waiting for it', (tester) async {
-      bridgedTrainer(heldByApp: false);
+      final trainer = bridgedTrainer(heldByApp: false);
 
       await _pumpHome(tester);
 
       expect(statusText(l.onboardingSummaryWaitingFor('MyWhoosh')), findsOneWidget);
-      expect(statusText(l.chainStatusWaitingForPickup('MyWhoosh')), findsNothing);
+      expect(statusText(l.chainStatusWaitingForPickup('MyWhoosh', trainer.advertisementName)), findsNothing);
     });
 
     testWidgets('trainer card: once the app holds the trainer, the status is simply bridged', (tester) async {
-      bridgedTrainer(heldByApp: true);
+      final trainer = bridgedTrainer(heldByApp: true);
 
       await _pumpHome(tester);
 
       expect(statusText(l.chainStatusBridged), findsOneWidget);
-      expect(statusText(l.chainStatusWaitingForPickup('MyWhoosh')), findsNothing);
+      expect(statusText(l.chainStatusWaitingForPickup('MyWhoosh', trainer.advertisementName)), findsNothing);
+    });
+  });
+}
+
+// ── BikeControl as the trainer app ─────────────────────────────────────────
+//
+// A rider who uses BikeControl itself as the trainer app rides on its own
+// virtual shifting: there is no other app to pick a bridge up, so nothing on
+// the trainer card may wait for one.
+
+void _selfHostedTrainerTests() {
+  group('BikeControl as the trainer app', () {
+    late AppLocalizations l;
+
+    setUp(() {
+      l = AppLocalizations.current;
+      core.settings.setTrainerApp(BikeControl());
+    });
+
+    ProxyDevice runningTrainer({RetrofitMode mode = RetrofitMode.wifi}) {
+      final trainer = ProxyDevice(BleDevice(deviceId: 'kickr-self-hosted', name: 'KICKR CORE 1234'))
+        ..setRetrofitMode(mode);
+      trainer.emulator.isStarted.value = true;
+      core.connection.devices.add(trainer);
+      return trainer;
+    }
+
+    Finder statusText(String text) => find.descendant(of: find.byType(BkStatusDot), matching: find.text(text));
+
+    testWidgets('trainer card: no pick-up step and no waiting status', (tester) async {
+      final trainer = runningTrainer();
+
+      await _pumpHome(tester);
+
+      final card = _chainCard(ChainLinkKey.trainer);
+      expect(tester.widget<ChainLinkRow>(card).link.steps.map((s) => s.id), [SetupStepId.trainerPaired]);
+      expect(
+        find.descendant(
+          of: card,
+          matching: find.text(l.chainStepTrainerBridgedPending('BikeControl', trainer.advertisementName)),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: card,
+          matching: find.text(l.chainStepTrainerBridgedHint(trainer.advertisementName, 'BikeControl')),
+        ),
+        findsNothing,
+      );
+      expect(statusText(l.chainStatusWaitingForPickup('BikeControl', trainer.advertisementName)), findsNothing);
+      expect(statusText(l.onboardingSummaryWaitingFor('BikeControl')), findsNothing);
+      expect(statusText(l.connected), findsOneWidget);
+    });
+
+    testWidgets('trainer card: names no WiFi or Bluetooth transport, since nothing is advertised to another app', (
+      tester,
+    ) async {
+      runningTrainer();
+
+      await _pumpHome(tester);
+
+      final card = _chainCard(ChainLinkKey.trainer);
+      expect(find.descendant(of: card, matching: find.text(l.connectionWifi)), findsNothing);
+      expect(find.descendant(of: card, matching: find.text(l.connectionBluetooth)), findsNothing);
     });
   });
 }
@@ -1737,7 +1804,7 @@ void _droppedAppTests() {
       expect(
         find.descendant(
           of: _chainCard(ChainLinkKey.trainer),
-          matching: find.text(l.chainStepTrainerBridgedPending('MyWhoosh')),
+          matching: find.text(l.chainStepTrainerBridgedPending('MyWhoosh', trainer.advertisementName)),
         ),
         findsOneWidget,
       );
@@ -1777,7 +1844,7 @@ void _droppedAppTests() {
       expect(
         find.descendant(
           of: _chainCard(ChainLinkKey.trainer),
-          matching: find.text(l.chainStepTrainerBridgedPending('MyWhoosh')),
+          matching: find.text(l.chainStepTrainerBridgedPending('MyWhoosh', trainer.advertisementName)),
         ),
         findsOneWidget,
       );

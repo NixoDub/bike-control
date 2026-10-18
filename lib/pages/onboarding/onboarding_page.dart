@@ -836,6 +836,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
     appConnected: core.logic.connectedTrainerConnections.any((c) => c.isConnected.value),
     hasTrainer: onboardingTrainerBridged(core.connection.proxyDevices),
     trainerAppConnected: core.connection.proxyDevices.any((t) => t.isConnectedListenable.value),
+    selfHosted: _selfHosted,
   );
 
   bool get _doneOffersOverlay {

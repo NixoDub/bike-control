@@ -220,17 +220,24 @@ ChainLink _trainerLink(ChainInputs inputs) {
   // the trainer app has picked the virtual trainer up. Gear ratios are a
   // preference with a working default, not a step — a rider is never blocked
   // waiting to "set up gears".
+  //
+  // With BikeControl itself as the trainer app there is no other app: the
+  // shifting runs right here, nothing has to pick a bridge up and no app shows
+  // a gear of its own. Being connected is the whole of it, so both the pick-up
+  // step and the overlay step stay off the card.
+  final selfHosted = inputs.app.selfHosted;
   final steps = committed
       ? <SetupStep>[
           SetupStep(id: SetupStepId.trainerPaired, done: paired),
-          SetupStep(
-            id: SetupStepId.trainerAppBridged,
-            done: trainer.appHoldsBridge,
-            hintArg: trainer.bridgeName,
-            // The entry NOT to pick, when known: the trainer under its own
-            // name sits right beside the bridge in the app's list.
-            secondaryHintArg: trainer.rawTrainerName,
-          ),
+          if (!selfHosted)
+            SetupStep(
+              id: SetupStepId.trainerAppBridged,
+              done: trainer.appHoldsBridge,
+              hintArg: trainer.bridgeName,
+              // The entry NOT to pick, when known: the trainer under its own
+              // name sits right beside the bridge in the app's list.
+              secondaryHintArg: trainer.rawTrainerName,
+            ),
           // Last, and required until answered once: the trainer app shows its
           // own gear, not the one BikeControl computes, so a bridged rider who
           // has not turned the overlay on is looking at a number that will
@@ -247,7 +254,7 @@ ChainLink _trainerLink(ChainInputs inputs) {
           // next app start — a decline is a snooze, not a "never", and the
           // step comes back as the optional offer. Only offered
           // once the bridge is up: before that there is no gear.
-          if (paired && trainer.overlayOffered && (trainer.overlayEnabled || !trainer.overlayDeclined))
+          if (!selfHosted && paired && trainer.overlayOffered && (trainer.overlayEnabled || !trainer.overlayDeclined))
             SetupStep(
               id: SetupStepId.trainerGearOverlay,
               done: trainer.overlayEnabled,
