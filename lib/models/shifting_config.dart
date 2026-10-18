@@ -1,3 +1,4 @@
+import 'package:bike_control/utils/ble_device_ids.dart';
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:prop/emulators/definitions/fitness_bike_definition.dart';
 
@@ -85,7 +86,9 @@ class ShiftingConfig {
     final parsedRatios = rawRatios?.whereType<num>().map((e) => e.toDouble()).toList();
     return ShiftingConfig(
       name: (json['name'] as String?) ?? 'Default',
-      trainerKey: (json['trainerKey'] as String?) ?? '__unknown__',
+      // A nameless trainer is keyed by its device id, which older builds
+      // stored upper-case (see ble_device_ids.dart).
+      trainerKey: canonicalBleDeviceId((json['trainerKey'] as String?) ?? '__unknown__'),
       isActive: (json['isActive'] as bool?) ?? false,
       mode: parsedMode,
       bikeWeightKg: bike.clamp(bikeWeightMinKg, bikeWeightMaxKg),

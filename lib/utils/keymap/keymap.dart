@@ -6,6 +6,7 @@ import 'package:accessibility/accessibility.dart';
 import 'package:bike_control/gen/l10n.dart';
 import 'package:bike_control/main.dart';
 import 'package:bike_control/utils/actions/android.dart';
+import 'package:bike_control/utils/ble_device_ids.dart';
 import 'package:bike_control/utils/core.dart';
 import 'package:bike_control/utils/keymap/buttons.dart';
 import 'package:dartx/dartx.dart';
@@ -553,7 +554,8 @@ class KeyPair {
         name = raw;
       } else if (raw is Map) {
         name = raw['name']?.toString();
-        deviceId = raw['deviceId']?.toString();
+        // Older builds stored BLE ids upper-case (see ble_device_ids.dart).
+        deviceId = canonicalBleDeviceIdOrNull(raw['deviceId']?.toString());
       }
 
       if (name == null) {

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:bike_control/bluetooth/ble_command_queue_config.dart';
 import 'package:bike_control/bluetooth/emulation/emulated_ble_platform.dart';

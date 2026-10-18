@@ -9,6 +9,7 @@ import 'package:bike_control/gen/l10n.dart';
 import 'package:bike_control/main.dart';
 import 'package:bike_control/services/sensors/sensor_quantity.dart';
 import 'package:bike_control/utils/actions/base_actions.dart';
+import 'package:bike_control/utils/ble_device_ids.dart';
 import 'package:bike_control/utils/core.dart';
 import 'package:bike_control/utils/erg_power_stepping.dart';
 import 'package:bike_control/utils/gear_readout.dart';
@@ -536,7 +537,11 @@ class ProxyDevice extends BluetoothDevice {
   /// so it shows up as a new device. Everything else keeps the device serial.
   String _bridgeSerialNumber() {
     final zwiftNamed = _retrofitModeN.value != RetrofitMode.proxy && core.settings.getTrainerApp() is Zwift;
-    return mdnsSerialNumber(zwiftNamed ? 'zwift:${scanResult.deviceId}' : scanResult.deviceId);
+    // Seeded with the id as universal_ble 2 reported it (upper-case on all but
+    // Windows): trainer apps recognise the bridge they paired by this serial,
+    // so the lower-case ids of universal_ble 3 must not change it.
+    final seedId = legacyCaseBleDeviceId(scanResult.deviceId);
+    return mdnsSerialNumber(zwiftNamed ? 'zwift:$seedId' : seedId);
   }
 
   /// Whether the bridge advertises 16-bit services bare (`1826`) or in the

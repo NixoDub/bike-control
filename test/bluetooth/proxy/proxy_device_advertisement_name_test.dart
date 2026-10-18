@@ -6,6 +6,7 @@ import 'package:bike_control/utils/keymap/apps/rouvy.dart';
 import 'package:bike_control/utils/keymap/apps/tacx.dart';
 import 'package:bike_control/utils/keymap/apps/training_peaks.dart';
 import 'package:bike_control/utils/keymap/apps/zwift.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prop/emulators/dircon_emulator.dart';
 import 'package:prop/prop.dart' show mdnsSerialNumber;
@@ -181,6 +182,37 @@ void main() {
 
       core.settings.setTrainerApp(Rouvy());
       expect(serialOf(device), mdnsSerialNumber(deviceId));
+    });
+
+    // universal_ble 3 reports ids lower-case; trainer apps paired the serial
+    // derived from the id as universal_ble 2 reported it, so it must not move.
+    group('survives the lower-case device ids of universal_ble 3', () {
+      tearDown(() => debugDefaultTargetPlatformOverride = null);
+
+      for (final platform in [TargetPlatform.android, TargetPlatform.iOS, TargetPlatform.macOS]) {
+        test(platform.name, () {
+          debugDefaultTargetPlatformOverride = platform;
+          for (final app in [MyWhoosh(), Zwift()]) {
+            core.settings.setTrainerApp(app);
+            for (final mode in RetrofitMode.values) {
+              expect(
+                serialOf(deviceIn(mode, id: deviceId.toLowerCase())),
+                serialOf(deviceIn(mode)),
+                reason: '${app.name} ${mode.name}',
+              );
+            }
+          }
+        });
+      }
+
+      test('windows, which always reported lower-case', () {
+        debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+        core.settings.setTrainerApp(MyWhoosh());
+        expect(
+          serialOf(deviceIn(RetrofitMode.wifi, id: deviceId.toLowerCase())),
+          mdnsSerialNumber(deviceId.toLowerCase()),
+        );
+      });
     });
 
     test('keeps the mac-address and app fields alongside it', () {

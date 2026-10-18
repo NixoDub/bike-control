@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:bike_control/utils/ble_device_ids.dart';
 import 'package:flutter/foundation.dart';
 import 'package:universal_ble/universal_ble.dart';
 
@@ -114,7 +115,8 @@ class RememberedDevice {
     }
 
     return RememberedDevice(
-      deviceId: deviceId,
+      // Older builds stored BLE ids upper-case (see ble_device_ids.dart).
+      deviceId: canonicalBleDeviceId(deviceId),
       name: json['name'] as String?,
       kind: kind,
       lastConnected: DateTime.tryParse(json['lastConnected'] as String? ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0),
