@@ -6,6 +6,7 @@ import 'package:bike_control/utils/core.dart';
 import 'package:bike_control/utils/i18n_extension.dart';
 import 'package:bike_control/pages/onboarding/widgets/onboarding_reveal.dart';
 import 'package:bike_control/utils/iap/iap_manager.dart';
+import 'package:bike_control/utils/keymap/apps/bike_control.dart';
 import 'package:bike_control/utils/keymap/apps/supported_app.dart';
 import 'package:bike_control/widgets/ui/app_theme.dart';
 import 'package:bike_control/widgets/ui/bk_grouped_section.dart';
@@ -34,9 +35,12 @@ OnboardingDoneState onboardingDoneState({
   required bool appConnected,
   required bool hasTrainer,
   required bool trainerAppConnected,
+  // BikeControl itself is the trainer app: it is the app, and it rides the
+  // trainer right here, so there is no app to connect and no bridge to pick up.
+  bool selfHosted = false,
 }) {
-  if (!appConnected) return OnboardingDoneState.waitingForApp;
-  if (hasTrainer && !trainerAppConnected) return OnboardingDoneState.waitingForTrainerPickup;
+  if (!appConnected && !selfHosted) return OnboardingDoneState.waitingForApp;
+  if (hasTrainer && !trainerAppConnected && !selfHosted) return OnboardingDoneState.waitingForTrainerPickup;
   if (!hasController) return OnboardingDoneState.noController;
   return OnboardingDoneState.ready;
 }
@@ -122,11 +126,13 @@ Widget onboardingDoneBody(
   VoidCallback? onShowOverlay,
 }) {
   final hasController = controllerName != null;
+  final selfHosted = app is BikeControl;
   final state = onboardingDoneState(
     hasController: hasController,
     appConnected: appConnected,
     hasTrainer: trainerName != null,
     trainerAppConnected: trainerAppConnected,
+    selfHosted: selfHosted,
   );
   final allReady = state == OnboardingDoneState.ready;
   final title = switch (state) {
@@ -163,11 +169,13 @@ Widget onboardingDoneBody(
                     child: Text(context.i18n.onboardingPairControllerAction),
                   ),
           ),
-    appConnected
+    appConnected || selfHosted
         ? (LucideIcons.monitor, app.name, context.i18n.onboardingDeviceConnected, true, null)
         : (LucideIcons.monitor, app.name, context.i18n.onboardingSummaryWaitingFor(app.name), false, null),
     if (trainerName != null)
-      trainerAppConnected
+      selfHosted
+          ? (LucideIcons.bike, trainerName, context.i18n.onboardingDeviceConnected, true, null)
+          : trainerAppConnected
           ? (LucideIcons.bike, trainerName, context.i18n.onboardingSummaryTrainerInApp(app.name), true, null)
           : (LucideIcons.bike, trainerName, context.i18n.onboardingSummaryWaitingFor(app.name), false, null),
   ];
@@ -273,7 +281,7 @@ Widget onboardingDoneBody(
       ],
       // Waiting on the app: show what to do in it, right here — the previous
       // page with these steps is no longer on screen.
-      if (!appConnected) ...[
+      if (state == OnboardingDoneState.waitingForApp) ...[
         Gap(10),
         OnboardingAppGuideCard(app: app),
         if (waitingOnNetworkMethod && onTestNetwork != null)

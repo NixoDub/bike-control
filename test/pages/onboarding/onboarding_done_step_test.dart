@@ -13,6 +13,7 @@ import 'package:bike_control/pages/onboarding/onboarding_app_guides.dart';
 import 'package:bike_control/pages/onboarding/onboarding_models.dart';
 import 'package:bike_control/pages/onboarding/steps/step_controller.dart';
 import 'package:bike_control/pages/onboarding/steps/step_done.dart';
+import 'package:bike_control/utils/keymap/apps/bike_control.dart';
 import 'package:bike_control/utils/keymap/apps/custom_app.dart';
 import 'package:bike_control/utils/keymap/apps/my_whoosh.dart';
 import 'package:bike_control/utils/keymap/apps/supported_app.dart';
@@ -243,6 +244,46 @@ Future<void> main() async {
       expect(state(app: false, trainer: true), OnboardingDoneState.waitingForApp);
       expect(state(trainer: true), OnboardingDoneState.waitingForTrainerPickup);
       expect(state(controller: false, trainer: true), OnboardingDoneState.waitingForTrainerPickup);
+    });
+
+    // BikeControl as the trainer app: it is the app, and it rides the trainer
+    // itself, so neither "connect the app" nor "pick the trainer up" is owed.
+    test('with BikeControl as the trainer app, nothing waits for an app', () {
+      OnboardingDoneState selfHosted({bool controller = true, bool trainer = false}) => onboardingDoneState(
+        hasController: controller,
+        appConnected: false,
+        hasTrainer: trainer,
+        trainerAppConnected: false,
+        selfHosted: true,
+      );
+
+      expect(selfHosted(), OnboardingDoneState.ready);
+      expect(selfHosted(trainer: true), OnboardingDoneState.ready);
+      expect(selfHosted(controller: false, trainer: true), OnboardingDoneState.noController);
+    });
+
+    testWidgets('with BikeControl as the trainer app the body waits for nothing', (tester) async {
+      await pump(
+        tester,
+        (c) => onboardingDoneBody(
+          c,
+          app: BikeControl(),
+          controllerName: 'Zwift Click',
+          trainerName: 'KICKR CORE',
+          bridgeName: 'KICKR CORE - BikeControl',
+          appConnected: false,
+          trainerAppConnected: false,
+          reduceMotion: true,
+          showTestMode: false,
+        ),
+      );
+      final l = l10n(tester);
+
+      expect(find.text(l.onboardingDoneTitle.toUpperCase()), findsOneWidget);
+      expect(find.text(l.onboardingSummaryWaitingFor('BikeControl')), findsNothing);
+      expect(find.byType(OnboardingPairAsTrainerCard), findsNothing);
+      expect(find.byType(OnboardingAppGuideCard), findsNothing);
+      expect(find.textContaining('KICKR CORE - BikeControl'), findsNothing);
     });
 
     Widget bridgeWaiting(BuildContext c, {VoidCallback? onCheck}) => onboardingDoneBody(

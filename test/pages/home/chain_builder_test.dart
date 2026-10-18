@@ -822,6 +822,63 @@ void main() {
     });
   });
 
+  // A rider using BikeControl itself as the trainer app: the trainer is
+  // connected and virtual shifting runs right here, so there is no other app
+  // to pick a bridge up and no other app showing its own gear.
+  group('trainer link with BikeControl as the trainer app', () {
+    const selfHostedApp = AppInput(name: 'BikeControl', selfHosted: true);
+
+    test('a connected trainer needs nothing but being connected', () {
+      final chain = buildChain(
+        ChainInputs(
+          controllers: [controller()],
+          trainer: trainer(appHoldsBridge: false),
+          app: selfHostedApp,
+        ),
+      );
+      final link = chain.byKey(ChainLinkKey.trainer);
+      expect(link.steps.map((s) => s.id), [SetupStepId.trainerPaired]);
+      expect(_stepDone(link, SetupStepId.trainerPaired), isTrue);
+      expect(link.status, LinkStatus.ready);
+    });
+
+    test('offers no gear overlay step, even where the overlay could be shown', () {
+      final chain = buildChain(
+        ChainInputs(
+          trainer: trainer(appHoldsBridge: false, overlayOffered: true),
+          app: selfHostedApp,
+        ),
+      );
+      final link = chain.byKey(ChainLinkKey.trainer);
+      expect(_hasStep(link, SetupStepId.trainerGearOverlay), isFalse);
+      expect(_hasStep(link, SetupStepId.trainerAppBridged), isFalse);
+    });
+
+    test('the banner reads ready to ride', () {
+      final chain = buildChain(
+        ChainInputs(
+          controllers: [controller()],
+          trainer: trainer(appHoldsBridge: false, overlayOffered: true),
+          app: selfHostedApp,
+        ),
+      );
+      expect(deriveBanner(chain).kind, ChainBannerKind.ready);
+    });
+
+    test('a trainer that dropped still says so', () {
+      final chain = buildChain(
+        ChainInputs(
+          trainer: trainer(presence: DevicePresence.lost, appHoldsBridge: false),
+          app: selfHostedApp,
+        ),
+      );
+      final link = chain.byKey(ChainLinkKey.trainer);
+      expect(link.status, LinkStatus.problem);
+      expect(link.steps.map((s) => s.id), [SetupStepId.trainerPaired]);
+      expect(_stepDone(link, SetupStepId.trainerPaired), isFalse);
+    });
+  });
+
   group('sensors link', () {
     test('sensors-only mode replaces the trainer link with a sensors link', () {
       final chain = buildChain(ChainInputs(controllers: [controller()], sensors: sensors(), app: _readyApp));

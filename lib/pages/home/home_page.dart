@@ -1784,6 +1784,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       statusLabel = l.chainStatusLostConnection;
     } else if (connecting) {
       statusLabel = l.chainStatusConnecting;
+    } else if (bridged && inputs.app.selfHosted) {
+      // BikeControl is the trainer app: the shifting runs right here, and
+      // there is no other app to wait for.
+      statusLabel = l.connected;
     } else if (bridged) {
       statusLabel = appHoldsBridge
           ? l.chainStatusBridged
@@ -1791,7 +1795,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           // the controller link: it has connected, it just hasn't picked the
           // trainer entry up — the other half of its pairing screen.
           : appReady
-          ? l.chainStatusWaitingForPickup(appName)
+          ? l.chainStatusWaitingForPickup(appName, proxy!.advertisementName)
           : l.onboardingSummaryWaitingFor(appName);
     } else if (appReady && inputs.app.name != null) {
       // Only vouch for the app handling shifting when the app is actually
@@ -1829,7 +1833,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       appName: inputs.app.name,
       leading: _tile(LucideIcons.bike, live: link.status == LinkStatus.ready || bridged),
       title: link.title.isEmpty ? l.chainTrainerTitle : link.title,
-      subtitle: bridged ? _bridgeTransport(proxy!) : null,
+      // How another app reaches the bridge. With BikeControl as the trainer
+      // app nothing is handed to another app, so "WiFi" would mislead.
+      subtitle: bridged && !inputs.app.selfHosted ? _bridgeTransport(proxy!) : null,
       statusLabel: statusLabel,
       statusDetail: bridged && appHoldsBridge && inputs.app.name != null
           ? Text(l.devicesBridgedTo(inputs.app.name!))

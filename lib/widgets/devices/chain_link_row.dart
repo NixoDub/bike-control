@@ -320,7 +320,7 @@ class _ChainLinkRowState extends State<ChainLinkRow> with TickerProviderStateMix
             if (widget.statusLabel != null || detail != null || badges.isNotEmpty) ...[
               const Gap(8),
               ConstrainedBox(
-                // A long status ("Waiting for MyWhoosh to pick it up") wraps
+                // A long status ("Waiting for MyWhoosh to connect to …") wraps
                 // rather than squeezing the name to nothing.
                 constraints: const BoxConstraints(maxWidth: 170),
                 child: Column(

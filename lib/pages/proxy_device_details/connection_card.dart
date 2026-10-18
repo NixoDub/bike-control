@@ -6,6 +6,7 @@ import 'package:bike_control/gen/l10n.dart';
 import 'package:bike_control/main.dart';
 import 'package:bike_control/utils/core.dart';
 import 'package:bike_control/utils/iap/iap_manager.dart';
+import 'package:bike_control/utils/keymap/apps/bike_control.dart';
 import 'package:bike_control/utils/keymap/apps/supported_app.dart'
     show SupportedApp, TrainerConnectionType, VsSameDeviceBlock, vsSameDeviceBlock;
 import 'package:bike_control/utils/requirements/multi.dart';
@@ -296,6 +297,24 @@ class _ConnectionCardState extends State<ConnectionCard> {
       RetrofitMode.proxy => LucideIcons.radioTower,
     };
     final l10n = AppLocalizations.of(context);
+    // BikeControl is the trainer app: the shifting runs right here, so there
+    // is no bridge for another app to pick up. Running is the whole of it,
+    // and asking the rider to choose an entry in a connection screen, or
+    // spinning until another app connects, would only read as stuck.
+    if (core.settings.getTrainerApp() is BikeControl) {
+      final running = selection != _ConnectSelection.none && started;
+      final String status = selection == _ConnectSelection.none
+          ? l10n.notConnected
+          : running
+          ? l10n.connected
+          : l10n.chainStatusConnecting;
+      final title = widget.device.toString();
+      return Basic(
+        leading: StatusIcon(icon: LucideIcons.bike, status: running, started: connecting),
+        title: running ? Text(title).small.semiBold : Text(title).small.muted,
+        subtitle: Text(status).xSmall.textMuted,
+      );
+    }
     // "No connection" selected → nothing is advertising, so the
     // "Choose BikeControl …" instruction doesn't apply; say "Not connected".
     final String subtitle = selection == _ConnectSelection.none

@@ -2025,14 +2025,8 @@
       }
     }
   },
-  "chainStepTrainerBridgedPending": "Waiting for {app} to pick it up",
-  "@chainStepTrainerBridgedPending": {
-    "placeholders": {
-      "app": {
-        "type": "String"
-      }
-    }
-  },
+  "chainStepTrainerBridgedPending": "Waiting for {app} to connect to “{bridge}”",
+  "@chainStepTrainerBridgedPending": {"placeholders": {"app": {"type": "String"}, "bridge": {"type": "String"}}},
   "chainStepTrainerBridgedHint": "Choose “{bridge}” as the trainer in {app}.",
   "@chainStepTrainerBridgedHint": {
     "placeholders": {
@@ -2386,8 +2380,8 @@
   "@chainStepTrainerBridgedHint2": {"placeholders": {"app": {"type": "String"}, "bridge": {"type": "String"}, "trainer": {"type": "String"}}},
   "chainPendingSubtitleController": "{app} has your trainer through BikeControl, but your buttons won't reach {app} until you also connect the BikeControl controller in its pairing screen.",
   "@chainPendingSubtitleController": {"placeholders": {"app": {"type": "String"}}},
-  "chainStatusWaitingForPickup": "Waiting for {app} to pick it up",
-  "@chainStatusWaitingForPickup": {"placeholders": {"app": {"type": "String"}}},
+  "chainStatusWaitingForPickup": "Waiting for {app} to connect to “{bridge}”",
+  "@chainStatusWaitingForPickup": {"placeholders": {"app": {"type": "String"}, "bridge": {"type": "String"}}},
   "vsTransportSameDeviceNote": "Bluetooth can't reach an app on this same device — using WiFi.",
   "vsSameDeviceBlockedFix": "What works: BikeControl on a phone or tablet next to your bike, or {app} on another device.",
   "@vsSameDeviceBlockedFix": {"description": "Trainer page: the setups that work when the trainer app on this device can't reach BikeControl's bridge.", "placeholders": {"app": {"type": "String"}}},

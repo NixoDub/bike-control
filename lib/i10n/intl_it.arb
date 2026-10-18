@@ -1715,14 +1715,8 @@
       }
     }
   },
-  "chainStepTrainerBridgedPending": "In attesa che {app} lo rilevi",
-  "@chainStepTrainerBridgedPending": {
-    "placeholders": {
-      "app": {
-        "type": "String"
-      }
-    }
-  },
+  "chainStepTrainerBridgedPending": "In attesa che {app} si colleghi a «{bridge}»",
+  "@chainStepTrainerBridgedPending": {"placeholders": {"app": {"type": "String"}, "bridge": {"type": "String"}}},
   "chainStepTrainerBridgedHint": "Scegli «{bridge}» come rullo in {app}.",
   "@chainStepTrainerBridgedHint": {
     "placeholders": {
@@ -2190,8 +2184,8 @@
   "@chainStepTrainerBridgedHint2": {"placeholders": {"app": {"type": "String"}, "bridge": {"type": "String"}, "trainer": {"type": "String"}}},
   "chainPendingSubtitleController": "{app} ha il tuo rullo tramite BikeControl, ma i tuoi pulsanti non raggiungeranno {app} finché non colleghi anche il controller BikeControl nella sua schermata di associazione.",
   "@chainPendingSubtitleController": {"placeholders": {"app": {"type": "String"}}},
-  "chainStatusWaitingForPickup": "In attesa che {app} lo rilevi",
-  "@chainStatusWaitingForPickup": {"placeholders": {"app": {"type": "String"}}},
+  "chainStatusWaitingForPickup": "In attesa che {app} si colleghi a «{bridge}»",
+  "@chainStatusWaitingForPickup": {"placeholders": {"app": {"type": "String"}, "bridge": {"type": "String"}}},
   "vsTransportSameDeviceNote": "Il Bluetooth non può raggiungere un'app su questo stesso dispositivo — viene usato il Wi-Fi.",
   "vsSameDeviceBlockedFix": "Cosa funziona: BikeControl su un telefono o tablet vicino alla bici, oppure {app} su un altro dispositivo.",
   "@vsSameDeviceBlockedFix": {"description": "Trainer page: the setups that work when the trainer app on this device can't reach BikeControl's bridge.", "placeholders": {"app": {"type": "String"}}},
