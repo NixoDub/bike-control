@@ -58,6 +58,9 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
                     changing: _changingApp || core.settings.getTrainerApp() == null,
                     onChange: () => setState(() => _changingApp = !_changingApp),
                     picker: TrainerAppSelect(
+                      // After Change the list opens at once; with no app
+                      // picked yet the select just waits to be tapped.
+                      openOnShow: _changingApp,
                       onUpdate: () {
                         widget.onUpdate();
                         setState(() => _changingApp = false);
@@ -224,7 +227,12 @@ class _TrainerAppCard extends StatelessWidget {
               if (logo != null && !screenshotMode)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: TrainerAppLogo(asset: logo, url: app?.logoUrl, width: BkIconTile.size, height: BkIconTile.size),
+                  child: TrainerAppLogo(
+                    asset: logo,
+                    url: app?.logoUrl,
+                    width: BkIconTile.size,
+                    height: BkIconTile.size,
+                  ),
                 )
               else
                 const BkIconTile(icon: LucideIcons.monitor),
@@ -287,7 +295,7 @@ Widget installOnTargetDeviceWarning(BuildContext context, SupportedApp app) {
   );
 }
 
-class TrainerAppSelect extends StatelessWidget {
+class TrainerAppSelect extends StatefulWidget {
   /// Called after the trainer app changes so the host can rebuild.
   final VoidCallback onUpdate;
 
@@ -296,12 +304,50 @@ class TrainerAppSelect extends StatelessWidget {
   /// "Trainer app" label for the anonymized marketing screenshots). Used by the
   /// MyWhoosh setup-guide snapshot, which needs the actual "MyWhoosh" name.
   final bool showRealName;
-  const TrainerAppSelect({super.key, required this.onUpdate, this.showRealName = false});
+
+  /// Opens the list as soon as the select appears — after "Change", the
+  /// rider asked for the list, not for a control to tap again. Focus moves
+  /// to the select, so keyboard and screen-reader users land in the list
+  /// and return to the select when it closes.
+  final bool openOnShow;
+
+  const TrainerAppSelect({super.key, required this.onUpdate, this.showRealName = false, this.openOnShow = false});
+
+  @override
+  State<TrainerAppSelect> createState() => _TrainerAppSelectState();
+}
+
+class _TrainerAppSelectState extends State<TrainerAppSelect> {
+  final FocusNode _focusNode = FocusNode(debugLabel: 'trainer-app-select');
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.openOnShow) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final context = _focusNode.context;
+        if (!mounted || context == null) return;
+        _focusNode.requestFocus();
+        // The select's own activation: the same path as Enter or a tap.
+        Actions.maybeInvoke(context, const ActivateIntent());
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  VoidCallback get onUpdate => widget.onUpdate;
+  bool get showRealName => widget.showRealName;
 
   @override
   Widget build(BuildContext context) {
     final groupedByOfficial = SupportedApp.supportedApps.groupBy((e) => e.officialIntegration);
     return Select<SupportedApp>(
+      focusNode: _focusNode,
       constraints: BoxConstraints(maxWidth: 400, minWidth: 400),
       popupConstraints: BoxConstraints(maxWidth: 400, minWidth: 400, minHeight: 300),
       itemBuilder: (c, app) => Row(
