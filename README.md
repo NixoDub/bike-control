@@ -63,6 +63,7 @@ Best follow our landing page and the "Get Started" button: [bikecontrol.app](htt
 - Wahoo Kickr Bike Pro
 - Wahoo Kickr Bike V1
 - Wahoo Kickr Bike V2
+- Stages SB20 Smart Bike (beta)
 - CYCPLUS BC2 Virtual Shifter
 - Thinkrider VS200 Virtual Shifter (beta)
 - Elite Sterzo Smart (for steering support)

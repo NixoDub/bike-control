@@ -49,6 +49,7 @@ import 'ltwoo/ltwoo_erx.dart';
 import 'sensors/ble_cadence_device.dart';
 import 'sensors/ble_heart_rate_device.dart';
 import 'sensors/ble_power_device.dart';
+import 'stages/stages_smart_bike.dart';
 import 'thinkrider/thinkrider_vs200.dart';
 import 'wheeltop/wheeltop_eds.dart';
 
@@ -90,6 +91,9 @@ abstract class BluetoothDevice extends BaseDevice {
     ZwiftConstants.ZWIFT_RIDE_CUSTOM_SERVICE_UUID,
     SquareConstants.SERVICE_UUID,
     WahooKickrBikeShiftConstants.SERVICE_UUID,
+    // Stages smart bike buttons — on web a service must be listed here to be
+    // accessible at all; matching itself stays name-gated.
+    StagesSmartBikeConstants.BUTTON_SERVICE_UUID,
     WahooKickrHeadwindConstants.SERVICE_UUID,
     wahooClimbServiceUuid,
     SterzoConstants.SERVICE_UUID,
@@ -263,6 +267,11 @@ abstract class BluetoothDevice extends BaseDevice {
         _ when scanResult.name!.toUpperCase().startsWith('KICKR BIKE SHIFT') => WahooKickrBikeShift(scanResult),
         _ when scanResult.name!.toUpperCase().startsWith('KICKR BIKE PRO') => WahooKickrBikePro(scanResult),
         _ when scanResult.name!.toUpperCase().startsWith('KICKR BIKE') => WahooKickrBikeShift(scanResult),
+        // A smart bike that hosts its own shift buttons. Before the power-meter
+        // and trainer rules: 'STAGES' is a power-meter name and the bike
+        // advertises FTMS, but its buttons only work on this class (the
+        // trainer role is attached at connect time).
+        _ when StagesSmartBikeConstants.matchesName(scanResult.name!) => StagesSmartBike(scanResult),
         _ when scanResult.name!.toUpperCase().startsWith('CYCPLUS') && scanResult.name!.toUpperCase().contains('BC2') =>
           CycplusBc2(scanResult),
         _ when scanResult.name!.toUpperCase().startsWith('THINK VS') => ThinkRiderVs200(scanResult),
@@ -343,6 +352,11 @@ abstract class BluetoothDevice extends BaseDevice {
         _ when scanResult.name!.toUpperCase().contains('KICKR BIKE SHIFT') => WahooKickrBikeShift(scanResult),
         _ when scanResult.name!.toUpperCase().startsWith('KICKR BIKE PRO') => WahooKickrBikePro(scanResult),
         _ when scanResult.name!.toUpperCase().startsWith('KICKR BIKE') => WahooKickrBikeShift(scanResult),
+        // A smart bike that hosts its own shift buttons. Before the power-meter
+        // and trainer rules: 'STAGES' is a power-meter name and the bike
+        // advertises FTMS, but its buttons only work on this class (the
+        // trainer role is attached at connect time).
+        _ when StagesSmartBikeConstants.matchesName(scanResult.name!) => StagesSmartBike(scanResult),
         _ when scanResult.name!.toUpperCase().startsWith('CYCPLUS') && scanResult.name!.toUpperCase().contains('BC2') =>
           CycplusBc2(scanResult),
         _ when scanResult.name!.toUpperCase().startsWith('THINK VS') => ThinkRiderVs200(scanResult),
@@ -508,7 +522,7 @@ abstract class BluetoothDevice extends BaseDevice {
   bool get keepsReconnectingWhileDropping => false;
 
   /// When true, the inactivity battery saver leaves this controller connected
-  /// (see `Connection._onInactivityTimeout`). Default false. A KICKR BIKE
+  /// (see `Connection._onInactivityTimeout`). Default false. A smart bike
   /// returns true while its trainer role is in use, since its link carries
   /// the trainer bridge too.
   bool get exemptFromBatterySaver => false;
