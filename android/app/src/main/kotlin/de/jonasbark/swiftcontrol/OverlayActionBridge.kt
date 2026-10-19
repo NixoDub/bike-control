@@ -31,8 +31,21 @@ object OverlayActionBridge {
     private var mainChannel: MethodChannel? = null
     private var overlayChannel: MethodChannel? = null
 
-    fun bindMainChannel(channel: MethodChannel) {
+    fun bindMainChannel(channel: MethodChannel?) {
         mainChannel = channel
+    }
+
+    /**
+     * The notification's "Hide overlay" button. Main Dart switches the overlay
+     * off the way the Overlay section's switch does — persisted, so a trainer
+     * reconnect doesn't bring it back. Returns false when the main engine is
+     * gone (activity destroyed, process still alive for the overlay service),
+     * so the caller can stop the overlay itself.
+     */
+    fun requestHideOverlay(): Boolean {
+        val channel = mainChannel ?: return false
+        channel.invokeMethod("action", "hideOverlay")
+        return true
     }
 
     /**

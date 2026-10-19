@@ -12,11 +12,12 @@ import 'package:bike_control/main.dart' show recordError;
 import 'package:bike_control/services/overlay/overlay_entry_point.dart';
 import 'package:bike_control/services/overlay/overlay_state.dart';
 import 'package:bike_control/services/overlay/trainer_overlay_controller.dart';
+import 'package:bike_control/utils/core.dart';
 import 'package:bike_control/utils/erg_power_stepping.dart';
 import 'package:bike_control/widgets/overlay/trainer_overlay_view.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show MethodChannel;
-import 'package:flutter/widgets.dart' show TextScaler, WidgetsBinding;
+import 'package:flutter/widgets.dart' show Size, TextScaler, WidgetsBinding;
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import 'package:prop/emulators/definitions/fitness_bike_definition.dart';
 
@@ -28,8 +29,29 @@ const _overlayActionsChannel = MethodChannel('bike_control/overlay_actions');
 /// Room around the card in the Android overlay window, in dp, for its border.
 const double androidOverlayMargin = 16;
 
+/// Fits the overlay window to the card at [cardSize] (dp), plus its margin.
+///
+/// Only while the window is up. The package starts the overlay engine with
+/// the app, long before any overlay is shown, and the card already lays out
+/// and reports its size then; the window's channel only exists once the
+/// overlay service runs, so resizing earlier fails on every launch. The
+/// window is opened at the card's size anyway (see [AndroidOverlayController.show]).
+Future<void> resizeAndroidOverlayWindow(Size cardSize) async {
+  try {
+    if (!await FlutterOverlayWindow.isActive()) return;
+    await FlutterOverlayWindow.resizeOverlay(
+      (cardSize.width + androidOverlayMargin).ceil(),
+      (cardSize.height + androidOverlayMargin).ceil(),
+      true,
+    );
+  } catch (e, s) {
+    recordError(e, s, context: 'overlay.android.resize');
+  }
+}
+
 /// Gives the overlay's foreground-service notification BikeControl's own
-/// status-bar icon, words and tap.
+/// status-bar icon, words and tap, and a "Hide overlay" button (handled as
+/// `hideOverlay` by the main-side handler).
 ///
 /// flutter_overlay_window 0.5.0 builds that notification itself: the launcher
 /// icon as the small icon — which Android draws as a filled circle — a bare
@@ -50,6 +72,7 @@ Future<bool> styleAndroidOverlayNotification(
         'title': l.overlayNotificationTitle,
         'text': l.overlayNotificationText,
         'channelName': l.overlayNotificationChannel,
+        'hideLabel': l.overlayHide,
       });
       if (ok == true) return true;
     } catch (e, s) {
@@ -228,11 +251,22 @@ class AndroidOverlayController implements TrainerOverlayController {
   /// Set up the main-side MethodCallHandler (idempotent). The Kotlin bridge
   /// invokes "action" on this channel whenever the overlay isolate calls
   /// `MethodChannel('bike_control/overlay_actions').invokeMethod('push', ...)`.
+  @visibleForTesting
+  void debugInstallMainHandler() => _installMainHandler();
+
   void _installMainHandler() {
     if (_mainHandlerInstalled) return;
     _mainHandlerInstalled = true;
     _overlayActionsChannel.setMethodCallHandler((call) async {
       if (call.method != 'action') return null;
+      // The notification's "Hide overlay" button. Means the same as the
+      // Overlay section's switch going off, persisted included — otherwise
+      // the next trainer reconnect would put the overlay straight back.
+      if (call.arguments == 'hideOverlay') {
+        await hide();
+        await core.settings.setOverlayEnabled(false);
+        return null;
+      }
       // Re-resolve the live FitnessBikeDefinition each call — see comment
       // on LiveDefinitionLookup; the trainer emulator rebinds a fresh def
       // on every transport restart.

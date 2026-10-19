@@ -1,7 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:bike_control/main.dart' show recordError;
-import 'package:bike_control/services/overlay/android_overlay_controller.dart' show androidOverlayMargin;
+import 'package:bike_control/services/overlay/android_overlay_controller.dart' show resizeAndroidOverlayWindow;
 import 'package:bike_control/services/overlay/overlay_state.dart';
 import 'package:bike_control/widgets/overlay/overlay_app.dart';
 import 'package:bike_control/widgets/overlay/overlay_window_fit.dart';
@@ -76,16 +77,7 @@ class _OverlayAppState extends State<_OverlayApp> {
           drag: false,
           // The window follows the card, so it has no empty room beside it
           // when fields are off. resizeOverlay takes dp (showOverlay px).
-          onSize: (size) {
-            FlutterOverlayWindow.resizeOverlay(
-              (size.width + androidOverlayMargin).ceil(),
-              (size.height + androidOverlayMargin).ceil(),
-              true,
-            ).catchError((Object e, StackTrace s) {
-              recordError(e, s, context: 'overlay.android.resize');
-              return null;
-            });
-          },
+          onSize: (size) => unawaited(resizeAndroidOverlayWindow(size)),
           child: Center(
             child: TrainerOverlayView(
               state: _state,

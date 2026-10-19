@@ -118,6 +118,11 @@
                 android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver"
                 android:exported="false" />
 
+        <!-- The gear overlay notification's "Hide overlay" button. -->
+        <receiver
+                android:name=".OverlayNotificationReceiver"
+                android:exported="false" />
+
         <service
                 android:name="de.jonasbark.accessibility.AccessibilityService"
                 android:exported="true"

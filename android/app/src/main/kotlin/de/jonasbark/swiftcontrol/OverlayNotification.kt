@@ -25,7 +25,13 @@ object OverlayNotification {
      * Returns false while the package's notification is not up yet — the
      * service goes foreground after showOverlay returns — so Dart retries.
      */
-    fun style(context: Context, title: String, text: String, channelName: String): Boolean {
+    fun style(
+        context: Context,
+        title: String,
+        text: String,
+        channelName: String,
+        hideLabel: String?,
+    ): Boolean {
         val manager = context.getSystemService(NotificationManager::class.java) ?: return false
         if (manager.activeNotifications.none { it.id == NOTIFICATION_ID }) return false
 
@@ -52,7 +58,7 @@ object OverlayNotification {
             )
         }
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(text)
@@ -63,8 +69,17 @@ object OverlayNotification {
             .setShowWhen(false)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setVisibility(NotificationCompat.VISIBILITY_SECRET)
-            .build()
-        manager.notify(NOTIFICATION_ID, notification)
+        if (hideLabel != null) {
+            val hide = PendingIntent.getBroadcast(
+                context,
+                NOTIFICATION_ID,
+                Intent(context, OverlayNotificationReceiver::class.java)
+                    .setAction(OverlayNotificationReceiver.ACTION_HIDE),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+            builder.addAction(0, hideLabel, hide)
+        }
+        manager.notify(NOTIFICATION_ID, builder.build())
         return true
     }
 }
