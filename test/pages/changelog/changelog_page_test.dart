@@ -139,6 +139,16 @@ Future<void> main() async {
     expect(find.byKey(const ValueKey('whats-new-5.5.0')), findsOneWidget);
     expect(find.byKey(const ValueKey('whats-new-4.7.0')), findsNothing);
 
+    // shadcn's dialog route has a transparent barrier: without a backdrop and
+    // an outline the card sat flat on the page it covers.
+    expect(find.descendant(of: find.byType(ChangelogDialog), matching: find.byType(ModalBackdrop)), findsOneWidget);
+    final card = tester.widget<Container>(
+      find.descendant(of: find.byType(ChangelogDialog), matching: find.byKey(const ValueKey('whats-new-card'))),
+    );
+    final decoration = card.decoration! as BoxDecoration;
+    expect(decoration.border, isNotNull);
+    expect(decoration.boxShadow, isNotEmpty);
+
     await tester.tap(find.byKey(const ValueKey('whats-new-close')));
     await tester.pumpAndSettle();
     expect(find.text(l.whatsNew), findsNothing);
