@@ -975,6 +975,13 @@ class Settings {
   Future<void> setShimanoButtonMode(String serial, bool enabled) async =>
       prefs.setBool('shimano_button_mode_$serial', enabled);
 
+  // The rider chose to keep using D-Fly channel buttons instead of button mode
+  // (e.g. because Windows can't pair the Di2), so its setup isn't requested.
+
+  bool getShimanoDfly(String serial) => prefs.getBool('shimano_dfly_$serial') ?? false;
+
+  Future<void> setShimanoDfly(String serial, bool chosen) async => prefs.setBool('shimano_dfly_$serial', chosen);
+
   String getShimanoPasskey(String serial) =>
       prefs.getString('shimano_passkey_$serial') ?? ShimanoAuth.defaultPasskey;
 

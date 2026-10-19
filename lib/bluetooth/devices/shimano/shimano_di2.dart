@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:bike_control/bluetooth/messages/notification.dart';
@@ -9,6 +10,7 @@ import 'package:bike_control/utils/keymap/buttons.dart';
 import 'package:bike_control/widgets/controller/controller_layout.dart';
 import 'package:bike_control/widgets/ui/type_scale.dart';
 import 'package:dartx/dartx.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:prop/prop.dart' hide Set;
 import 'package:universal_ble/universal_ble.dart';
@@ -58,7 +60,7 @@ class ShimanoDi2 extends BluetoothDevice {
     // This also releases a derailleur left in PC-connect mode by an earlier,
     // interrupted session.
     if (hasConfig && isButtonModeEnabled) {
-      unawaited(_enterButtonModeLogged());
+      unawaited(reenterButtonMode());
     }
   }
 
@@ -68,8 +70,8 @@ class ShimanoDi2 extends BluetoothDevice {
   @override
   // Shown while no button is known yet. A Di2 with the config service sends
   // nothing until button mode is set up, so pressing a paddle would do
-  // nothing — point at the setup instead.
-  String get buttonExplanation => hasConfigService
+  // nothing — point at the setup instead, unless the rider chose D-Fly.
+  String get buttonExplanation => hasConfigService && !isDflyChosen
       ? AppLocalizations.current.chainStepShimanoSetupHint
       : AppLocalizations.current.shimanoDflyExplanation;
 
@@ -197,8 +199,30 @@ class ShimanoDi2 extends BluetoothDevice {
   /// Whether the rider opted in to button mode for this Di2.
   bool get isButtonModeEnabled => core.settings.getShimanoButtonMode(_serialKey);
 
+  /// Whether the rider chose to keep the D-Fly channel buttons instead of
+  /// button mode. They need no pairing, so this is the way out where Windows
+  /// can't pair the Di2.
+  bool get isDflyChosen => core.settings.getShimanoDfly(_serialKey);
+
+  /// The home chain's "Use Di2 buttons" step: whether button mode is on, or
+  /// null when there is no such step — a Di2 without the config service, or
+  /// one whose rider chose the D-Fly channel buttons.
+  bool? get buttonModeSetupDone => hasConfigService && !isDflyChosen ? isButtonModeEnabled : null;
+
+  /// Keep the D-Fly channel buttons: the Di2 keeps shifting by itself and
+  /// button mode's setup is no longer requested. "Use Di2 buttons" stays
+  /// available on the device panel.
+  Future<void> useDflyChannels() async {
+    await core.settings.setShimanoDfly(_serialKey, true);
+    core.connection.signalChange(this);
+  }
+
   ShimanoButtonSession? _buttonSession;
   final Set<ControllerButton> _pressed = {};
+
+  /// How BikeControl gets the bond the config service needs; replaced in tests.
+  @visibleForTesting
+  static ShimanoDi2Bond bond = const ShimanoDi2Bond();
 
   /// A GATT/handshake timeout means the Di2 didn't answer (asleep / out of
   /// range) — the sheet then prompts the rider to wake it and retry.
@@ -213,11 +237,37 @@ class ShimanoDi2 extends BluetoothDevice {
   /// link is up the derailleur stops shifting itself and every paddle press
   /// arrives here as a button. Nothing on the Di2 is changed — once the link
   /// drops it shifts normally again.
-  Future<void> enterButtonMode({required String passkey}) async {
+  ///
+  /// Where the platform doesn't bond on its own (Windows), the bond is checked
+  /// first and, with [pair], requested; a missing or refused bond fails as
+  /// [ShimanoDi2PairingRequiredException].
+  Future<void> enterButtonMode({required String passkey, bool pair = true}) async {
     final t = _configTransport;
     if (t == null) return;
-    await ShimanoConfig.authenticate(t, passkey: passkey);
+    await _ensureBonded(pair: pair);
+    try {
+      await ShimanoConfig.authenticate(t, passkey: passkey);
+    } catch (e, st) {
+      // Windows still holds keys the Di2 has since forgotten: pairing again
+      // from code is a no-op (Windows thinks it's paired), only the rider can
+      // remove and re-add it.
+      if (bond.isRequired && ShimanoDi2Bond.isInsufficientAuthentication(e)) {
+        Error.throwWithStackTrace(ShimanoDi2PairingRequiredException(e), st);
+      }
+      rethrow;
+    }
     await startButtonSession(t);
+  }
+
+  Future<void> _ensureBonded({required bool pair}) async {
+    if (!bond.isRequired) return;
+    if (await bond.isPaired(device.deviceId)) return;
+    if (!pair) throw ShimanoDi2PairingRequiredException(null);
+    try {
+      await bond.pair(device.deviceId);
+    } catch (e, st) {
+      Error.throwWithStackTrace(ShimanoDi2PairingRequiredException(e), st);
+    }
   }
 
   /// Replay the button-mode sequence on [t]. Every step runs even if one
@@ -261,6 +311,7 @@ class ShimanoDi2 extends BluetoothDevice {
       await target.enterButtonMode(passkey: passkey);
       await core.settings.setShimanoPasskey(_serialKey, passkey);
       await core.settings.setShimanoButtonMode(_serialKey, true);
+      await core.settings.setShimanoDfly(_serialKey, false);
       core.connection.signalChange(target);
     } catch (e, st) {
       actionStreamInternal.add(LogNotification('ShimanoDi2 button mode setup failed: $e'));
@@ -287,15 +338,22 @@ class ShimanoDi2 extends BluetoothDevice {
     }
   }
 
-  Future<void> _enterButtonModeLogged() =>
-      autoEnterButtonMode(() => enterButtonMode(passkey: core.settings.getShimanoPasskey(_serialKey)));
+  /// Re-enter button mode on (re)connect. It never starts a pairing: a
+  /// refused one drops the link at the 30 s security timeout, so pairing
+  /// on every reconnect would cycle the connection. A missing bond is logged
+  /// and retried next connect; pairing belongs to the setup sheet.
+  @visibleForTesting
+  Future<void> reenterButtonMode() => autoEnterButtonMode(
+        () => enterButtonMode(passkey: core.settings.getShimanoPasskey(_serialKey), pair: false),
+      );
 
   /// The automatic re-entry on connect. A stored passkey the Di2 now rejects
   /// (changed in E-TUBE since setup) can't start working on its own, and a
   /// rejection drops the link, so retrying it on every reconnect would only
   /// cycle the connection while the card claims the paddles are buttons.
   /// Switch button mode off instead: the setup step comes back and asks for
-  /// the passkey. Anything else (asleep, out of range) is retried next connect.
+  /// the passkey. Anything else (asleep, out of range, no Windows bond) is
+  /// retried next connect.
   @visibleForTesting
   Future<void> autoEnterButtonMode(Future<void> Function() enter) async {
     try {
@@ -347,10 +405,11 @@ class ShimanoDi2 extends BluetoothDevice {
 
   /// Until button mode is on, the Di2 shifts itself and reports nothing — so
   /// the ride card has no buttons to show. Surface that as a required one-time
-  /// setup (dimmed card + prompt) rather than a blank card.
+  /// setup (dimmed card + prompt) rather than a blank card — unless the rider
+  /// chose the D-Fly channel buttons instead.
   @override
   DeviceSetupNeed? get setupNeed =>
-      isConnected && hasConfigService && !isButtonModeEnabled ? DeviceSetupNeed.setup : null;
+      isConnected && hasConfigService && !isButtonModeEnabled && !isDflyChosen ? DeviceSetupNeed.setup : null;
 
   @override
   Future<void> openSetup(BuildContext context) async {
@@ -363,6 +422,8 @@ class ShimanoDi2 extends BluetoothDevice {
         operation: (passkey) => setupButtonMode(passkey: passkey),
         isUnresponsive: _isUnresponsive,
         isPasskeyRejected: (e) => e is ShimanoPasskeyRejectedException,
+        isPairingRequired: (e) => e is ShimanoDi2PairingRequiredException,
+        onUseDfly: () => unawaited(useDflyChannels()),
       );
 
   @override
@@ -376,8 +437,10 @@ class ShimanoDi2 extends BluetoothDevice {
         shimanoSetupPanel(
           context,
           active: isButtonModeEnabled,
+          dfly: isDflyChosen,
           onSetup: () => unawaited(_showSetup(context)),
           onTurnOff: () => unawaited(turnOffButtonMode()),
+          onUseDfly: () => unawaited(useDflyChannels()),
         ),
       ];
     }
@@ -427,6 +490,48 @@ class ShimanoDi2Buttons {
     },
   );
 
+}
+
+/// The bond (encrypted link) the 18FF config service needs: unbonded, the RD
+/// refuses every 18FF read, write and subscribe. Android and iOS pair on their
+/// own when the RD answers "insufficient authentication"; WinRT only fails the
+/// call, so on Windows BikeControl checks the bond and asks for it.
+class ShimanoDi2Bond {
+  const ShimanoDi2Bond();
+
+  /// A pairing that works takes a few seconds; a refused one only ends with
+  /// the 30 s security-manager timeout (and drops the link), which is too long
+  /// to keep the rider waiting. Give up sooner: should Windows still finish
+  /// the pairing, Retry finds the bond in place.
+  static const _pairTimeout = Duration(seconds: 10);
+
+  /// WinRT HRESULTs for ATT "insufficient authentication / encryption" — what
+  /// an 18FF call over an unbonded (or no longer bonded) link fails with.
+  static const _insufficientAuthenticationHr = 'hr=-2140864507'; // 0x80650005
+  static const _insufficientEncryptionHr = 'hr=-2140864497'; // 0x8065000F
+
+  bool get isRequired => !kIsWeb && Platform.isWindows;
+
+  Future<bool> isPaired(String deviceId) async => await UniversalBle.isPaired(deviceId) ?? false;
+
+  Future<void> pair(String deviceId) => UniversalBle.pair(deviceId, timeout: _pairTimeout);
+
+  static bool isInsufficientAuthentication(Object error) {
+    final text = error.toString();
+    return text.contains(_insufficientAuthenticationHr) || text.contains(_insufficientEncryptionHr);
+  }
+}
+
+/// Button mode needs a bond Windows doesn't have and couldn't (or, on
+/// reconnect, didn't try to) set up. [cause] is the pairing or GATT failure,
+/// null when the bond was only found missing.
+class ShimanoDi2PairingRequiredException implements Exception {
+  ShimanoDi2PairingRequiredException(this.cause);
+
+  final Object? cause;
+
+  @override
+  String toString() => 'ShimanoDi2PairingRequiredException: ${cause ?? 'Di2 is not paired with Windows'}';
 }
 
 class ShimanoDi2Constants {

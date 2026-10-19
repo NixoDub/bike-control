@@ -1811,6 +1811,12 @@
   "shimanoPasskeyHint": "Keep 000000 unless you set your own passkey in the E-TUBE app.",
   "shimanoPasskeyWrongTitle": "Wrong passkey",
   "shimanoPasskeyWrongBody": "Your Di2 rejected the passkey. Enter the passkey you set in the E-TUBE app.",
+  "shimanoPairTitle": "Pair your Di2 with Windows",
+  "@shimanoPairTitle": {"description": "Di2 button-mode setup sheet, Windows only: the Di2's settings service needs a Bluetooth pairing that Windows could not set up on its own."},
+  "shimanoPairBody": "Di2 buttons need your Di2 paired with Windows, and Windows couldn't pair it. Open Windows Settings → Bluetooth & devices → Add device → Bluetooth and choose your Di2 (press a shifter button to wake it). If it's already listed, remove it and add it again. Then tap Retry.",
+  "shimanoUseDfly": "Use D-Fly channels instead",
+  "@shimanoUseDfly": {"description": "Di2 setup sheet and device panel: skip button mode and keep using the buttons the rider set to D-Fly channels in E-TUBE, which work without pairing."},
+  "shimanoDflyActive": "Your Di2 shifts normally. Buttons you set to D-Fly channels in the E-TUBE app show up here when you press them.",
   "chainReadyTitle": "Ready to ride",
   "chainReadySubtitle": "Your buttons are reaching {app}.",
   "@chainReadySubtitle": {
