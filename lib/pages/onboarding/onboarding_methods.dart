@@ -60,6 +60,15 @@ bool onboardingVsNeedsSecondDevice(SupportedApp app) =>
 bool onboardingWhereUsesLocal(Target target) =>
     target == Target.thisDevice && target.connectionType == ConnectionType.local;
 
+/// The method the Where step's [target] turns on for [app], so its tile can say
+/// how the app will find BikeControl. An app with no network method (Biketerra)
+/// is reached over Bluetooth, not Wi-Fi.
+OnboardingMethod onboardingWhereMethod(Target target, SupportedApp app) {
+  if (onboardingWhereUsesLocal(target)) return OnboardingMethod.local;
+  if (!_supportsNetwork(app) && _supportsBluetooth(app)) return OnboardingMethod.bluetooth;
+  return OnboardingMethod.network;
+}
+
 /// Whether the tile is shown at all for [app]. Mirrors the settings page:
 /// Local drives the app running on THIS device (CoreLogic.showLocalControl),
 /// Bluetooth advertises to an app on ANOTHER device. On iOS the Local tile is
@@ -146,6 +155,7 @@ Future<void> setOnboardingMethodEnabled(
   SupportedApp app,
   bool value, {
   required VoidCallback onUpdate,
+  @visibleForTesting List<PlatformRequirement>? bluetoothRequirements,
 }) async {
   void toastError(Object e) {
     core.connection.signalNotification(
@@ -192,6 +202,17 @@ Future<void> setOnboardingMethodEnabled(
         }
       }
     case OnboardingMethod.bluetooth:
+      // The settings tile asks for these before its onChange runs (see
+      // ConnectionMethod); without them Android never advertises, while the
+      // method reads as on.
+      if (value &&
+          !await satisfyRequirements(
+            context,
+            bluetoothRequirements ?? core.permissions.getRemoteControlRequirements(),
+          )) {
+        onUpdate();
+        return;
+      }
       if (value) {
         await core.stopAllBleConnections();
       }
