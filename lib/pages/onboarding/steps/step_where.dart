@@ -82,10 +82,11 @@ Widget _whereTile(
 
 Widget onboardingWhereBody(BuildContext context,
     {required SupportedApp app, required Target? selected, required ValueChanged<Target> onSelect}) {
-  String enables(Target t) =>
-      onboardingWhereUsesLocal(t)
-          ? context.i18n.onboardingWhereEnablesLocal(app.name)
-          : context.i18n.onboardingWhereEnablesNetwork(app.name);
+  String enables(Target t) => switch (onboardingWhereMethod(t, app)) {
+        OnboardingMethod.local => context.i18n.onboardingWhereEnablesLocal(app.name),
+        OnboardingMethod.bluetooth => context.i18n.onboardingWhereEnablesBluetooth(app.name),
+        OnboardingMethod.network => context.i18n.onboardingWhereEnablesNetwork(app.name),
+      };
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: onboardingReveal([

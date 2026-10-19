@@ -1235,6 +1235,7 @@
   },
   "onboardingWhereSubtitle": "To decyduje, jak BikeControl się z nią komunikuje.",
   "onboardingWhereEnablesLocal": "BikeControl naciska przyciski w {app} za Ciebie — bez drugiego urządzenia.",
+  "onboardingWhereEnablesBluetooth": "{app} znajduje BikeControl przez Bluetooth.",
   "onboardingWhereEnablesNetwork": "{app} znajduje BikeControl przez Twoje Wi-Fi.",
   "onboardingWhereChangeLater": "Możesz to zmienić później w ustawieniach połączenia.",
   "onboardingHelp": "Pomoc",

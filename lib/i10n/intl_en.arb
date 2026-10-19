@@ -657,6 +657,14 @@
       }
     }
   },
+  "onboardingWhereEnablesBluetooth": "{app} finds BikeControl over Bluetooth.",
+  "@onboardingWhereEnablesBluetooth": {
+    "placeholders": {
+      "app": {
+        "type": "String"
+      }
+    }
+  },
   "onboardingWhereEnablesNetwork": "{app} finds BikeControl over your Wi-Fi.",
   "@onboardingWhereEnablesNetwork": {
     "placeholders": {

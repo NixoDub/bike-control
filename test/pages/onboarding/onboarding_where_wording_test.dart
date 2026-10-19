@@ -14,7 +14,7 @@ void main() {
       setUp(() async => l = await AppLocalizations.load(locale));
 
       test('the Where tiles describe what happens, not a method name', () {
-        for (final text in [l.onboardingWhereEnablesLocal('Zwift'), l.onboardingWhereEnablesNetwork('Zwift')]) {
+        for (final text in [l.onboardingWhereEnablesLocal('Zwift'), l.onboardingWhereEnablesNetwork('Zwift'), l.onboardingWhereEnablesBluetooth('Zwift')]) {
           expect(text, contains('Zwift'), reason: 'say what happens with the rider\'s own app');
           expect(text, isNot(contains(l.onboardingMethodLocal)));
           expect(text, isNot(contains(l.onboardingMethodNetwork)));
