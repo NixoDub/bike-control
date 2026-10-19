@@ -46,6 +46,7 @@ enum SetupStepId {
   controllerInRange,
   controllerUnlocked,
   controllerSramSetup,
+  controllerShimanoSetup,
   controllerSramRestore,
   controllerClickV2Setup,
   controllerClickV2KeepAwake,

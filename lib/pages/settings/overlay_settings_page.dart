@@ -7,7 +7,6 @@ import 'package:bike_control/services/overlay/trainer_overlay_service.dart';
 import 'package:bike_control/utils/core.dart';
 import 'package:bike_control/widgets/overlay/trainer_overlay_view.dart';
 import 'package:bike_control/widgets/ui/app_theme.dart';
-import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:bike_control/widgets/ui/bk_page_header.dart';
 import 'package:prop/emulators/definitions/fitness_bike_definition.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -137,14 +136,8 @@ class _OverlayPreviewState extends State<OverlayPreview> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    // The desktop window fits what it shows (and follows the mode); Android's
-    // keeps room for everything.
-    Size sizeFor(TrainerOverlayState s) => defaultTargetPlatform == TargetPlatform.android
-        ? TrainerOverlayView.windowSize(
-            MediaQuery.textScalerOf(context),
-            controls: widget.fields.contains(OverlayField.controls),
-          )
-        : TrainerOverlayView.fitWindowSizeOf(context, s);
+    // The overlay window fits what it shows (and follows the mode).
+    Size sizeFor(TrainerOverlayState s) => TrainerOverlayView.fitWindowSizeOf(context, s, drag: false);
     return Container(
       key: const ValueKey('overlay-preview'),
       height: 150,

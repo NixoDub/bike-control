@@ -581,6 +581,9 @@
   "overlayFieldsLabel": "Fields to show",
   "overlayGrantAndroidPermission": "Grant overlay permission",
   "overlayHide": "Hide overlay",
+  "overlayNotificationTitle": "Gear overlay is on",
+  "overlayNotificationText": "Tap to open BikeControl",
+  "overlayNotificationChannel": "Gear overlay",
   "overlayLowPowerMode": "Live Activities are disabled (Low Power Mode or system setting).",
   "overlayOpacity": "Overlay opacity",
   "overlayOpacitySubtitle": "Fade the floating overlay so it blends into your trainer app.",
@@ -651,6 +654,14 @@
   "onboardingWhereSubtitle": "This decides how BikeControl talks to it.",
   "onboardingWhereEnablesLocal": "BikeControl presses the buttons in {app} for you — no other device needed.",
   "@onboardingWhereEnablesLocal": {
+    "placeholders": {
+      "app": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingWhereEnablesBluetooth": "{app} finds BikeControl over Bluetooth.",
+  "@onboardingWhereEnablesBluetooth": {
     "placeholders": {
       "app": {
         "type": "String"
@@ -1716,6 +1727,7 @@
     }
   },
   "wheeltopClaimedByDerailleurHint": "The shifter is likely claimed by its rear derailleur. Power the derailleur down or let it sleep, then press a shifter button while scanning.",
+  "bleSensorConnectGuidance": "The sensor may be in use by another app or device. Pair it directly in your trainer app instead, or tap Reconnect to try again.",
   "unableToConnectToDeviceTimeout": "Unable to connect to {device}: Timeout",
   "@unableToConnectToDeviceTimeout": {
     "placeholders": {
@@ -1777,6 +1789,28 @@
   "sramChecklistDisabling": "Disabling on-device shifting",
   "sramChecklistRestoring": "Restoring original shifting",
   "sramPressHold": "Press & hold on the derailleur",
+  "shimanoSetup": "Use Di2 buttons",
+  "shimanoDflyExplanation": "Press a D-Fly button to configure it.",
+  "@shimanoDflyExplanation": {"description": "Di2 controller settings, before any button is known: a Di2 without the E-TUBE config service sends its D-Fly buttons, so the rider presses one to add it."},
+  "shimanoPanelIntro": "Use your Di2 shifters as BikeControl buttons. Nothing on your Di2 is changed: while BikeControl is connected, the paddles send button presses instead of shifting.",
+  "shimanoSetupIntro": "While BikeControl is connected, your Di2 doesn't shift. Its paddles become BikeControl buttons instead. Disconnect and it shifts normally again. No Di2 setting is changed.",
+  "shimanoSetupSuccess": "Your Di2 paddles are now BikeControl buttons. Disconnect BikeControl to shift normally again.",
+  "shimanoDialogRunning": "Talking to your Di2 — keep it close and awake.",
+  "shimanoAuthorizeTitle": "Wake your Di2",
+  "shimanoAuthorizeBody": "Your Di2 didn't respond. Press any shifter button to wake it, keep it close, then tap Retry.",
+  "shimanoErrorTitle": "That didn't work",
+  "shimanoGenericError": "Something went wrong. Please try again.",
+  "shimanoShiftingOff": "Di2 buttons are active. Your Di2 doesn't shift while BikeControl is connected.",
+  "shimanoSettingUp": "Setting up",
+  "shimanoAllSet": "You're all set",
+  "shimanoChecklistAuthenticating": "Authenticating with Di2",
+  "shimanoWakeUp": "Press a shifter button to wake it",
+  "shimanoChecklistActivating": "Switching your Di2 to button mode",
+  "shimanoTurnOff": "Stop using Di2 buttons",
+  "shimanoPasskeyLabel": "E-TUBE passkey",
+  "shimanoPasskeyHint": "Keep 000000 unless you set your own passkey in the E-TUBE app.",
+  "shimanoPasskeyWrongTitle": "Wrong passkey",
+  "shimanoPasskeyWrongBody": "Your Di2 rejected the passkey. Enter the passkey you set in the E-TUBE app.",
   "chainReadyTitle": "Ready to ride",
   "chainReadySubtitle": "Your buttons are reaching {app}.",
   "@chainReadySubtitle": {
@@ -1928,6 +1962,8 @@
   "chainStepUnlockedLikelyUntil": "Likely unlocked until {date}",
   "chainStepSramSetup": "Controls set up",
   "chainStepSramSetupHint": "Its own shifting still runs the gears — hand them to BikeControl so the paddles send button presses.",
+  "chainStepShimanoSetup": "Di2 buttons active",
+  "chainStepShimanoSetupHint": "Your Di2 still shifts by itself — switch it to button mode so the paddles send button presses. Nothing on the Di2 is changed.",
   "chainStepClickV2Setup": "Choose how it unlocks",
   "chainStepClickV2SetupHint": "Zwift locks the Click V2 to their own app. Pick how BikeControl works around it and it connects straight away.",
   "chainStepClickV2KeepAwake": "Switch the left side on to keep the lights on",
@@ -2024,14 +2060,8 @@
       }
     }
   },
-  "chainStepTrainerBridgedPending": "Waiting for {app} to pick it up",
-  "@chainStepTrainerBridgedPending": {
-    "placeholders": {
-      "app": {
-        "type": "String"
-      }
-    }
-  },
+  "chainStepTrainerBridgedPending": "Waiting for {app} to connect to “{bridge}”",
+  "@chainStepTrainerBridgedPending": {"placeholders": {"app": {"type": "String"}, "bridge": {"type": "String"}}},
   "chainStepTrainerBridgedHint": "Choose “{bridge}” as the trainer in {app}.",
   "@chainStepTrainerBridgedHint": {
     "placeholders": {
@@ -2385,8 +2415,8 @@
   "@chainStepTrainerBridgedHint2": {"placeholders": {"app": {"type": "String"}, "bridge": {"type": "String"}, "trainer": {"type": "String"}}},
   "chainPendingSubtitleController": "{app} has your trainer through BikeControl, but your buttons won't reach {app} until you also connect the BikeControl controller in its pairing screen.",
   "@chainPendingSubtitleController": {"placeholders": {"app": {"type": "String"}}},
-  "chainStatusWaitingForPickup": "Waiting for {app} to pick it up",
-  "@chainStatusWaitingForPickup": {"placeholders": {"app": {"type": "String"}}},
+  "chainStatusWaitingForPickup": "Waiting for {app} to connect to “{bridge}”",
+  "@chainStatusWaitingForPickup": {"placeholders": {"app": {"type": "String"}, "bridge": {"type": "String"}}},
   "vsTransportSameDeviceNote": "Bluetooth can't reach an app on this same device — using WiFi.",
   "vsSameDeviceBlockedFix": "What works: BikeControl on a phone or tablet next to your bike, or {app} on another device.",
   "@vsSameDeviceBlockedFix": {"description": "Trainer page: the setups that work when the trainer app on this device can't reach BikeControl's bridge.", "placeholders": {"app": {"type": "String"}}},
@@ -3308,5 +3338,6 @@
   "chainHintVeryBigGear": "Your chain on the trainer is in a very big gear (gear ratio about {ratio}). Virtual gears feel realistic with the chain in a middle gear, e.g. 34/17 or 50/25. Leave it there and only shift virtually.",
   "@chainHintVeryBigGear": {"placeholders": {"ratio": {"type": "String"}}},
   "chainHintVerySmallGear": "Your chain on the trainer is in a very small gear (gear ratio about {ratio}). Virtual gears feel realistic with the chain in a middle gear, e.g. 34/17 or 50/25. Leave it there and only shift virtually.",
-  "@chainHintVerySmallGear": {"placeholders": {"ratio": {"type": "String"}}}
+  "@chainHintVerySmallGear": {"placeholders": {"ratio": {"type": "String"}}},
+  "ignoredDevicesNearby": "Found ignored devices nearby"
 }

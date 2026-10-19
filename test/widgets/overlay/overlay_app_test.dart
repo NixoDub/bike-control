@@ -111,7 +111,7 @@ void main() {
     expect(pill.left, greaterThan(plus.right), reason: 'mode and readings sit after +');
   });
 
-  testWidgets('Android: a rounded pill in the card colour, not the page colour', (tester) async {
+  testWidgets('Android: a card in the card colour, not the page colour', (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     try {
       tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
@@ -131,9 +131,8 @@ void main() {
       final card = BkTheme.build(Brightness.dark).colorScheme.card;
       expect(decoration.color!.withAlpha(255), card.withAlpha(255));
       expect(decoration.color!.a, greaterThanOrEqualTo(0.9));
-      final height = tester.getSize(find.byType(TrainerOverlayView)).height;
       final radius = (decoration.borderRadius! as BorderRadius).topLeft.x;
-      expect(radius, greaterThanOrEqualTo(height / 2), reason: "fully rounded ends");
+      expect(radius, BkComponentThemes.cardRadius, reason: 'card corners, not heavy round ends');
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }

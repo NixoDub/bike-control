@@ -2,6 +2,7 @@ import 'package:bike_control/bluetooth/devices/base_device.dart';
 import 'package:bike_control/gen/l10n.dart';
 import 'package:bike_control/utils/actions/base_actions.dart';
 import 'package:bike_control/utils/keymap/buttons.dart';
+import 'package:bike_control/utils/keymap/keymap.dart' show ButtonTrigger;
 import 'package:bike_control/widgets/keymap_explanation.dart';
 import 'package:bike_control/widgets/ui/connection_method.dart' show ConnectionMethodType;
 import 'package:dartx/dartx.dart';
@@ -54,6 +55,20 @@ class ButtonNotification extends BaseNotification {
 
   @override
   int get hashCode => buttonsClicked.hashCode;
+}
+
+/// The gesture a press resolved to — single click, double click or long
+/// press — once [BaseDevice] has decided it, so the UI can name the action that
+/// actually ran rather than guessing from the first press.
+class GestureNotification extends BaseNotification {
+  final BaseDevice device;
+  final ControllerButton button;
+  final ButtonTrigger trigger;
+
+  GestureNotification({required this.device, required this.button, required this.trigger});
+
+  @override
+  String toString() => 'Gesture: ${button.name.splitByUpperCase()} ${trigger.name}';
 }
 
 class ActionNotification extends BaseNotification {

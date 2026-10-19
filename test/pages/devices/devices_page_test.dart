@@ -22,6 +22,7 @@ import 'package:bike_control/widgets/devices/trainer_metrics_strip.dart';
 import 'package:bike_control/widgets/scan.dart';
 import 'package:bike_control/widgets/ui/app_theme.dart';
 import 'package:bike_control/widgets/ui/pro_badge.dart';
+import 'package:bike_control/widgets/ui/bk_switch_row.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prop/emulators/definitions/fitness_bike_definition.dart';
 import 'package:prop/emulators/transporter/network_transporter.dart';
@@ -298,6 +299,40 @@ Future<void> main() async {
     expect(find.descendant(of: section, matching: find.text(l.devicesMediaRemotes)), findsNothing);
     final ignored = find.byKey(const ValueKey('devices-ignored'));
     expect(find.descendant(of: ignored, matching: find.text('2')), findsOneWidget);
+  });
+
+  testWidgets('phone steering is part of Base: no PRO badge, and the switch turns it on', (tester) async {
+    debugHostPlatformOverride = TargetPlatform.android;
+    IAPManager.instance.setProForTesting(enabled: false);
+    core.settings.setPhoneSteeringEnabled(false);
+    addTearDown(() {
+      core.settings.setPhoneSteeringEnabled(false);
+      core.connection.toggleGyroscopeSteering(false);
+    });
+    await _pumpDevices(tester);
+
+    final section = find.byKey(const ValueKey('devices-other-inputs'));
+    final row = find.ancestor(of: find.text(l.devicesPhoneSteering), matching: find.byType(BkSwitchRow));
+    expect(find.descendant(of: section, matching: row), findsOneWidget);
+    expect(find.descendant(of: row, matching: find.byType(ProBadge)), findsNothing);
+
+    await tester.tap(find.descendant(of: row, matching: find.byType(Switch)));
+    await tester.pump();
+    expect(core.settings.getPhoneSteeringEnabled(), isTrue);
+  });
+
+  testWidgets('an ignored device the scan sees is called out under the controllers', (tester) async {
+    debugHostPlatformOverride = TargetPlatform.android;
+    addTearDown(() => core.connection.ignoredDevicesNearby.value = const {});
+    await _pumpDevices(tester);
+
+    final hint = find.byKey(const ValueKey('ignored-devices-nearby-hint'));
+    expect(hint, findsNothing);
+
+    core.connection.ignoredDevicesNearby.value = {'neighbour-click'};
+    await tester.pump();
+    final section = find.byKey(const ValueKey('devices-controllers'));
+    expect(find.descendant(of: section, matching: hint), findsOneWidget);
   });
 
   testWidgets('ride feedback, Health and Quit are no longer on Devices', (tester) async {

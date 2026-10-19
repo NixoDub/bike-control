@@ -42,9 +42,28 @@ class MainActivity: FlutterFragmentActivity(), GamepadsCompatibleActivity {
                     val enable = call.argument<Boolean>("enable") ?: true
                     result.success(OverlayActionBridge.setKeepScreenOn(enable))
                 }
+                "styleOverlayNotification" -> {
+                    result.success(
+                        OverlayNotification.style(
+                            applicationContext,
+                            title = call.argument<String>("title") ?: "BikeControl",
+                            text = call.argument<String>("text") ?: "",
+                            channelName = call.argument<String>("channelName") ?: "BikeControl",
+                            hideLabel = call.argument<String>("hideLabel"),
+                        ),
+                    )
+                }
                 else -> result.notImplemented()
             }
         }
+    }
+
+    override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        // The channel dies with this engine; without unbinding, the
+        // notification's "Hide overlay" would talk into a detached engine
+        // instead of stopping the overlay itself.
+        OverlayActionBridge.bindMainChannel(null)
+        super.cleanUpFlutterEngine(flutterEngine)
     }
 
     override fun isGamepadsInputDevice(device: InputDevice): Boolean {

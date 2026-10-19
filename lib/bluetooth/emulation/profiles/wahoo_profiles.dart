@@ -136,7 +136,7 @@ final wahooKickrClimbProfile = EmulationProfile(
   },
   decodeWrite: (characteristicUuid, value) {
     if (characteristicUuid != lcUuid(wahooClimbCharacteristicUuid)) return null;
-    if (value.length == 1 && value[0] == wahooClimbRequestControlOpcode) return 'Request control';
+    if (value.length == 1 && value[0] == wahooClimbGetTiltModeOpcode) return 'Get tilt mode';
     if (value.length == 3 && value[0] == wahooClimbSetInclineOpcode) {
       var grade001 = value[1] | (value[2] << 8);
       if (grade001 >= 0x8000) grade001 -= 0x10000;

@@ -1,7 +1,7 @@
 name: bike_control
 description: "BikeControl - Control your virtual riding"
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
-version: 7.2.1+158
+version: 7.3.0+159
 
 environment:
   sdk: ^3.9.0
@@ -15,10 +15,7 @@ dependencies:
   flutter_local_notifications: ^22.3.0
 
   # fork to allow iOS background BLE connections
-  universal_ble:
-    git:
-      url: https://github.com/jonasbark/universal_ble.git
-      ref: changes
+  universal_ble: ^3.1.0
   gamepads: ^0.1.10+1
 
   lottie: ^3.3.2
@@ -157,6 +154,7 @@ flutter:
     - assets/rouvy.png
     - assets/trainingpeaks.png
     - assets/strappo.png
+    - assets/biketerra.png
     - assets/contours/
     - assets/brand/
     - icon.png

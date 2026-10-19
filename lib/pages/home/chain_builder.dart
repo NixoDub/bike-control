@@ -49,8 +49,9 @@ LinkStatus _presenceStatus(DevicePresence presence) => switch (presence) {
 List<ChainLink> _controllerLinks(ChainInputs inputs) {
   if (inputs.controllers.isEmpty) {
     // Nothing paired ever: one placeholder card that reads as an invitation
-    // rather than a fault. "Paired" and "mapped" are the two things a fresh
-    // rider has to do, and neither is done.
+    // rather than a fault. Finding the controller is the one thing to do —
+    // mapping its buttons waits until there are buttons, same as on a real
+    // card (see [ControllerInput.hasKnownButtons]).
     return [
       ChainLink(
         key: ChainLinkKey.controller,
@@ -60,7 +61,6 @@ List<ChainLink> _controllerLinks(ChainInputs inputs) {
         steps: [
           SetupStep(id: SetupStepId.controllerBluetoothReady, done: inputs.bluetoothReady),
           const SetupStep(id: SetupStepId.controllerPaired, done: false),
-          const SetupStep(id: SetupStepId.controllerButtonsMapped, done: false),
         ],
       ),
     ];
@@ -99,6 +99,9 @@ List<ChainLink> _controllerLinks(ChainInputs inputs) {
             // range", underneath it.
             if (guidedSetupDone != null && (guidedSetupDone || inRange))
               SetupStep(id: SetupStepId.controllerSramSetup, done: guidedSetupDone),
+            // The Di2's counterpart, under the same rule.
+            if (controller.shimanoSetupDone case final done? when done || inRange)
+              SetupStep(id: SetupStepId.controllerShimanoSetup, done: done),
             // Only once there are buttons to map. A derailleur declares none
             // until its paddles have been heard from, so the line would name
             // work with nothing to work on — see [ControllerInput.hasKnownButtons].
@@ -211,23 +214,29 @@ ChainLink _trainerLink(ChainInputs inputs) {
   // this trainer. Before that — a trainer merely in range, or one deliberately
   // left on "let the app handle shifting" — a list of unticked boxes reads as
   // work outstanding when nothing is outstanding at all.
-  final committed =
-      trainer.presence != DevicePresence.discovered && trainer.presence != DevicePresence.remembered;
+  final committed = trainer.presence != DevicePresence.discovered && trainer.presence != DevicePresence.remembered;
   // The two facts onboarding checks, in its order: the bridge is running, and
   // the trainer app has picked the virtual trainer up. Gear ratios are a
   // preference with a working default, not a step — a rider is never blocked
   // waiting to "set up gears".
+  //
+  // With BikeControl itself as the trainer app there is no other app: the
+  // shifting runs right here, nothing has to pick a bridge up and no app shows
+  // a gear of its own. Being connected is the whole of it, so both the pick-up
+  // step and the overlay step stay off the card.
+  final selfHosted = inputs.app.selfHosted;
   final steps = committed
       ? <SetupStep>[
           SetupStep(id: SetupStepId.trainerPaired, done: paired),
-          SetupStep(
-            id: SetupStepId.trainerAppBridged,
-            done: trainer.appHoldsBridge,
-            hintArg: trainer.bridgeName,
-            // The entry NOT to pick, when known: the trainer under its own
-            // name sits right beside the bridge in the app's list.
-            secondaryHintArg: trainer.rawTrainerName,
-          ),
+          if (!selfHosted)
+            SetupStep(
+              id: SetupStepId.trainerAppBridged,
+              done: trainer.appHoldsBridge,
+              hintArg: trainer.bridgeName,
+              // The entry NOT to pick, when known: the trainer under its own
+              // name sits right beside the bridge in the app's list.
+              secondaryHintArg: trainer.rawTrainerName,
+            ),
           // Last, and required until answered once: the trainer app shows its
           // own gear, not the one BikeControl computes, so a bridged rider who
           // has not turned the overlay on is looking at a number that will
@@ -244,7 +253,7 @@ ChainLink _trainerLink(ChainInputs inputs) {
           // next app start — a decline is a snooze, not a "never", and the
           // step comes back as the optional offer. Only offered
           // once the bridge is up: before that there is no gear.
-          if (paired && trainer.overlayOffered && (trainer.overlayEnabled || !trainer.overlayDeclined))
+          if (!selfHosted && paired && trainer.overlayOffered && (trainer.overlayEnabled || !trainer.overlayDeclined))
             SetupStep(
               id: SetupStepId.trainerGearOverlay,
               done: trainer.overlayEnabled,
@@ -300,6 +309,7 @@ ChainLink _appLink(ChainInputs inputs) {
   // This very app connected earlier in this session, over a real method —
   // the session latches that per app, see [AppInput.wasConnectedThisSession].
   final connectedEarlier = selected && app.wasConnectedThisSession;
+  final awaitsController = inputs.controllers.isEmpty && !(selected && connected);
 
   final steps = <SetupStep>[
     SetupStep(id: SetupStepId.appSelected, done: selected),
@@ -345,17 +355,22 @@ ChainLink _appLink(ChainInputs inputs) {
           AddressWarningKind.unreachable || null => SetupStepVariant.standard,
         },
       ),
-    SetupStep(
-      id: SetupStepId.appConnected,
-      done: selected && connected,
-      // Once the app is reading the trainer through BikeControl, the
-      // trainer half of its pairing screen is done and only the controller
-      // tile is missing — say that, not "waiting for the app". Only with an
-      // app to name: the sentence is about a specific app's pairing screen.
-      variant: selected && app.trainerBridgedByApp
-          ? SetupStepVariant.controllerLinkMissing
-          : SetupStepVariant.standard,
-    ),
+    // Not while there is no controller yet: the app has nothing of
+    // BikeControl's to pick up, and "waiting for MyWhoosh" would send the
+    // rider into the app before the card above has been dealt with. A
+    // connection that is already there still gets its tick.
+    if (!awaitsController)
+      SetupStep(
+        id: SetupStepId.appConnected,
+        done: selected && connected,
+        // Once the app is reading the trainer through BikeControl, the
+        // trainer half of its pairing screen is done and only the controller
+        // tile is missing — say that, not "waiting for the app". Only with an
+        // app to name: the sentence is about a specific app's pairing screen.
+        variant: selected && app.trainerBridgedByApp
+            ? SetupStepVariant.controllerLinkMissing
+            : SetupStepVariant.standard,
+      ),
     // Last, and optional: Local is not a way to reach the app, it is a way to
     // do *more* to it — keystrokes and clicks the button editor only offers
     // once it is on. Nobody has to have it, so it never colours the card; but
@@ -381,7 +396,7 @@ ChainLink _appLink(ChainInputs inputs) {
   final dropped = connectedEarlier && !connected && !app.trainerBridgedByApp;
 
   final LinkStatus status;
-  if (steps.every((s) => s.done || s.optional)) {
+  if (steps.every((s) => s.done || s.optional) && !awaitsController) {
     status = LinkStatus.ready;
   } else if (!selected) {
     status = LinkStatus.off;

@@ -574,8 +574,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
         final id = notification.device.uniqueId;
         _pressGeneration[id] = (_pressGeneration[id] ?? 0) + 1;
         setState(() => _pressedButton[id] = notification.buttonsClicked.first);
-        final notifier = _presses.putIfAbsent(id, () => ValueNotifier((button: null, generation: 0)));
-        notifier.value = (button: notification.buttonsClicked.first, generation: _pressGeneration[id]!);
+        final notifier = _presses.putIfAbsent(id, () => ValueNotifier((button: null, generation: 0, trigger: null)));
+        notifier.value = (button: notification.buttonsClicked.first, generation: _pressGeneration[id]!, trigger: null);
+      } else if (notification is GestureNotification) {
+        final notifier = _presses[notification.device.uniqueId];
+        if (notifier != null) {
+          notifier.value = (button: notification.button, generation: notifier.value.generation, trigger: notification.trigger);
+        }
       }
     });
   }
@@ -831,6 +836,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
     appConnected: core.logic.connectedTrainerConnections.any((c) => c.isConnected.value),
     hasTrainer: onboardingTrainerBridged(core.connection.proxyDevices),
     trainerAppConnected: core.connection.proxyDevices.any((t) => t.isConnectedListenable.value),
+    selfHosted: _selfHosted,
   );
 
   bool get _doneOffersOverlay {

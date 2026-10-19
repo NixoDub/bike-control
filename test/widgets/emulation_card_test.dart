@@ -47,7 +47,7 @@ Future<void> main() async {
   testWidgets('press and release inject pressed and released frames', (tester) async {
     final session = manager.start(zwiftClickProfile);
     final frames = <Uint8List>[];
-    ble.onValueChange = (deviceId, characteristicId, value, timestamp) => frames.add(value);
+    ble.onValueChange = (change) => frames.add(change.value);
     await pumpCard(tester, session);
 
     final gesture = await tester.startGesture(tester.getCenter(find.text('Shift Up (+)')));

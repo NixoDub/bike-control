@@ -20,6 +20,9 @@
   "overlayFieldsLabel": "Anzuzeigende Felder",
   "overlayGrantAndroidPermission": "Overlay-Berechtigung erteilen",
   "overlayHide": "Overlay ausblenden",
+  "overlayNotificationTitle": "Gang-Overlay ist aktiv",
+  "overlayNotificationText": "Tippe, um BikeControl zu öffnen",
+  "overlayNotificationChannel": "Gang-Overlay",
   "overlayLowPowerMode": "Live Activities sind deaktiviert (Energiesparmodus oder Systemeinstellung).",
   "overlayPermissionExplain": "Android benötigt die Berechtigung, das Overlay über deiner Trainer-App anzuzeigen.",
   "overlaySection": "Overlay",
@@ -1127,6 +1130,7 @@
   },
   "connectionGaveUpAfterAttempts": "Verbindung zu {device} nach mehreren Versuchen fehlgeschlagen.",
   "wheeltopClaimedByDerailleurHint": "Der Schalter wird vermutlich von seinem Schaltwerk belegt. Schalte das Schaltwerk aus oder lass es einschlafen und drücke dann während der Suche eine Taste am Schalter.",
+  "bleSensorConnectGuidance": "Der Sensor wird eventuell von einer anderen App oder einem anderen Gerät verwendet. Kopple ihn stattdessen direkt in deiner Trainings-App oder tippe auf „Erneut verbinden“, um es noch einmal zu versuchen.",
   "unableToConnectToDeviceTimeout": "Verbindung zu {device} nicht möglich: Zeitüberschreitung",
   "@unableToConnectToDeviceTimeout": {
     "placeholders": {
@@ -1178,6 +1182,27 @@
   "sramChecklistDisabling": "Geräte-Schalten wird deaktiviert",
   "sramChecklistRestoring": "Ursprüngliche Schaltung wird wiederhergestellt",
   "sramPressHold": "Am Schaltwerk gedrückt halten",
+  "shimanoSetup": "Di2-Tasten nutzen",
+  "shimanoDflyExplanation": "Drücke eine D-Fly-Taste, um sie einzurichten.",
+  "shimanoPanelIntro": "Nutze deine Di2-Schalthebel als BikeControl-Tasten. An deiner Di2 wird nichts verändert: Solange BikeControl verbunden ist, senden die Hebel Tastendrücke statt zu schalten.",
+  "shimanoSetupIntro": "Solange BikeControl verbunden ist, schaltet deine Di2 nicht. Die Hebel werden stattdessen zu BikeControl-Tasten. Trennst du die Verbindung, schaltet sie wieder normal. Keine Di2-Einstellung wird verändert.",
+  "shimanoSetupSuccess": "Deine Di2-Hebel sind jetzt BikeControl-Tasten. Trenne BikeControl, um wieder normal zu schalten.",
+  "shimanoDialogRunning": "Verbindung mit deinem Di2 — halte es in der Nähe und wach.",
+  "shimanoAuthorizeTitle": "Wecke dein Di2",
+  "shimanoAuthorizeBody": "Dein Di2 hat nicht reagiert. Drücke eine beliebige Schalttaste, um es zu wecken, halte es in der Nähe und tippe dann auf Wiederholen.",
+  "shimanoErrorTitle": "Das hat nicht geklappt",
+  "shimanoGenericError": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
+  "shimanoShiftingOff": "Di2-Tasten sind aktiv. Deine Di2 schaltet nicht, solange BikeControl verbunden ist.",
+  "shimanoSettingUp": "Wird eingerichtet",
+  "shimanoAllSet": "Alles bereit",
+  "shimanoChecklistAuthenticating": "Authentifizierung mit Di2",
+  "shimanoWakeUp": "Drücke eine Schalttaste, um es zu wecken",
+  "shimanoChecklistActivating": "Di2 wird in den Tastenmodus versetzt",
+  "shimanoTurnOff": "Di2-Tasten nicht mehr nutzen",
+  "shimanoPasskeyLabel": "E-TUBE-Passkey",
+  "shimanoPasskeyHint": "Lass 000000 stehen, außer du hast in der E-TUBE-App einen eigenen Passkey festgelegt.",
+  "shimanoPasskeyWrongTitle": "Falscher Passkey",
+  "shimanoPasskeyWrongBody": "Deine Di2 hat den Passkey abgelehnt. Gib den Passkey ein, den du in der E-TUBE-App festgelegt hast.",
   "actionInclineIncrease": "Steigung erhöhen",
   "actionInclineDecrease": "Steigung verringern",
   "actionInclineZero": "Steigung ebnen (0 %)",
@@ -1246,6 +1271,7 @@
   },
   "onboardingWhereSubtitle": "Das entscheidet, wie BikeControl mit der App spricht.",
   "onboardingWhereEnablesLocal": "BikeControl drückt die Tasten in {app} für dich — kein zweites Gerät nötig.",
+  "onboardingWhereEnablesBluetooth": "{app} findet BikeControl über Bluetooth.",
   "onboardingWhereEnablesNetwork": "{app} findet BikeControl über dein WLAN.",
   "onboardingWhereChangeLater": "Du kannst das später in den Verbindungseinstellungen ändern.",
   "onboardingHelp": "Hilfe",
@@ -1668,6 +1694,8 @@
   "chainStepUnlockedLikelyUntil": "Wahrscheinlich entsperrt bis {date}",
   "chainStepSramSetup": "Steuerung eingerichtet",
   "chainStepSramSetupHint": "Noch schaltet das Schaltwerk selbst — übergib die Gänge an BikeControl, damit die Hebel Tastendrücke senden.",
+  "chainStepShimanoSetup": "Di2-Tasten aktiv",
+  "chainStepShimanoSetupHint": "Noch schaltet deine Di2 selbst — schalte sie in den Tastenmodus, damit die Hebel Tastendrücke senden. An der Di2 wird nichts verändert.",
   "chainStepClickV2Setup": "Wähle die Entsperrmethode",
   "chainStepClickV2SetupHint": "Zwift bindet den Click V2 an die eigene App. Wähle, wie BikeControl das umgeht — danach verbindet er sich sofort.",
   "chainStepClickV2KeepAwake": "Linke Seite einschalten, damit die Lichter anbleiben",
@@ -1726,14 +1754,8 @@
       }
     }
   },
-  "chainStepTrainerBridgedPending": "Warte darauf, dass {app} ihn erkennt",
-  "@chainStepTrainerBridgedPending": {
-    "placeholders": {
-      "app": {
-        "type": "String"
-      }
-    }
-  },
+  "chainStepTrainerBridgedPending": "Warte darauf, dass {app} sich mit „{bridge}“ verbindet",
+  "@chainStepTrainerBridgedPending": {"placeholders": {"app": {"type": "String"}, "bridge": {"type": "String"}}},
   "chainStepTrainerBridgedHint": "Wähle „{bridge}“ als Trainer in {app}.",
   "@chainStepTrainerBridgedHint": {
     "placeholders": {
@@ -2191,8 +2213,8 @@
   "@chainStepTrainerBridgedHint2": {"placeholders": {"app": {"type": "String"}, "bridge": {"type": "String"}, "trainer": {"type": "String"}}},
   "chainPendingSubtitleController": "{app} hat deinen Trainer über BikeControl, aber deine Tasten erreichen {app} erst, wenn du im Kopplungsbildschirm auch den BikeControl-Controller verbindest.",
   "@chainPendingSubtitleController": {"placeholders": {"app": {"type": "String"}}},
-  "chainStatusWaitingForPickup": "Warte darauf, dass {app} ihn erkennt",
-  "@chainStatusWaitingForPickup": {"placeholders": {"app": {"type": "String"}}},
+  "chainStatusWaitingForPickup": "Warte darauf, dass {app} sich mit „{bridge}“ verbindet",
+  "@chainStatusWaitingForPickup": {"placeholders": {"app": {"type": "String"}, "bridge": {"type": "String"}}},
   "vsTransportSameDeviceNote": "Bluetooth erreicht keine App auf diesem Gerät — WLAN wird verwendet.",
   "vsSameDeviceBlockedFix": "Was funktioniert: BikeControl auf einem Handy oder Tablet neben deinem Rad, oder {app} auf einem anderen Gerät.",
   "@vsSameDeviceBlockedFix": {"description": "Trainer page: the setups that work when the trainer app on this device can't reach BikeControl's bridge.", "placeholders": {"app": {"type": "String"}}},
@@ -2896,5 +2918,6 @@
   "vsCalibrateHintTooLight": "Hochschalten halten",
   "chainHintTitle": "Leg die Kette auf einen mittleren Gang",
   "chainHintVeryBigGear": "Deine Kette auf dem Trainer liegt auf einem sehr großen Gang (Übersetzung etwa {ratio}). Virtuelle Gänge fühlen sich realistisch an, wenn die Kette auf einem mittleren Gang liegt, z. B. 34/17 oder 50/25. Lass sie dort und schalte nur noch virtuell.",
-  "chainHintVerySmallGear": "Deine Kette auf dem Trainer liegt auf einem sehr kleinen Gang (Übersetzung etwa {ratio}). Virtuelle Gänge fühlen sich realistisch an, wenn die Kette auf einem mittleren Gang liegt, z. B. 34/17 oder 50/25. Lass sie dort und schalte nur noch virtuell."
+  "chainHintVerySmallGear": "Deine Kette auf dem Trainer liegt auf einem sehr kleinen Gang (Übersetzung etwa {ratio}). Virtuelle Gänge fühlen sich realistisch an, wenn die Kette auf einem mittleren Gang liegt, z. B. 34/17 oder 50/25. Lass sie dort und schalte nur noch virtuell.",
+  "ignoredDevicesNearby": "Ignorierte Geräte in der Nähe gefunden"
 }

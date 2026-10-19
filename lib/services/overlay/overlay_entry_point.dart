@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:bike_control/main.dart' show recordError;
+import 'package:bike_control/services/overlay/android_overlay_controller.dart' show resizeAndroidOverlayWindow;
 import 'package:bike_control/services/overlay/overlay_state.dart';
 import 'package:bike_control/widgets/overlay/overlay_app.dart';
+import 'package:bike_control/widgets/overlay/overlay_window_fit.dart';
 import 'package:bike_control/widgets/overlay/trainer_overlay_view.dart';
 import 'package:flutter/services.dart' show MethodChannel;
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
@@ -69,27 +72,34 @@ class _OverlayAppState extends State<_OverlayApp> {
     return OverlayShadcnApp(
       home: Scaffold(
         backgroundColor: const Color(0x00000000),
-        child: Center(
-          child: TrainerOverlayView(
-            state: _state,
-            // Mode toggle: not exposed (no pill tap on Android).
-            onModeToggle: null,
-            // flutter_overlay_window provides its own dragging.
-            onDragStart: null,
-            // Send action requests back to the main isolate, where the
-            // controller listens via `FlutterOverlayWindow.overlayListener`.
-            onPrimaryDecrement: () {
-              _overlayActionsChannel.invokeMethod('push', 'primaryDecrement').catchError((Object e, StackTrace s) {
-                recordError(e, s, context: 'overlay.android.push.primaryDecrement');
-                return null;
-              });
-            },
-            onPrimaryIncrement: () {
-              _overlayActionsChannel.invokeMethod('push', 'primaryIncrement').catchError((Object e, StackTrace s) {
-                recordError(e, s, context: 'overlay.android.push.primaryIncrement');
-                return null;
-              });
-            },
+        child: OverlayWindowFit(
+          state: _state,
+          drag: false,
+          // The window follows the card, so it has no empty room beside it
+          // when fields are off. resizeOverlay takes dp (showOverlay px).
+          onSize: (size) => unawaited(resizeAndroidOverlayWindow(size)),
+          child: Center(
+            child: TrainerOverlayView(
+              state: _state,
+              // Mode toggle: not exposed (no pill tap on Android).
+              onModeToggle: null,
+              // flutter_overlay_window provides its own dragging.
+              onDragStart: null,
+              // Send action requests back to the main isolate, where the
+              // controller listens via `FlutterOverlayWindow.overlayListener`.
+              onPrimaryDecrement: () {
+                _overlayActionsChannel.invokeMethod('push', 'primaryDecrement').catchError((Object e, StackTrace s) {
+                  recordError(e, s, context: 'overlay.android.push.primaryDecrement');
+                  return null;
+                });
+              },
+              onPrimaryIncrement: () {
+                _overlayActionsChannel.invokeMethod('push', 'primaryIncrement').catchError((Object e, StackTrace s) {
+                  recordError(e, s, context: 'overlay.android.push.primaryIncrement');
+                  return null;
+                });
+              },
+            ),
           ),
         ),
       ),

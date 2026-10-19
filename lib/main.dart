@@ -8,6 +8,7 @@ import 'package:bike_control/bluetooth/emulation/real_ble_platform.dart';
 import 'package:bike_control/bluetooth/emulation/routing_ble_platform.dart';
 import 'package:bike_control/bluetooth/messages/notification.dart';
 import 'package:bike_control/gen/l10n.dart';
+import 'package:bike_control/services/overlay/trainer_overlay_service.dart';
 import 'package:bike_control/services/overlay/desktop_overlay_window.dart';
 import 'package:bike_control/services/overlay/overlay_entry_point.dart' as overlay_entry;
 import 'package:bike_control/utils/actions/android.dart';
@@ -38,8 +39,10 @@ import 'pages/navigation.dart';
 import 'utils/actions/base_actions.dart';
 import 'utils/core.dart';
 import 'utils/host_platform.dart';
+import 'utils/network_server_teardown.dart';
 import 'utils/window_size.dart';
 import 'widgets/ui/app_theme.dart';
+import 'widgets/ui/safe_area_popover_handler.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
 var screenshotMode = false;
@@ -761,6 +764,12 @@ class _BikeControlAppState extends State<BikeControlApp> {
         );
       }
 
+      // The overlay notification's "Hide overlay" reaches this isolate through
+      // the overlay controller, and the overlay service can still be running
+      // from before this screen was recreated — so create it now, not on the
+      // first show.
+      if (!kIsWeb && Platform.isAndroid) TrainerOverlayService.forCurrentPlatform();
+
       if (mounted) setState(() => _ready = true);
     } catch (e, s) {
       recordError(e, s, context: 'Startup bootstrap');
@@ -782,8 +791,9 @@ class _BikeControlAppState extends State<BikeControlApp> {
         child: ShadcnApp(
           navigatorKey: navigatorKey,
           debugShowCheckedModeBanner: false,
-          menuHandler: OverlayHandler.popover,
-          popoverHandler: OverlayHandler.popover,
+          // Popovers and menus stay clear of the status and navigation bars.
+          menuHandler: const SafeAreaPopoverHandler(),
+          popoverHandler: const SafeAreaPopoverHandler(),
           localizationsDelegates: [
             ...ShadcnLocalizations.localizationsDelegates,
             OtherLocalizationsDelegate(),
@@ -938,6 +948,9 @@ class _StarterState extends State<_Starter> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       unawaited(IAPManager.instance.refreshEntitlementsOnResume());
     }
+    // The process can outlive this engine on Android (foreground service);
+    // release the server ports so the next launch gets them back.
+    if (!kIsWeb && Platform.isAndroid) unawaited(stopNetworkServersOnLifecycleChange(state));
   }
 
   @override

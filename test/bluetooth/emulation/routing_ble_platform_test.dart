@@ -17,7 +17,12 @@ class _ThrowingScanPlatform extends FakeUniversalBlePlatform {
 // side actually handled a call instead of both sides looking identical.
 class _UnreachableRealPlatform extends FakeUniversalBlePlatform {
   @override
-  Future<void> connect(String deviceId, {Duration? connectionTimeout, bool autoConnect = false}) async {
+  Future<void> connect(
+    String deviceId, {
+    Duration? connectionTimeout,
+    bool autoConnect = false,
+    ConnectionPlatformConfig? platformConfig,
+  }) async {
     throw StateError('real must not be reached for emulated: ids');
   }
 }
@@ -28,12 +33,12 @@ void main() {
   late RoutingBlePlatform routing;
 
   FakePeripheral peripheral(String id) => FakePeripheral(
-        deviceId: id,
-        name: 'P $id',
-        services: [
-          BleService('0000180f-0000-1000-8000-00805f9b34fb', const []),
-        ],
-      );
+    deviceId: id,
+    name: 'P $id',
+    services: [
+      BleService('0000180f-0000-1000-8000-00805f9b34fb', const []),
+    ],
+  );
 
   setUp(() {
     real = FakeUniversalBlePlatform();
@@ -81,7 +86,7 @@ void main() {
   test('forwards characteristic notifications to the routing onValueChange', () async {
     fake.addPeripheral(peripheral('emulated:1'));
     Uint8List? received;
-    routing.onValueChange = (deviceId, characteristicId, value, timestamp) => received = value;
+    routing.onValueChange = (change) => received = change.value;
 
     fake.notify('emulated:1', '00002a00-0000-1000-8000-00805f9b34fb', const [1, 2, 3]);
 
@@ -117,5 +122,68 @@ void main() {
         isA<StateError>().having((e) => e.message, 'message', 'FakePeripheral emulated:gone is not registered'),
       ),
     );
+  });
+
+  test('passes the connect platformConfig through to the child platform', () async {
+    real.addPeripheral(peripheral('aa:bb:cc:dd:ee:ff'));
+    final config = ConnectionPlatformConfig(
+      apple: AppleConnectionOptions(notifyOnConnection: true, notifyOnDisconnection: true, notifyOnNotification: true),
+    );
+
+    await routing.connect('aa:bb:cc:dd:ee:ff', platformConfig: config);
+
+    expect(real.lastConnectPlatformConfig, same(config));
+  });
+
+  test('forwards connection error details (errorCode / nativeErrorCode) from a child', () async {
+    fake.addPeripheral(peripheral('emulated:1'));
+    BleConnectionChange? change;
+    routing.onConnectionChange = (c) => change = c;
+
+    fake.updateConnection('emulated:1', false, 'link lost', UniversalBleErrorCode.deviceDisconnected, 0x13);
+
+    expect(change, isNotNull);
+    expect(change!.deviceId, 'emulated:1');
+    expect(change!.isConnected, isFalse);
+    expect(change!.error, 'link lost');
+    expect(change!.errorCode, UniversalBleErrorCode.deviceDisconnected);
+    expect(change!.nativeErrorCode, 0x13);
+  });
+
+  test('emits canonical lower-case ids and still routes them back to the registered peripheral', () async {
+    // universal_ble 3 canonicalises every emitted id; a peripheral registered
+    // with an upper-case address must still be reachable by that canonical id.
+    real.addPeripheral(peripheral('AA:BB:CC:DD:EE:FF'));
+    final seen = <String>[];
+    routing.onScanResultUpdate = (device) => seen.add(device.deviceId);
+
+    await routing.startScan();
+    expect(seen, contains('aa:bb:cc:dd:ee:ff'));
+
+    await routing.connect('aa:bb:cc:dd:ee:ff');
+    expect(real.peripherals['AA:BB:CC:DD:EE:FF']!.isConnected, isTrue);
+  });
+
+  test('routes descriptor reads and writes to the owning child', () async {
+    final p = peripheral('emulated:1');
+    p.descriptorValues['00002902-0000-1000-8000-00805f9b34fb'] = Uint8List.fromList(const [1, 0]);
+    fake.addPeripheral(p);
+
+    final value = await routing.readDescriptorValue(
+      'emulated:1',
+      '0000180f-0000-1000-8000-00805f9b34fb',
+      '00002a19-0000-1000-8000-00805f9b34fb',
+      '00002902-0000-1000-8000-00805f9b34fb',
+    );
+    expect(value, Uint8List.fromList(const [1, 0]));
+
+    await routing.writeDescriptorValue(
+      'emulated:1',
+      '0000180f-0000-1000-8000-00805f9b34fb',
+      '00002a19-0000-1000-8000-00805f9b34fb',
+      '00002902-0000-1000-8000-00805f9b34fb',
+      Uint8List.fromList(const [0, 0]),
+    );
+    expect(p.descriptorValues['00002902-0000-1000-8000-00805f9b34fb'], Uint8List.fromList(const [0, 0]));
   });
 }

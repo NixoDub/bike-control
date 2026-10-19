@@ -1,4 +1,5 @@
 import 'package:bike_control/bluetooth/devices/bluetooth_device.dart';
+import 'package:bike_control/gen/l10n.dart';
 import 'package:bike_control/services/sensors/ble_sensor_source.dart';
 import 'package:bike_control/utils/core.dart';
 
@@ -41,4 +42,16 @@ mixin BleSensorDevice on BluetoothDevice {
     final broadcast = core.connection.broadcast;
     return broadcast != null && (broadcast.isOn.value || broadcast.isEngaging);
   }
+
+  /// A sensor whose connect keeps failing (or that connects and drops right
+  /// away) must give up instead of looping. Straps are single-link hardware
+  /// and, on iOS, every app shares one BLE link to them: an endless retry
+  /// loop here keeps knocking the strap off the trainer app too. Picking the
+  /// sensor again (`Connection.connectDevice`) or the alert's Reconnect
+  /// button starts a fresh streak.
+  @override
+  int get maxAutoConnectAttempts => 3;
+
+  @override
+  String? get connectionGuidance => AppLocalizations.current.bleSensorConnectGuidance;
 }

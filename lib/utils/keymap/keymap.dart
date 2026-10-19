@@ -6,6 +6,7 @@ import 'package:accessibility/accessibility.dart';
 import 'package:bike_control/gen/l10n.dart';
 import 'package:bike_control/main.dart';
 import 'package:bike_control/utils/actions/android.dart';
+import 'package:bike_control/utils/ble_device_ids.dart';
 import 'package:bike_control/utils/core.dart';
 import 'package:bike_control/utils/keymap/buttons.dart';
 import 'package:dartx/dartx.dart';
@@ -15,6 +16,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import '../../bluetooth/devices/base_device.dart';
 import '../actions/base_actions.dart';
+import 'apps/bike_control.dart';
 import 'apps/custom_app.dart';
 import 'apps/supported_app.dart';
 
@@ -422,6 +424,13 @@ class KeyPair {
       (screenshotPath != null && screenshotPath!.trim().isNotEmpty) ||
       (command != null && command!.trim().isNotEmpty);
 
+  /// True when BikeControl itself is the trainer app ("self-hosted") and this
+  /// keypair's action is a trainer action BikeControl runs on the connected
+  /// trainer directly ([BaseActions.performAction] hands [trainerActions] to
+  /// the proxy device) — no other app and no connection method is involved.
+  bool get runsInSelfHostedBikeControl =>
+      inGameAction != null && trainerActions.contains(inGameAction) && core.settings.getTrainerApp() is BikeControl;
+
   /// True when this keypair has an action, but no connection method that's
   /// on right now can carry it — so pressing the button does nothing yet.
   bool get waitsForConnectionMethod =>
@@ -429,7 +438,9 @@ class KeyPair {
 
   @override
   String toString() {
-    final text = (inGameAction != null && (core.logic.emulatorEnabled || inGameAction!.isOutsideTrainerApp))
+    final text =
+        (inGameAction != null &&
+            (core.logic.emulatorEnabled || inGameAction!.isOutsideTrainerApp || runsInSelfHostedBikeControl))
         ? [
             inGameAction!.title,
             if (inGameActionValue != null) '$inGameActionValue',
@@ -553,7 +564,8 @@ class KeyPair {
         name = raw;
       } else if (raw is Map) {
         name = raw['name']?.toString();
-        deviceId = raw['deviceId']?.toString();
+        // Older builds stored BLE ids upper-case (see ble_device_ids.dart).
+        deviceId = canonicalBleDeviceIdOrNull(raw['deviceId']?.toString());
       }
 
       if (name == null) {

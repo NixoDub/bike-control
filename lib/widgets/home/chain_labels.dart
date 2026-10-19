@@ -69,6 +69,9 @@ ChainStepText chainStepText(BuildContext context, SetupStep step, {String? appNa
     SetupStepId.controllerSramSetup => step.done
         ? ChainStepText(l.chainStepSramSetup)
         : ChainStepText(l.sramSetup, l.chainStepSramSetupHint),
+    SetupStepId.controllerShimanoSetup => step.done
+        ? ChainStepText(l.chainStepShimanoSetup)
+        : ChainStepText(l.shimanoSetup, l.chainStepShimanoSetupHint),
     // Optional, so it is only ever emitted while outstanding (restore clears the
     // backup, so it can never sit ticked). The hint is the whole offer — that
     // the derailleur's own shifting comes back — since "restore" alone says
@@ -77,14 +80,17 @@ ChainStepText chainStepText(BuildContext context, SetupStep step, {String? appNa
     SetupStepId.trainerPaired => step.done
         ? ChainStepText(l.chainStepTrainerPaired)
         : ChainStepText(l.chainStepTrainerPairedPending),
-    // Whether the trainer app has actually picked the bridge up. The hint names
+    // Whether the trainer app has actually picked the bridge up. The label says
+    // who connects to what, by the bridge's own name: "waiting for the app to
+    // pick it up" read as BikeControl still trying to reach the trainer. The
+    // hint names
     // the exact entry to look for, which is the thing riders miss — and, when
     // the trainer's own name is known, the entry right beside it that they
     // pick instead, which bypasses BikeControl altogether.
     SetupStepId.trainerAppBridged => step.done
         ? ChainStepText(l.chainStepTrainerBridged(app))
         : ChainStepText(
-            l.chainStepTrainerBridgedPending(app),
+            l.chainStepTrainerBridgedPending(app, step.hintArg ?? 'BikeControl'),
             step.secondaryHintArg != null
                 ? l.chainStepTrainerBridgedHint2(app, step.hintArg ?? 'BikeControl', step.secondaryHintArg!)
                 : l.chainStepTrainerBridgedHint(step.hintArg ?? 'BikeControl', app),

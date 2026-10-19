@@ -13,10 +13,7 @@ dependencies:
   protobuf: ^4.2.0
   dartx: any
   shared_preferences: ^2.5.3
-  universal_ble:
-    git:
-      url: https://github.com/jonasbark/universal_ble.git
-      ref: changes
+  universal_ble: ^3.1.0
 
 
   flutter:

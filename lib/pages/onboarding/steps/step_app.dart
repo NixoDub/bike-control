@@ -9,6 +9,7 @@ import 'package:bike_control/pages/onboarding/widgets/onboarding_note.dart';
 import 'package:bike_control/utils/i18n_extension.dart';
 import 'package:bike_control/utils/keymap/apps/supported_app.dart';
 import 'package:flutter/rendering.dart' show RenderProxyBox;
+import 'package:bike_control/widgets/ui/trainer_app_logo.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 
@@ -46,7 +47,7 @@ class OnboardingAppTile extends StatelessWidget {
               height: 40,
               child: Center(
                 child: app.logoAsset != null
-                    ? Image.asset(app.logoAsset!, height: 36, fit: BoxFit.contain)
+                    ? TrainerAppLogo(asset: app.logoAsset!, url: app.logoUrl, height: 36, fit: BoxFit.contain)
                     : Container(
                         width: 40,
                         height: 40,

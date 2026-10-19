@@ -4,6 +4,7 @@ import 'package:bike_control/gen/l10n.dart';
 import 'package:bike_control/main.dart' show OtherLocalizationsDelegate, installLoggerErrorListener;
 import 'package:bike_control/pages/navigation.dart';
 import 'package:bike_control/widgets/ui/app_theme.dart';
+import 'package:bike_control/widgets/ui/safe_area_popover_handler.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prop/utils/shared.dart' show Logger;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -30,8 +31,8 @@ Future<void> pumpShell(
   await tester.pumpWidget(
     ShadcnApp(
       debugShowCheckedModeBanner: false,
-      menuHandler: OverlayHandler.popover,
-      popoverHandler: OverlayHandler.popover,
+      menuHandler: const SafeAreaPopoverHandler(),
+      popoverHandler: const SafeAreaPopoverHandler(),
       localizationsDelegates: [
         ...ShadcnLocalizations.localizationsDelegates,
         const OtherLocalizationsDelegate(),

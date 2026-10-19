@@ -8,6 +8,7 @@ import 'package:bike_control/bluetooth/devices/steering_device.dart';
 import 'package:bike_control/bluetooth/devices/bluetooth_device.dart';
 import 'package:bike_control/bluetooth/devices/proxy/proxy_device.dart';
 import 'package:bike_control/bluetooth/devices/sensors/ble_sensor_device.dart';
+import 'package:bike_control/bluetooth/devices/shimano/shimano_di2.dart';
 import 'package:bike_control/bluetooth/devices/sram/sram_axs.dart';
 import 'package:bike_control/bluetooth/devices/zwift/zwift_clickv2.dart';
 import 'package:bike_control/bluetooth/devices/zwift/zwift_device.dart';
@@ -21,6 +22,7 @@ import 'package:bike_control/bluetooth/devices/zwift/zwift_clickv2_right_side.da
 import 'package:bike_control/pages/click_v2_onboarding.dart';
 import 'package:bike_control/utils/click_v2_onboarding.dart';
 import 'package:bike_control/pages/unlock.dart';
+import 'package:bike_control/widgets/ignored_devices_nearby_hint.dart';
 import 'package:bike_control/widgets/ui/bk_motion.dart';
 import 'package:bike_control/widgets/ui/bk_touch_target.dart';
 import 'package:bike_control/widgets/ui/type_scale.dart';
@@ -40,11 +42,13 @@ import 'package:bike_control/pages/trainer_connection_settings.dart';
 import 'package:bike_control/services/overlay/trainer_overlay_service.dart';
 import 'package:bike_control/utils/core.dart';
 import 'package:bike_control/utils/device_setup_prompt.dart';
+import 'package:bike_control/pages/button_simulator.dart';
 import 'package:bike_control/utils/i18n_extension.dart';
 import 'package:bike_control/utils/iap/iap_manager.dart';
 import 'package:bike_control/utils/keymap/apps/bike_control.dart';
 import 'package:bike_control/services/local_network_access.dart';
-import 'package:bike_control/services/network_self_test/probes/passive_probes.dart' show AddressWarningKind, advertisedAddressWarning, advertisedAddressWarningKind;
+import 'package:bike_control/services/network_self_test/probes/passive_probes.dart'
+    show AddressWarningKind, advertisedAddressWarning, advertisedAddressWarningKind;
 import 'package:bike_control/utils/requirements/local_network.dart';
 import 'package:bike_control/utils/requirements/multi.dart';
 import 'package:bike_control/widgets/drivetrain/drivetrain_controls.dart';
@@ -77,6 +81,7 @@ import 'package:prop/emulators/dircon_emulator.dart' show RetrofitMode;
 import 'package:prop/mdns/service_advertiser.dart' show ServiceAdvertiser;
 import 'package:prop/prop.dart' show ClickKeepAwakeStatus, ClickLogic, LogLevel;
 import 'package:prop/utils/network_address.dart' show AdvertisedAddressPicker;
+import 'package:bike_control/widgets/ui/trainer_app_logo.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 /// How much the chain card wants to talk about a given trainer. Lower wins.
@@ -204,7 +209,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   final Map<String, ValueNotifier<ControllerPress>> _presses = {};
 
   ValueNotifier<ControllerPress> _pressesFor(String deviceId) =>
-      _presses.putIfAbsent(deviceId, () => ValueNotifier((button: null, generation: 0)));
+      _presses.putIfAbsent(deviceId, () => ValueNotifier((button: null, generation: 0, trigger: null)));
 
   /// How many buttons Ride last drew for each controller, to spot one it
   /// added since.
@@ -318,11 +323,23 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       if (notification is ButtonNotification && notification.buttonsClicked.isNotEmpty) {
         final device = notification.device;
         final presses = _pressesFor(device.uniqueId);
-        presses.value = (button: notification.buttonsClicked.first, generation: presses.value.generation + 1);
+        presses.value = (
+          button: notification.buttonsClicked.first,
+          generation: presses.value.generation + 1,
+          trigger: null,
+        );
         // Controllers without a fixed layout (gamepads, keyboards) add a button
         // on its first press; the picture and the list only show it on a rebuild.
         final shownCount = _buttonCounts[device.uniqueId];
         if (shownCount != null && shownCount != device.availableButtons.length && mounted) setState(() {});
+      } else if (notification is GestureNotification) {
+        // The press resolved (single / double / long): name its action.
+        final presses = _pressesFor(notification.device.uniqueId);
+        presses.value = (
+          button: notification.button,
+          generation: presses.value.generation,
+          trigger: notification.trigger,
+        );
       }
     });
 
@@ -721,6 +738,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             unlockUncertain: _unlockUncertain(device),
             unlockIsRideV2: device is ZwiftUnlock && device.isRideV2,
             sramSetupDone: device is SramAxs ? !device.needsGuidedSetup : null,
+            shimanoSetupDone: device is ShimanoDi2 && device.hasConfigService ? device.isButtonModeEnabled : null,
             sramCanRestore: device is SramAxs && device.canRestoreShifting,
             needsUnlockModeChoice:
                 (device is ZwiftClickV2 || device is ZwiftClickV2RightSide) && ClickV2Onboarding.isPending,
@@ -874,14 +892,20 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 24,
       children: [
-        BkGroupedSection(
-          key: const ValueKey('devices-controllers'),
-          header: l.controllers,
-          dividerIndent: chainRowTextInset,
-          children: [
-            for (final link in controllers) keyed(link, _row(link, devicesById[link.deviceId], inputs)),
-            if (!nothingPaired) _connectControllersRow(),
-          ],
+        // A controller on the ignore list never shows up here, however often
+        // the rider wakes it — say so under the list when the scan sees one.
+        ValueListenableBuilder<Set<String>>(
+          valueListenable: core.connection.ignoredDevicesNearby,
+          builder: (context, ignoredNearby, _) => BkGroupedSection(
+            key: const ValueKey('devices-controllers'),
+            header: l.controllers,
+            dividerIndent: chainRowTextInset,
+            footerChild: ignoredNearby.isEmpty ? null : const IgnoredDevicesNearbyHint(),
+            children: [
+              for (final link in controllers) keyed(link, _row(link, devicesById[link.deviceId], inputs)),
+              if (!nothingPaired) _connectControllersRow(),
+            ],
+          ),
         ),
         BkGroupedSection(
           key: ValueKey('devices-${slot.key.name}'),
@@ -1447,6 +1471,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 body: l.rideNoControllerBody,
                 actionLabel: l.connect,
                 onAction: () => _openController(null),
+                // Or press the trainer app's buttons from here, as the
+                // trainer page offers it.
+                secondaryKey: const ValueKey('ride-manual-control'),
+                secondaryLabel: switch (core.settings.getTrainerApp()) {
+                  final app? when app is! BikeControl => l.manualyControllingButton(shownTrainerAppName(app.name)),
+                  _ => null,
+                },
+                onSecondary: () => context.push(const ButtonSimulator()),
               ),
             for (final (i, device) in shown.indexed)
               Padding(
@@ -1776,6 +1808,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       statusLabel = l.chainStatusLostConnection;
     } else if (connecting) {
       statusLabel = l.chainStatusConnecting;
+    } else if (bridged && inputs.app.selfHosted) {
+      // BikeControl is the trainer app: the shifting runs right here, and
+      // there is no other app to wait for.
+      statusLabel = l.connected;
     } else if (bridged) {
       statusLabel = appHoldsBridge
           ? l.chainStatusBridged
@@ -1783,7 +1819,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           // the controller link: it has connected, it just hasn't picked the
           // trainer entry up — the other half of its pairing screen.
           : appReady
-          ? l.chainStatusWaitingForPickup(appName)
+          ? l.chainStatusWaitingForPickup(appName, proxy!.advertisementName)
           : l.onboardingSummaryWaitingFor(appName);
     } else if (appReady && inputs.app.name != null) {
       // Only vouch for the app handling shifting when the app is actually
@@ -1821,7 +1857,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       appName: inputs.app.name,
       leading: _tile(LucideIcons.bike, live: link.status == LinkStatus.ready || bridged),
       title: link.title.isEmpty ? l.chainTrainerTitle : link.title,
-      subtitle: bridged ? _bridgeTransport(proxy!) : null,
+      // How another app reaches the bridge. With BikeControl as the trainer
+      // app nothing is handed to another app, so "WiFi" would mislead.
+      subtitle: bridged && !inputs.app.selfHosted ? _bridgeTransport(proxy!) : null,
       statusLabel: statusLabel,
       statusDetail: bridged && appHoldsBridge && inputs.app.name != null
           ? Text(l.devicesBridgedTo(inputs.app.name!))
@@ -1982,7 +2020,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       leading: logo != null
           ? ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.asset(logo, width: BkIconTile.size, height: BkIconTile.size),
+              child: TrainerAppLogo(asset: logo, url: app?.logoUrl, width: BkIconTile.size, height: BkIconTile.size),
             )
           : _tile(LucideIcons.monitor, live: app != null),
       title: link.title.isEmpty ? l.chainAppTitle : link.title,
@@ -2058,6 +2096,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           // The same guided sheet the device card and the onboarding wizard
           // run — the derailleur cannot send anything until it has.
           await device.showGuidedSetup(context);
+        } else if (active == SetupStepId.controllerShimanoSetup && device is ShimanoDi2) {
+          // The same setup sheet the device card runs — until button mode is
+          // on, the Di2 shifts by itself and sends nothing.
+          await device.openSetup(context);
         } else if (active == SetupStepId.controllerSramRestore && device is SramAxs) {
           // The optional "restore original shifting" offer runs the same guided
           // restore sheet the device page does.

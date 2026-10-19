@@ -46,7 +46,7 @@ Future<void> main() async {
             child: ControllerButtonsCard(
               device: device,
               keymap: keymap,
-              presses: ValueNotifier((button: null, generation: 0)),
+              presses: ValueNotifier((button: null, generation: 0, trigger: null)),
               onUpdate: () {},
               onEdit: () {},
               wide: true,

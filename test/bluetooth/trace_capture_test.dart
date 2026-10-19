@@ -13,7 +13,10 @@ import 'package:prop/prop.dart';
 /// submitted to show. Note IAP is not initialised in this test either: an
 /// entitlement lookup anywhere on this path would throw.
 void main() {
-  tearDown(() => Logger.onTrace = null);
+  tearDown(() {
+    Logger.onTrace = null;
+    Logger.onEvent = null;
+  });
 
   test('trace lines are exported from startLogCapture on, without any entitlement', () {
     final connection = Connection();
@@ -26,5 +29,18 @@ void main() {
       connection.lastTraceEntries.map((e) => e.entry),
       ['trainer< ftms 054a00', 'trainer> 00002ad9 800501'],
     );
+  });
+
+  test('prop events land in the Logs: buffer, not the wire trace', () {
+    final connection = Connection();
+    connection.startLogCapture();
+
+    Logger.event('KICKR tilt: response op=0x66 code=3 (invalid parameter)');
+
+    expect(
+      connection.lastLogEntries.map((e) => e.entry),
+      contains('KICKR tilt: response op=0x66 code=3 (invalid parameter)'),
+    );
+    expect(connection.lastTraceEntries, isEmpty);
   });
 }

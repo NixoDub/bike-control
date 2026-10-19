@@ -8,11 +8,13 @@ import 'package:bike_control/bluetooth/devices/openbikecontrol/protocol_parser.d
 import 'package:bike_control/bluetooth/devices/proxy/proxy_device.dart';
 import 'package:bike_control/services/overlay/overlay_state.dart';
 import 'package:bike_control/services/settings_sync_service.dart';
+import 'package:bike_control/utils/ble_device_ids.dart';
 import 'package:bike_control/utils/core.dart';
 import 'package:bike_control/utils/iap/iap_manager.dart';
 import 'package:bike_control/utils/keymap/apps/supported_app.dart';
 import 'package:bike_control/utils/requirements/android.dart';
 import 'package:bike_control/utils/requirements/multi.dart';
+import 'package:bike_control/utils/settings/ble_device_id_migration.dart';
 import 'package:bike_control/utils/windows_store_environment.dart';
 import 'package:dartx/dartx.dart';
 import 'package:flutter/foundation.dart';
@@ -56,6 +58,13 @@ class Settings {
       // be skipped — but bound it so a stuck platform channel surfaces as a
       // recoverable error instead of an infinite freeze.
       prefs = await SharedPreferences.getInstance().timeout(const Duration(seconds: 10));
+      // Before anything below reads a device-keyed setting: universal_ble 3
+      // emits lower-case device ids, older builds stored them upper-case.
+      try {
+        await migrateBleDeviceIds(prefs, isWeb: kIsWeb);
+      } catch (e, s) {
+        recordError(e, s, context: 'Init.bleDeviceIdMigration');
+      }
       propPrefs.initialize(prefs);
       trainerAppListenable.value = getTrainerApp();
       final localeOverride = getLocaleOverride();
@@ -290,7 +299,7 @@ class Settings {
   /// (the default). Stored as the raw source id so an id that no longer
   /// resolves degrades to "trainer" at the read site instead of throwing.
   String? getSensorSelection(String quantityName) {
-    return prefs.getString(_sensorSelectionKey(quantityName));
+    return canonicalBleDeviceIdOrNull(prefs.getString(_sensorSelectionKey(quantityName)));
   }
 
   Future<void> setSensorSelection(String quantityName, String? sourceId) async {
@@ -734,8 +743,10 @@ class Settings {
     }
   }
 
+  /// Synced from other installs too, which may still store BLE ids
+  /// upper-case — read them in the form live devices report.
   List<String> _getIgnoredDeviceIds() {
-    return prefs.getStringList('ignored_device_ids') ?? [];
+    return (prefs.getStringList('ignored_device_ids') ?? []).map(canonicalBleDeviceId).toList();
   }
 
   List<String> _getIgnoredDeviceNames() {
@@ -746,7 +757,7 @@ class Settings {
     final ids = _getIgnoredDeviceIds();
     final names = _getIgnoredDeviceNames();
 
-    if (!ids.contains(deviceId)) {
+    if (!ids.contains(canonicalBleDeviceId(deviceId))) {
       ids.add(deviceId);
       names.add(deviceName);
       await prefs.setStringList('ignored_device_ids', ids);
@@ -759,12 +770,13 @@ class Settings {
     final ids = _getIgnoredDeviceIds();
     final names = _getIgnoredDeviceNames();
 
-    final index = ids.indexOf(deviceId);
+    final index = ids.indexOf(canonicalBleDeviceId(deviceId));
     if (index != -1) {
       ids.removeAt(index);
       names.removeAt(index);
       await prefs.setStringList('ignored_device_ids', ids);
       await prefs.setStringList('ignored_device_names', names);
+      core.connection.pruneIgnoredDevicesNearby();
       _triggerAutoSync();
     }
   }
@@ -954,6 +966,20 @@ class Settings {
 
   Future<void> setSramShiftingDisabled(String serial, bool disabled) async =>
       prefs.setBool('sram_disabled_$serial', disabled);
+
+  // Shimano Di2 button mode: whether the rider opted in (re-entered on every
+  // connect) and the E-TUBE passkey that authenticated it.
+
+  bool getShimanoButtonMode(String serial) => prefs.getBool('shimano_button_mode_$serial') ?? false;
+
+  Future<void> setShimanoButtonMode(String serial, bool enabled) async =>
+      prefs.setBool('shimano_button_mode_$serial', enabled);
+
+  String getShimanoPasskey(String serial) =>
+      prefs.getString('shimano_passkey_$serial') ?? ShimanoAuth.defaultPasskey;
+
+  Future<void> setShimanoPasskey(String serial, String passkey) async =>
+      prefs.setString('shimano_passkey_$serial', passkey);
 
   List<({int serial, int mask, int? deviceType})> getSramButtons(String serial) {
     final raw = prefs.getStringList('sram_buttons_$serial') ?? const [];

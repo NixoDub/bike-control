@@ -95,6 +95,9 @@ abstract class BaseDevice {
   Timer? _repeatTimer;
   bool _repeatInFlight = false;
   Set<ControllerButton> _previouslyPressedButtons = <ControllerButton>{};
+  // A multi-button press already fired; until every button is up, what is
+  // left held is that press being let go, not a new one.
+  bool _releasingChord = false;
   Set<ControllerButton> _activeLongPressButtons = <ControllerButton>{};
   ControllerButton? _pendingSingleClickButton;
 
@@ -134,6 +137,19 @@ abstract class BaseDevice {
         await _handleButtonsReleased();
         return;
       }
+
+      // Devices that report every change of the held set (Stages, Di2) send a
+      // chord let go finger by finger as [A, B] → [A] → []: the [A] is the
+      // tail of the chord, and acting on it would fire A once more on release.
+      final held = buttonsClicked.toSet();
+      if (_previouslyPressedButtons.length > 1 &&
+          held.length < _previouslyPressedButtons.length &&
+          _previouslyPressedButtons.containsAll(held)) {
+        _previouslyPressedButtons = held;
+        _releasingChord = true;
+        return;
+      }
+      _releasingChord = false;
 
       actionStreamInternal.add(ButtonNotification(buttonsClicked: buttonsClicked, device: this));
 
@@ -200,6 +216,10 @@ abstract class BaseDevice {
     _stopRepeatingSingleClick();
     final releasedButtons = _previouslyPressedButtons.toList();
     _previouslyPressedButtons.clear();
+    if (_releasingChord) {
+      _releasingChord = false;
+      return;
+    }
 
     if (releasedButtons.isEmpty) {
       return;
@@ -410,6 +430,7 @@ abstract class BaseDevice {
     ButtonTrigger trigger = ButtonTrigger.longPress,
   }) async {
     for (final action in buttonsClicked) {
+      actionStreamInternal.add(GestureNotification(device: this, button: action, trigger: trigger));
       if (_intercept(action, trigger, isKeyDown: true) != null) continue;
       // Check IAP status before executing command
       if (!_canExecuteCommand()) {
@@ -472,6 +493,7 @@ abstract class BaseDevice {
     ButtonTrigger trigger = ButtonTrigger.singleClick,
   }) async {
     for (final action in buttonsClicked) {
+      actionStreamInternal.add(GestureNotification(device: this, button: action, trigger: trigger));
       if (_intercept(action, trigger, isKeyDown: true) != null) continue;
       // Check IAP status before executing command
       if (!_canExecuteCommand()) {

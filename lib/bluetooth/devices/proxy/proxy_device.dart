@@ -6,9 +6,11 @@ import 'package:bike_control/bluetooth/devices/zwift/constants.dart';
 import 'package:bike_control/bluetooth/devices/zwift/zwift_clickv2.dart';
 import 'package:bike_control/bluetooth/messages/notification.dart';
 import 'package:bike_control/gen/l10n.dart';
+import 'package:bike_control/utils/trainer_connect.dart' show trainerConnectErrorMessage;
 import 'package:bike_control/main.dart';
 import 'package:bike_control/services/sensors/sensor_quantity.dart';
 import 'package:bike_control/utils/actions/base_actions.dart';
+import 'package:bike_control/utils/ble_device_ids.dart';
 import 'package:bike_control/utils/core.dart';
 import 'package:bike_control/utils/erg_power_stepping.dart';
 import 'package:bike_control/utils/gear_readout.dart';
@@ -36,8 +38,13 @@ import 'package:universal_ble/universal_ble.dart';
 class ProxyDevice extends BluetoothDevice {
   static final List<String> proxyServiceUUIDs = [
     FitnessBikeDefinition.HEART_RATE_MEASUREMENT_UUID, // Heart Rate
-    FitnessBikeDefinition.CYCLING_POWER_SERVICE_UUID, // Heart Rate
+    FitnessBikeDefinition.CYCLING_POWER_SERVICE_UUID, // Cycling Power
     FitnessBikeDefinition.FITNESS_MACHINE_SERVICE_UUID, // Fitness Machine
+    // FE-C over BLE. Some trainers (e.g. Decathlon Van Rysel D100/D500)
+    // advertise this as their only service; without it here they matched no
+    // trainer rule and never showed up in a scan, even though [isSmartTrainer]
+    // and the transport already handle FE-C.
+    FitnessBikeDefinition.FEC_BLE_SERVICE_UUID,
   ];
 
   /// Per-instance emulator used exclusively in proxy mode. Each proxy-mode
@@ -531,7 +538,11 @@ class ProxyDevice extends BluetoothDevice {
   /// so it shows up as a new device. Everything else keeps the device serial.
   String _bridgeSerialNumber() {
     final zwiftNamed = _retrofitModeN.value != RetrofitMode.proxy && core.settings.getTrainerApp() is Zwift;
-    return mdnsSerialNumber(zwiftNamed ? 'zwift:${scanResult.deviceId}' : scanResult.deviceId);
+    // Seeded with the id as universal_ble 2 reported it (upper-case on all but
+    // Windows): trainer apps recognise the bridge they paired by this serial,
+    // so the lower-case ids of universal_ble 3 must not change it.
+    final seedId = legacyCaseBleDeviceId(scanResult.deviceId);
+    return mdnsSerialNumber(zwiftNamed ? 'zwift:$seedId' : seedId);
   }
 
   /// Whether the bridge advertises 16-bit services bare (`1826`) or in the
@@ -1293,7 +1304,23 @@ class ProxyDevice extends BluetoothDevice {
   Future<void> reconnectUpstream() async {
     if (!isConnected && !isStartedListenable.value) return;
     await core.connection.disconnect(this, forget: false, persistForget: false, keepInList: true);
-    await core.connection.connectDevice(this);
+    // Every caller fires this from a UI callback nobody awaits, so a failed
+    // reconnect (WiFi: the trainer's mDNS name not resolving yet, a socket
+    // timeout) must end here — rethrown, it surfaces as an uncaught crash.
+    // Connection._connect has already logged it and reset the device; the
+    // usual rediscovery brings the trainer back.
+    try {
+      await core.connection.connectDevice(this);
+    } catch (e, s) {
+      recordError(e, s, context: 'ProxyDevice.reconnectUpstream');
+      core.connection.signalNotification(
+        AlertNotification(
+          LogLevel.LOGLEVEL_ERROR,
+          trainerConnectErrorMessage(AppLocalizations.current, e, toString()),
+        ),
+      );
+      return;
+    }
     // connectDevice resolves before discovery finishes on some transports —
     // wait for the rebuilt definition so callers can start using it.
     final deadline = DateTime.now().add(const Duration(seconds: 15));

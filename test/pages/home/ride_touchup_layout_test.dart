@@ -51,13 +51,15 @@ Future<void> main() async {
 /// app's, too wide to share the header with the switch, so the switch moves
 /// down beside the trainer's name rather than cutting the title (with the
 /// app's fonts English keeps it beside the title — see
-/// virtual_shifting_card_header_fit_test.dart).
+/// virtual_shifting_card_header_fit_test.dart). And 144 dp higher again
+/// since the setup steps above it stopped asking for buttons to be mapped,
+/// and for the app to connect, before there is a controller: two rows fewer.
 const _before = (
-  cardTop: 600.0,
+  cardTop: 456.0,
   // 36 shorter since the SIM / ERG explainer line left the card.
   cardHeight: 481.0,
-  numberTop: 720.0,
-  ergCenterY: 674.0,
-  buttonsTop: 1101.0,
+  numberTop: 576.0,
+  ergCenterY: 530.0,
+  buttonsTop: 957.0,
   titleCenterY: 32.0,
 );

@@ -1,4 +1,5 @@
 import 'package:bike_control/gen/l10n.dart';
+import 'package:bike_control/widgets/ui/app_theme.dart';
 import 'package:bike_control/widgets/ui/bk_tappable.dart';
 import 'package:bike_control/services/overlay/overlay_state.dart';
 import 'package:bike_control/utils/gear_readout.dart';
@@ -153,10 +154,12 @@ class TrainerOverlayView extends StatelessWidget {
     return Size((width + 2).ceilToDouble(), (height + _padding.vertical + 2).ceilToDouble());
   }
 
-  /// The widest value each reading keeps room for: four-digit watts,
+  /// The widest value each reading keeps room for: three-digit watts,
   /// three-digit rpm, a ratio under ten. In tabular figures every digit is as
-  /// wide as an 8, so values within these ranges never change the width.
-  static const (String, String) _widestPower = ('8888', 'W');
+  /// wide as an 8, so values within these ranges never change the width. A
+  /// sprint past 999 W shrinks the readings a little rather than keeping
+  /// room for it all ride.
+  static const (String, String) _widestPower = ('888', 'W');
   static const (String, String) _widestCadence = ('188', 'rpm');
   static const (String, String) _widestRatio = ('×8.88', '');
 
@@ -176,6 +179,7 @@ class TrainerOverlayView extends StatelessWidget {
     Typography typography = const Typography.geist(),
     String gearLabel = 'GEAR',
     bool? touch,
+    bool drag = true,
   }) {
     final isErg = state.mode == TrainerMode.ergMode;
     final controls = state.fields.contains(OverlayField.controls);
@@ -221,7 +225,12 @@ class TrainerOverlayView extends StatelessWidget {
     final side = (pillWidth > readingsWidth ? pillWidth : readingsWidth) + 1;
 
     final width =
-        (controls ? 2 * (hit + _gap) : 0) + numeralWidth + _dividerSlot + side + _gap + _dragSlot + _padding.horizontal;
+        (controls ? 2 * (hit + _gap) : 0) +
+        numeralWidth +
+        _dividerSlot +
+        side +
+        (drag ? _gap + _dragSlot : 0) +
+        _padding.horizontal;
     final numeralBlock = numeral.height + labelHeight;
     final sideBlock = pill.height + 4 + (readings.isEmpty ? 0 : _sideGap + readingHeight);
     var height = controls ? hit : 0.0;
@@ -232,9 +241,11 @@ class TrainerOverlayView extends StatelessWidget {
   }
 
   /// [fitWindowSize] for [state] with [context]'s text size, type and
-  /// language.
-  static Size fitWindowSizeOf(BuildContext context, TrainerOverlayState state) => fitWindowSize(
+  /// language. [drag] keeps room for the drag handle; the Android window
+  /// drags as a whole and has none.
+  static Size fitWindowSizeOf(BuildContext context, TrainerOverlayState state, {bool drag = true}) => fitWindowSize(
     state: state,
+    drag: drag,
     textScaler: MediaQuery.textScalerOf(context),
     typography: Theme.of(context).typography,
     gearLabel: AppLocalizations.maybeOf(context)?.rideGear.toUpperCase() ?? 'GEAR',
@@ -247,22 +258,24 @@ class TrainerOverlayView extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final useConstraints = pill ?? defaultTargetPlatform == TargetPlatform.android;
-    final textScaler = MediaQuery.textScalerOf(context);
     final dark = Theme.of(context).brightness == Brightness.dark;
     return ValueListenableBuilder<TrainerOverlayState>(
       valueListenable: state,
       builder: (context, s, _) {
         final controls = s.fields.contains(OverlayField.controls);
-        final size = windowSize(textScaler, controls: controls);
         return Container(
-          constraints: useConstraints ? BoxConstraints(maxWidth: size.width) : null,
+          // As wide as what it shows, like the desktop window: no empty room
+          // for fields that are off. The Android window follows this size.
+          constraints: useConstraints
+              ? BoxConstraints.tightFor(width: fitWindowSizeOf(context, s, drag: onDragStart != null).width)
+              : null,
           // On Android the overlay floats over the trainer app: a pill in the
           // card colour, nearly opaque. The desktop window paints the card
           // colour itself (it can't be transparent everywhere).
           decoration: useConstraints
               ? BoxDecoration(
                   color: cs.card.withValues(alpha: dark ? 0.94 : 0.95),
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(BkComponentThemes.cardRadius),
                   border: Border.all(color: cs.border),
                 )
               : null,
@@ -333,20 +346,20 @@ class TrainerOverlayView extends StatelessWidget {
           child: SizedBox(width: 1, height: 40, child: ColoredBox(color: cs.border)),
         ),
         Expanded(child: _side(context, cs, s)),
-        const SizedBox(width: _gap),
-        SizedBox(
-          width: _dragSlot,
-          child: onDragStart != null
-              // Opaque, so the whole slot drags, not just the 14 px icon.
-              ? GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onPanStart: (_) => onDragStart!(),
-                  child: Center(
-                    child: Icon(LucideIcons.gripVertical, size: 14, color: cs.mutedForeground),
-                  ),
-                )
-              : null,
-        ),
+        if (onDragStart != null) ...[
+          const SizedBox(width: _gap),
+          SizedBox(
+            width: _dragSlot,
+            // Opaque, so the whole slot drags, not just the 14 px icon.
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onPanStart: (_) => onDragStart!(),
+              child: Center(
+                child: Icon(LucideIcons.gripVertical, size: 14, color: cs.mutedForeground),
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -407,7 +420,9 @@ class TrainerOverlayView extends StatelessWidget {
           return width;
         }
 
-        var room = constraints.maxWidth;
+        // The window keeps room for three-digit watts; a sprint's fourth
+        // digit shrinks the row a little instead of pushing a reading out.
+        var room = constraints.maxWidth + widthOf(('8', ''));
         final shown = <(String, String)>[];
         for (final r in readings) {
           final needed = widthOf(r) + (shown.isEmpty ? 0 : readingGap);
@@ -416,8 +431,8 @@ class TrainerOverlayView extends StatelessWidget {
           room -= needed;
         }
         if (shown.isEmpty) return const SizedBox.shrink();
-        // Only the very last reading can still be too wide (a huge text size
-        // in the narrowest window); it scales down, the gear doesn't.
+        // What is still too wide (that digit, or a huge text size in the
+        // narrowest window) scales down; the gear doesn't.
         return Align(
           alignment: AlignmentDirectional.centerStart,
           child: FittedBox(

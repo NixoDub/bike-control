@@ -5,6 +5,10 @@ import 'package:flutter/services.dart';
 import '../buttons.dart';
 import '../keymap.dart';
 
+/// Biketerra (https://biketerra.com) — officially supported via the open
+/// OpenBikeControl protocol over Bluetooth. Biketerra announces the buttons it
+/// understands over the protocol; the Zwift-style Bluetooth connection and the
+/// keyboard shortcuts below remain for setups that don't use it.
 class Biketerra extends SupportedApp {
   @override
   String? get officialUrl => 'https://biketerra.com';
@@ -14,14 +18,21 @@ class Biketerra extends SupportedApp {
 
   @override
   List<(AppConnectionMethod, ConnectionSupport)> get connections => [
+    (AppConnectionMethod.obpBle, ConnectionSupport.supported),
     (AppConnectionMethod.zwiftBle, ConnectionSupport.beta),
   ];
+
+  @override
+  String? get logoAsset => 'assets/biketerra.png';
+
+  @override
+  String? get logoUrl => 'https://bikecontrol.app/images/partners/biketerra-icon.png';
 
   Biketerra()
     : super(
         name: 'Biketerra',
         packageName: "Biketerra",
-        officialIntegration: false,
+        officialIntegration: true,
         keymap: Keymap(
           keyPairs: [
             ...ControllerButton.values

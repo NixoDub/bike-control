@@ -77,7 +77,7 @@ void main() {
       final device = BluetoothDevice.fromScanResult(session.peripheral.scanResult) as BleCadenceDevice;
 
       Uint8List? lastFrame;
-      ble.onValueChange = (deviceId, characteristicId, value, timestamp) => lastFrame = value;
+      ble.onValueChange = (change) => lastFrame = change.value;
 
       final notify90 = session.inputs.whereType<EmulatedAction>().firstWhere((a) => a.label == 'Notify 90 rpm');
 
@@ -139,7 +139,7 @@ void main() {
       final device = BluetoothDevice.fromScanResult(session.peripheral.scanResult) as BlePowerDevice;
 
       Uint8List? lastFrame;
-      ble.onValueChange = (deviceId, characteristicId, value, timestamp) => lastFrame = value;
+      ble.onValueChange = (change) => lastFrame = change.value;
 
       final notify = session.inputs.whereType<EmulatedAction>().firstWhere(
         (a) => a.label == 'Notify 250 W @ 90 rpm',

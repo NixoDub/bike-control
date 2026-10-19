@@ -23,6 +23,7 @@ import '../../bluetooth/devices/gyroscope/gyroscope_steering.dart';
 import '../../bluetooth/devices/hid/hid_device.dart';
 import '../../bluetooth/devices/shimano/shimano_di2.dart';
 import '../../bluetooth/devices/sram/sram_axs.dart';
+import '../../bluetooth/devices/stages/stages_smart_bike.dart';
 import '../../bluetooth/devices/thinkrider/thinkrider_vs200.dart';
 import '../../bluetooth/devices/wahoo/wahoo_kickr_bike_shift.dart';
 import '../../bluetooth/devices/zwift/constants.dart';
@@ -66,6 +67,7 @@ const controllerOptions = <ControllerOption>[
   ControllerOption('cycplus'),
   ControllerOption('elite'),
   ControllerOption('thinkrider'),
+  ControllerOption('stages'),
   ControllerOption('gamepad'),
   ControllerOption('hid_keyboard'),
   ControllerOption('gyroscope'),
@@ -87,6 +89,7 @@ String controllerOptionLabel(AppLocalizations l, String id) => switch (id) {
   'cycplus' => 'Cycplus',
   'elite' => 'Elite',
   'thinkrider' => 'ThinkRider',
+  'stages' => 'Stages',
   'gamepad' => l.intakeControllerGamepad,
   'hid_keyboard' => l.intakeControllerHidKeyboard,
   'gyroscope' => l.intakeControllerGyroscope,
@@ -202,6 +205,7 @@ String? controllerOptionIdFor(BaseDevice device) {
   if (device is CycplusBc2) return 'cycplus';
   if (device is EliteSquare || device is EliteSterzo) return 'elite';
   if (device is ThinkRiderVs200) return 'thinkrider';
+  if (device is StagesSmartBike) return 'stages';
   if (device is GamepadDevice) return 'gamepad';
   if (device is HidDevice) return 'hid_keyboard';
   if (device is GyroscopeSteering) return 'gyroscope';

@@ -20,6 +20,7 @@ import 'package:bike_control/bluetooth/devices/zwift/zwift_play.dart';
 import 'package:bike_control/bluetooth/devices/zwift/zwift_play_fw2.dart';
 import 'package:bike_control/bluetooth/devices/zwift/zwift_ride.dart';
 import 'package:bike_control/gen/l10n.dart';
+import 'package:bike_control/main.dart' show recordError;
 import 'package:bike_control/services/sensors/ble_sensor_source.dart';
 import 'package:bike_control/utils/core.dart';
 import 'package:bike_control/utils/i18n_extension.dart';
@@ -35,6 +36,7 @@ import 'package:flutter/foundation.dart';
 import 'package:prop/emulators/definitions/fitness_bike_definition.dart';
 import 'package:prop/prop.dart' show LogLevel, SramAdvertisement;
 import 'package:prop/utils/wahoo_climb.dart';
+import 'package:prop/utils/ble_connection_options.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:universal_ble/universal_ble.dart';
 import 'package:url_launcher/url_launcher_string.dart';
@@ -47,6 +49,7 @@ import 'ltwoo/ltwoo_erx.dart';
 import 'sensors/ble_cadence_device.dart';
 import 'sensors/ble_heart_rate_device.dart';
 import 'sensors/ble_power_device.dart';
+import 'stages/stages_smart_bike.dart';
 import 'thinkrider/thinkrider_vs200.dart';
 import 'wheeltop/wheeltop_eds.dart';
 
@@ -88,6 +91,9 @@ abstract class BluetoothDevice extends BaseDevice {
     ZwiftConstants.ZWIFT_RIDE_CUSTOM_SERVICE_UUID,
     SquareConstants.SERVICE_UUID,
     WahooKickrBikeShiftConstants.SERVICE_UUID,
+    // Stages smart bike buttons — on web a service must be listed here to be
+    // accessible at all; matching itself stays name-gated.
+    StagesSmartBikeConstants.BUTTON_SERVICE_UUID,
     WahooKickrHeadwindConstants.SERVICE_UUID,
     wahooClimbServiceUuid,
     SterzoConstants.SERVICE_UUID,
@@ -156,6 +162,15 @@ abstract class BluetoothDevice extends BaseDevice {
     FitnessBikeDefinition.FITNESS_MACHINE_SERVICE_UUID,
     FitnessBikeDefinition.FEC_BLE_SERVICE_UUID,
   ]);
+
+  /// Whether [name] is a Decathlon Van Rysel HT smart trainer
+  /// (`VANRYSEL-HT…` — the D100/D500 FE-C units as well as the RCR). Like the
+  /// Tacx Neo, these can reach a Windows scan with no advertised services at
+  /// all, leaving the name as the only usable signal, so `fromScanResult`
+  /// matches it by name in both branches and builds a [ProxyDevice] whose real
+  /// services (FE-C or FTMS) are discovered on connect. Kept to the `-HT`
+  /// prefix so other Van Rysel products (straps, power meters) are untouched.
+  static bool _isVanRyselTrainerName(String name) => name.toUpperCase().startsWith('VANRYSEL-HT');
 
   /// Test seam: overrides the effective [kIsWeb] check so `fromScanResult`'s
   /// web-specific classification branch can be exercised from a normal
@@ -252,6 +267,11 @@ abstract class BluetoothDevice extends BaseDevice {
         _ when scanResult.name!.toUpperCase().startsWith('KICKR BIKE SHIFT') => WahooKickrBikeShift(scanResult),
         _ when scanResult.name!.toUpperCase().startsWith('KICKR BIKE PRO') => WahooKickrBikePro(scanResult),
         _ when scanResult.name!.toUpperCase().startsWith('KICKR BIKE') => WahooKickrBikeShift(scanResult),
+        // A smart bike that hosts its own shift buttons. Before the power-meter
+        // and trainer rules: 'STAGES' is a power-meter name and the bike
+        // advertises FTMS, but its buttons only work on this class (the
+        // trainer role is attached at connect time).
+        _ when StagesSmartBikeConstants.matchesName(scanResult.name!) => StagesSmartBike(scanResult),
         _ when scanResult.name!.toUpperCase().startsWith('CYCPLUS') && scanResult.name!.toUpperCase().contains('BC2') =>
           CycplusBc2(scanResult),
         _ when scanResult.name!.toUpperCase().startsWith('THINK VS') => ThinkRiderVs200(scanResult),
@@ -259,6 +279,8 @@ abstract class BluetoothDevice extends BaseDevice {
         // Windows' universal_ble surfaces the Tacx Neo with an empty
         // advertisement (no services/serviceData), so match on name alone.
         _ when scanResult.name!.toUpperCase().startsWith('TACX NEO') => ProxyDevice(scanResult),
+        // Same for Decathlon Van Rysel HT trainers — see [_isVanRyselTrainerName].
+        _ when _isVanRyselTrainerName(scanResult.name!) => ProxyDevice(scanResult),
         _ when scanResult.name!.toUpperCase().startsWith('RDR') => ShimanoDi2(scanResult),
         _ when scanResult.name!.toUpperCase().startsWith('SRAM') && _sramIsConnectable(scanResult) => SramAxs(
           scanResult,
@@ -330,6 +352,11 @@ abstract class BluetoothDevice extends BaseDevice {
         _ when scanResult.name!.toUpperCase().contains('KICKR BIKE SHIFT') => WahooKickrBikeShift(scanResult),
         _ when scanResult.name!.toUpperCase().startsWith('KICKR BIKE PRO') => WahooKickrBikePro(scanResult),
         _ when scanResult.name!.toUpperCase().startsWith('KICKR BIKE') => WahooKickrBikeShift(scanResult),
+        // A smart bike that hosts its own shift buttons. Before the power-meter
+        // and trainer rules: 'STAGES' is a power-meter name and the bike
+        // advertises FTMS, but its buttons only work on this class (the
+        // trainer role is attached at connect time).
+        _ when StagesSmartBikeConstants.matchesName(scanResult.name!) => StagesSmartBike(scanResult),
         _ when scanResult.name!.toUpperCase().startsWith('CYCPLUS') && scanResult.name!.toUpperCase().contains('BC2') =>
           CycplusBc2(scanResult),
         _ when scanResult.name!.toUpperCase().startsWith('THINK VS') => ThinkRiderVs200(scanResult),
@@ -339,6 +366,8 @@ abstract class BluetoothDevice extends BaseDevice {
         // match on it and build a ProxyDevice (real services discovered on
         // connect). Must win over the services-based ProxyDevice branch below.
         _ when scanResult.name!.toUpperCase().startsWith('TACX NEO') => ProxyDevice(scanResult),
+        // Same for Decathlon Van Rysel HT trainers — see [_isVanRyselTrainerName].
+        _ when _isVanRyselTrainerName(scanResult.name!) => ProxyDevice(scanResult),
         //_ when scanResult.services.contains(CycplusBc2Constants.SERVICE_UUID.toLowerCase()) => CycplusBc2(scanResult),
         _ when scanResult.services.contains(ShimanoDi2Constants.SERVICE_UUID.toLowerCase()) => ShimanoDi2(scanResult),
         _ when scanResult.services.contains(ShimanoDi2Constants.SERVICE_UUID_ALTERNATIVE.toLowerCase()) => ShimanoDi2(
@@ -493,7 +522,7 @@ abstract class BluetoothDevice extends BaseDevice {
   bool get keepsReconnectingWhileDropping => false;
 
   /// When true, the inactivity battery saver leaves this controller connected
-  /// (see `Connection._onInactivityTimeout`). Default false. A KICKR BIKE
+  /// (see `Connection._onInactivityTimeout`). Default false. A smart bike
   /// returns true while its trainer role is in use, since its link carries
   /// the trainer bridge too.
   bool get exemptFromBatterySaver => false;
@@ -561,10 +590,17 @@ abstract class BluetoothDevice extends BaseDevice {
       (c) => c.uuid == BleUuid.DEVICE_INFORMATION_CHARACTERISTIC_BATTERY_LEVEL.toLowerCase(),
     );
     if (batteryCharacteristic != null) {
-      final batteryData = await readUpstream(batteryService!.uuid, batteryCharacteristic.uuid);
-      if (batteryData.isNotEmpty) {
-        batteryLevel = batteryData.first;
-        core.connection.signalChange(this);
+      // Optional metadata: a read that fails (e.g. an encrypted characteristic
+      // on an unbonded device) must not fail the connect, or the device is
+      // dropped before handleServices and reconnected in a loop.
+      try {
+        final batteryData = await readUpstream(batteryService!.uuid, batteryCharacteristic.uuid);
+        if (batteryData.isNotEmpty) {
+          batteryLevel = batteryData.first;
+          core.connection.signalChange(this);
+        }
+      } catch (e, s) {
+        recordError(e, s, context: 'BluetoothDevice.connect battery level ${device.name ?? device.deviceId}');
       }
     }
 
@@ -581,7 +617,7 @@ abstract class BluetoothDevice extends BaseDevice {
 
   @protected
   Future<void> connectUpstream() async {
-    await UniversalBle.connect(device.deviceId);
+    await UniversalBle.connect(device.deviceId, platformConfig: bleConnectionPlatformConfig());
     if (!kIsWeb) {
       try {
         await UniversalBle.requestMtu(device.deviceId, 517);

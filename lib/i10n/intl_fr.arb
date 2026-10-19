@@ -20,6 +20,9 @@
   "overlayFieldsLabel": "Champs à afficher",
   "overlayGrantAndroidPermission": "Accorder l'autorisation d'Overlay",
   "overlayHide": "Masquer l'Overlay",
+  "overlayNotificationTitle": "L'Overlay de vitesse est activé",
+  "overlayNotificationText": "Touche pour ouvrir BikeControl",
+  "overlayNotificationChannel": "Overlay de vitesse",
   "overlayLowPowerMode": "Les Live Activities sont désactivées (mode économie d'énergie ou réglage système).",
   "overlayPermissionExplain": "Android a besoin d'une autorisation pour afficher l'Overlay par-dessus ton application Trainer.",
   "overlaySection": "Overlay",
@@ -1115,6 +1118,7 @@
   },
   "connectionGaveUpAfterAttempts": "Impossible de se connecter à {device} après plusieurs tentatives.",
   "wheeltopClaimedByDerailleurHint": "La manette est probablement accaparée par son dérailleur arrière. Éteignez le dérailleur ou laissez-le se mettre en veille, puis appuyez sur un bouton de la manette pendant la recherche.",
+  "bleSensorConnectGuidance": "Le capteur est peut-être utilisé par une autre app ou un autre appareil. Associez-le plutôt directement dans votre app d'entraînement, ou appuyez sur « Reconnecter » pour réessayer.",
   "unableToConnectToDeviceTimeout": "Impossible de se connecter à {device} : délai dépassé",
   "@unableToConnectToDeviceTimeout": {
     "placeholders": {
@@ -1166,6 +1170,27 @@
   "sramChecklistDisabling": "Désactivation du passage des vitesses",
   "sramChecklistRestoring": "Restauration du fonctionnement d'origine",
   "sramPressHold": "Appui long sur le dérailleur",
+  "shimanoSetup": "Utiliser les boutons Di2",
+  "shimanoDflyExplanation": "Appuyez sur un bouton D-Fly pour le configurer.",
+  "shimanoPanelIntro": "Utilisez vos manettes Di2 comme boutons BikeControl. Rien n'est modifié sur votre Di2 : tant que BikeControl est connecté, les leviers envoient des appuis au lieu de changer de vitesse.",
+  "shimanoSetupIntro": "Tant que BikeControl est connecté, votre Di2 ne change pas de vitesse. Ses leviers deviennent des boutons BikeControl. Déconnectez-vous et elle passe à nouveau les vitesses normalement. Aucun réglage de la Di2 n'est modifié.",
+  "shimanoSetupSuccess": "Les leviers de votre Di2 sont maintenant des boutons BikeControl. Déconnectez BikeControl pour changer de vitesse normalement.",
+  "shimanoDialogRunning": "Communication avec votre Di2 — gardez-le à proximité et réveillé.",
+  "shimanoAuthorizeTitle": "Réveillez votre Di2",
+  "shimanoAuthorizeBody": "Votre Di2 n'a pas répondu. Appuyez sur n'importe quel bouton de commande pour le réveiller, gardez-le à proximité, puis touchez Réessayer.",
+  "shimanoErrorTitle": "Ça n'a pas marché",
+  "shimanoGenericError": "Un problème est survenu. Veuillez réessayer.",
+  "shimanoShiftingOff": "Les boutons Di2 sont actifs. Votre Di2 ne change pas de vitesse tant que BikeControl est connecté.",
+  "shimanoSettingUp": "Configuration",
+  "shimanoAllSet": "Tout est prêt",
+  "shimanoChecklistAuthenticating": "Authentification avec le Di2",
+  "shimanoWakeUp": "Appuyez sur un bouton de commande pour le réveiller",
+  "shimanoChecklistActivating": "Passage de votre Di2 en mode boutons",
+  "shimanoTurnOff": "Ne plus utiliser les boutons Di2",
+  "shimanoPasskeyLabel": "Code d'accès E-TUBE",
+  "shimanoPasskeyHint": "Gardez 000000, sauf si vous avez défini votre propre code dans l'app E-TUBE.",
+  "shimanoPasskeyWrongTitle": "Code d'accès incorrect",
+  "shimanoPasskeyWrongBody": "Votre Di2 a refusé le code. Saisissez le code défini dans l'app E-TUBE.",
   "actionInclineIncrease": "Augmenter la pente",
   "actionInclineDecrease": "Diminuer la pente",
   "actionInclineZero": "Pente à plat (0 %)",
@@ -1234,6 +1259,7 @@
   },
   "onboardingWhereSubtitle": "Cela détermine comment BikeControl lui parle.",
   "onboardingWhereEnablesLocal": "BikeControl appuie sur les boutons de {app} pour toi — pas besoin d'un autre appareil.",
+  "onboardingWhereEnablesBluetooth": "{app} trouve BikeControl via Bluetooth.",
   "onboardingWhereEnablesNetwork": "{app} trouve BikeControl via ton Wi-Fi.",
   "onboardingWhereChangeLater": "Tu pourras changer cela plus tard dans les réglages de connexion.",
   "onboardingHelp": "Aide",
@@ -1656,6 +1682,8 @@
   "chainStepUnlockedLikelyUntil": "Probablement déverrouillé jusqu'à {date}",
   "chainStepSramSetup": "Commande configurée",
   "chainStepSramSetupHint": "Le dérailleur gère encore les vitesses lui-même : confie-les à BikeControl pour que les leviers envoient des appuis.",
+  "chainStepShimanoSetup": "Boutons Di2 actifs",
+  "chainStepShimanoSetupHint": "Votre Di2 change encore de vitesse elle-même : passez-la en mode boutons pour que les leviers envoient des appuis. Rien n'est modifié sur la Di2.",
   "chainStepClickV2Setup": "Choisis le mode de déverrouillage",
   "chainStepClickV2SetupHint": "Zwift réserve le Click V2 à sa propre application. Choisis comment BikeControl contourne cela et il se connecte aussitôt.",
   "chainStepClickV2KeepAwake": "Allume le côté gauche pour garder les voyants allumés",
@@ -1714,14 +1742,8 @@
       }
     }
   },
-  "chainStepTrainerBridgedPending": "En attente que {app} le détecte",
-  "@chainStepTrainerBridgedPending": {
-    "placeholders": {
-      "app": {
-        "type": "String"
-      }
-    }
-  },
+  "chainStepTrainerBridgedPending": "En attente que {app} se connecte à « {bridge} »",
+  "@chainStepTrainerBridgedPending": {"placeholders": {"app": {"type": "String"}, "bridge": {"type": "String"}}},
   "chainStepTrainerBridgedHint": "Choisis « {bridge} » comme home trainer dans {app}.",
   "@chainStepTrainerBridgedHint": {
     "placeholders": {
@@ -2189,8 +2211,8 @@
   "@chainStepTrainerBridgedHint2": {"placeholders": {"app": {"type": "String"}, "bridge": {"type": "String"}, "trainer": {"type": "String"}}},
   "chainPendingSubtitleController": "{app} a ton home trainer via BikeControl, mais tes boutons n'atteindront pas {app} tant que tu n'auras pas aussi connecté le contrôleur BikeControl sur son écran d'association.",
   "@chainPendingSubtitleController": {"placeholders": {"app": {"type": "String"}}},
-  "chainStatusWaitingForPickup": "En attente que {app} le détecte",
-  "@chainStatusWaitingForPickup": {"placeholders": {"app": {"type": "String"}}},
+  "chainStatusWaitingForPickup": "En attente que {app} se connecte à « {bridge} »",
+  "@chainStatusWaitingForPickup": {"placeholders": {"app": {"type": "String"}, "bridge": {"type": "String"}}},
   "vsTransportSameDeviceNote": "Le Bluetooth ne peut pas atteindre une appli sur ce même appareil — le Wi-Fi est utilisé.",
   "vsSameDeviceBlockedFix": "Ce qui marche : BikeControl sur un téléphone ou une tablette près de ton vélo, ou {app} sur un autre appareil.",
   "@vsSameDeviceBlockedFix": {"description": "Trainer page: the setups that work when the trainer app on this device can't reach BikeControl's bridge.", "placeholders": {"app": {"type": "String"}}},
@@ -2896,5 +2918,6 @@
   "vsCalibrateHintTooLight": "Maintiens vitesse supérieure",
   "chainHintTitle": "Place ta chaîne sur un rapport moyen",
   "chainHintVeryBigGear": "Ta chaîne sur le home trainer est sur un très grand rapport (développement d'environ {ratio}). Les vitesses virtuelles sont réalistes avec la chaîne sur un rapport moyen, par ex. 34/17 ou 50/25. Laisse-la là et change uniquement de vitesse virtuellement.",
-  "chainHintVerySmallGear": "Ta chaîne sur le home trainer est sur un très petit rapport (développement d'environ {ratio}). Les vitesses virtuelles sont réalistes avec la chaîne sur un rapport moyen, par ex. 34/17 ou 50/25. Laisse-la là et change uniquement de vitesse virtuellement."
+  "chainHintVerySmallGear": "Ta chaîne sur le home trainer est sur un très petit rapport (développement d'environ {ratio}). Les vitesses virtuelles sont réalistes avec la chaîne sur un rapport moyen, par ex. 34/17 ou 50/25. Laisse-la là et change uniquement de vitesse virtuellement.",
+  "ignoredDevicesNearby": "Appareils ignorés détectés à proximité"
 }

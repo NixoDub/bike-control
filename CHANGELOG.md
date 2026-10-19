@@ -1,3 +1,14 @@
+### 7.3.0 (19-10-2026)
+**Features**:
+- Shimano Di2: much better integration. The shifters work as BikeControl buttons right away, without assigning D-Fly channels in the E-Tube app first. The Di2 shifts normally again once BikeControl disconnects, and no Di2 setting is changed.
+- Biketerra is now officially supported: it connects to BikeControl over Bluetooth via OpenBikeControl, with buttons and steering.
+- Stages SB20: the bike's shift buttons work as a controller (beta).
+
+**Fixes**:
+- Gamepads keep working while the trainer app is in the foreground (Android, macOS, Windows).
+- Improved virtual shifting on trainers that apply gears without confirming them (KICKR family, Tacx Neo).
+- Van Rysel trainers are now detected
+
 ### 7.2.0 (08-10-2026)
 **Features**:
 - A new look with Ride, Devices, Activity and Settings tabs.

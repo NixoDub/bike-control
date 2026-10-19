@@ -8,9 +8,18 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 /// field is turned on or off, the mode flips, or the text size changes; never
 /// for the values alone.
 class OverlayWindowFit extends StatefulWidget {
-  const OverlayWindowFit({super.key, required this.state, required this.onSize, required this.child});
+  const OverlayWindowFit({
+    super.key,
+    required this.state,
+    required this.onSize,
+    required this.child,
+    this.drag = true,
+  });
 
   final ValueListenable<TrainerOverlayState> state;
+
+  /// Whether the view has a drag handle to keep room for.
+  final bool drag;
 
   /// Called after the frame with the new size; resize the window here.
   final ValueChanged<Size> onSize;
@@ -28,7 +37,7 @@ class _OverlayWindowFitState extends State<OverlayWindowFit> {
     return ValueListenableBuilder<TrainerOverlayState>(
       valueListenable: widget.state,
       builder: (context, s, child) {
-        final size = TrainerOverlayView.fitWindowSizeOf(context, s);
+        final size = TrainerOverlayView.fitWindowSizeOf(context, s, drag: widget.drag);
         if (size != _reported) {
           _reported = size;
           WidgetsBinding.instance.addPostFrameCallback((_) {

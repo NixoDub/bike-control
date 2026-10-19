@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:bike_control/bluetooth/ble_command_queue_config.dart';
 import 'package:bike_control/bluetooth/devices/bluetooth_device.dart';
 import 'package:bike_control/bluetooth/devices/gamepad/gamepad_device.dart';
 import 'package:bike_control/bluetooth/devices/gyroscope/gyroscope_steering.dart';
@@ -40,7 +41,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:gamepads/gamepads.dart';
 import 'package:prop/emulators/definitions/fitness_bike_definition.dart';
 import 'package:prop/emulators/definitions/sensor_definition.dart';
-import 'package:prop/prop.dart';
+import 'package:prop/prop.dart' hide Set;
 import 'package:universal_ble/universal_ble.dart';
 
 import 'devices/base_device.dart';
@@ -165,6 +166,11 @@ class Connection {
     // call once this sink is set, so recording it costs nothing beyond the
     // bounded buffer.
     Logger.onTrace = _traceLog.add;
+
+    // High-level lines from inside prop (e.g. the KICKR tilt control point's
+    // answers) belong with the shifts and ERG targets in "Logs:". prop's
+    // Logger.info never gets here: it only prints in a debug build.
+    Logger.onEvent = _appendLogEntry;
   }
 
   final Map<BaseDevice, StreamSubscription<bool>> _connectionSubscriptions = {};
@@ -176,6 +182,23 @@ class Connection {
   final _lastScanResult = <BleDevice>[];
   final ValueNotifier<bool> hasDevices = ValueNotifier(false);
   final ValueNotifier<bool> isScanning = ValueNotifier(false);
+
+  /// Ids of devices on the ignore list that the current scan has seen. They
+  /// are still never added or connected — this only lets the screens tell a
+  /// rider whose controller "won't show up" that it is in fact ignored.
+  /// Cleared when a scan starts; ids leave it when they are un-ignored.
+  final ValueNotifier<Set<String>> ignoredDevicesNearby = ValueNotifier(const {});
+
+  /// Drops ids from [ignoredDevicesNearby] that are no longer on the ignore
+  /// list. Called whenever the ignore list shrinks.
+  void pruneIgnoredDevicesNearby() {
+    if (ignoredDevicesNearby.value.isEmpty) return;
+    final stillIgnored = core.settings.getIgnoredDevices().map((d) => d.id).toSet();
+    final pruned = ignoredDevicesNearby.value.intersection(stillIgnored);
+    if (pruned.length != ignoredDevicesNearby.value.length) {
+      ignoredDevicesNearby.value = Set.unmodifiable(pruned);
+    }
+  }
 
   /// Parsed adverts of nearby SRAM controllers (shifters/blips/pods — NOT the RD),
   /// used to name and pre-register their buttons. Deduped by serial (last wins).
@@ -816,6 +839,7 @@ class Connection {
   }
 
   void initialize() {
+    configureBleCommandQueues();
     // Show what the rider owns before any radio has said a word.
     loadRememberedDevices();
     // Store renders stage a settled setup, not a launch.
@@ -1129,7 +1153,10 @@ class Connection {
       }
     };
 
-    UniversalBle.onValueChange = (deviceId, characteristicUuid, value, timestamp) async {
+    UniversalBle.onValueChange = (BleCharacteristicValue change) async {
+      final deviceId = change.deviceId;
+      final characteristicUuid = change.characteristicId;
+      final value = change.value;
       final device = bluetoothDevices.firstOrNullWhere((e) => e.device.deviceId == deviceId);
       if (device == null) {
         _actionStreams.add(LogNotification('Device not found: $deviceId'));
@@ -1187,7 +1214,9 @@ class Connection {
       }
     };
 
-    UniversalBle.onConnectionChange = (String deviceId, bool isConnected, String? error) {
+    UniversalBle.onConnectionChange = (BleConnectionChange change) {
+      final deviceId = change.deviceId;
+      final isConnected = change.isConnected;
       final device = bluetoothDevices.firstOrNullWhere((e) => e.device.deviceId == deviceId);
       if (device != null && !isConnected) {
         // allow reconnection
@@ -1208,7 +1237,7 @@ class Connection {
           }
         });
       }
-      if (core.settings.getPhoneSteeringEnabled() && IAPManager.instance.isProEnabledForCurrentDeviceOrDidPurchaseOld) {
+      if (core.settings.getPhoneSteeringEnabled()) {
         toggleGyroscopeSteering(true);
       }
     }
@@ -1219,6 +1248,7 @@ class Connection {
       return;
     }
     isScanning.value = true;
+    ignoredDevicesNearby.value = const {};
     _actionStreams.add(LogNotification(AppLocalizations.current.scanningForDevicesShort));
 
     if (screenshotMode) {
@@ -1382,12 +1412,14 @@ class Connection {
   void addDevices(List<BaseDevice> dev) {
     final ignoredDevices = core.settings.getIgnoredDevices();
     final ignoredDeviceIds = ignoredDevices.map((d) => d.id).toSet();
+    final seenIgnored = <String>{};
     final newDevices = dev.where((device) {
       if (devices.contains(device)) return false;
 
       // Check if device is in the ignored list
       if (device is BluetoothDevice) {
         if (ignoredDeviceIds.contains(device.device.deviceId)) {
+          seenIgnored.add(device.device.deviceId);
           return false;
         }
         // A controller the battery saver disconnected must not silently
@@ -1400,6 +1432,9 @@ class Connection {
 
       return true;
     }).toList();
+    if (seenIgnored.isNotEmpty && !ignoredDevicesNearby.value.containsAll(seenIgnored)) {
+      ignoredDevicesNearby.value = Set.unmodifiable({...ignoredDevicesNearby.value, ...seenIgnored});
+    }
     devices.addAll(newDevices);
     _connectionQueue.addAll(newDevices);
     // A device held back for its setup (a Zwift Click V2 before its
@@ -1648,7 +1683,16 @@ class Connection {
   Future<void> connectDevice(BaseDevice device) async {
     // An explicit reconnect (e.g. the device picker) clears any battery-saver
     // suppression so the controller auto-reconnects normally again afterwards.
-    if (device is BluetoothDevice) _suppressedAutoReconnect.remove(device.device.deviceId);
+    // It is also a fresh decision by the rider, so any auto-connect backoff
+    // streak starts over: the device gets its full attempt budget again
+    // instead of re-suppressing after one more failure.
+    if (device is BluetoothDevice) {
+      final id = device.device.deviceId;
+      _suppressedAutoReconnect.remove(id);
+      _backoffCooldownTimers.remove(id)?.cancel();
+      _consecutiveConnectFailures.remove(id);
+      _quickDropCounts.remove(id);
+    }
     // The rider is connecting it right now — a pending automatic retry would
     // race this attempt.
     _cancelConnectRetry(device);
