@@ -143,4 +143,44 @@ void main() {
     }
     expect(find.text('14'), findsOneWidget);
   });
+
+  group('the Android pill', () {
+    Future<RenderBox> pumpPill(WidgetTester tester, Set<OverlayField> fields) async {
+      await tester.pumpWidget(
+        ShadcnApp(
+          home: Scaffold(
+            child: Center(
+              child: TrainerOverlayView(
+                key: const ValueKey('pill'),
+                state: mkState(fields: fields),
+                pill: true,
+                onPrimaryDecrement: () {},
+                onPrimaryIncrement: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+      return tester.renderObject<RenderBox>(find.byKey(const ValueKey('pill')));
+    }
+
+    for (final fields in [
+      const {OverlayField.power, OverlayField.cadence},
+      const {OverlayField.controls, OverlayField.power, OverlayField.cadence, OverlayField.gearRatio},
+      const <OverlayField>{},
+    ]) {
+      testWidgets('is as wide as what it shows: $fields', (tester) async {
+        final box = await pumpPill(tester, fields);
+        final ctx = tester.element(find.byKey(const ValueKey('pill')));
+        final fit = TrainerOverlayView.fitWindowSizeOf(ctx, mkState(fields: fields).value, drag: false);
+        expect(box.size.width, fit.width, reason: 'no empty room for fields that are off');
+        expect(
+          fit.width,
+          lessThan(TrainerOverlayView.fitWindowSizeOf(ctx, mkState(fields: fields).value).width),
+          reason: 'nor for a drag handle it does not draw (the whole window drags)',
+        );
+        expect(tester.takeException(), isNull, reason: 'and nothing overflows');
+      });
+    }
+  });
 }

@@ -24,6 +24,9 @@ import 'package:prop/emulators/definitions/fitness_bike_definition.dart';
 /// 0.5.0's own overlay→main path doesn't deliver.
 const _overlayActionsChannel = MethodChannel('bike_control/overlay_actions');
 
+/// Room around the card in the Android overlay window, in dp, for its border.
+const double androidOverlayMargin = 16;
+
 class AndroidOverlayController implements TrainerOverlayController {
   static const _minPushIntervalMs = 100; // ~10 Hz
   final ValueNotifier<bool> _showing = ValueNotifier(false);
@@ -74,11 +77,13 @@ class AndroidOverlayController implements TrainerOverlayController {
     // a 3× display).
     final dpr = WidgetsBinding.instance.platformDispatcher.views.first.devicePixelRatio;
     int dpToPx(double dp) => (dp * dpr).round();
-    // Sized around the gear numeral at the rider's text size (the card is
-    // never shrunk to fit), with a margin for the card's border. Sized for
-    // the -/+ row too: the fields can change while the window is up.
-    final overlaySize = TrainerOverlayView.windowSize(
-      TextScaler.linear(WidgetsBinding.instance.platformDispatcher.textScaleFactor),
+    // Sized to what the card shows at the rider's text size (the card is
+    // never shrunk to fit). The overlay engine resizes the window whenever
+    // the fields or the mode change (see runOverlayApp).
+    final overlaySize = TrainerOverlayView.fitWindowSize(
+      state: _stateFor(def),
+      drag: false,
+      textScaler: TextScaler.linear(WidgetsBinding.instance.platformDispatcher.textScaleFactor),
     );
 
     // Android requires a foreground-service notification for SYSTEM_ALERT_WINDOW
@@ -92,8 +97,8 @@ class AndroidOverlayController implements TrainerOverlayController {
       flag: OverlayFlag.defaultFlag,
       visibility: NotificationVisibility.visibilitySecret,
       positionGravity: PositionGravity.none,
-      width: dpToPx(overlaySize.width + 16),
-      height: dpToPx(overlaySize.height + 16),
+      width: dpToPx(overlaySize.width + androidOverlayMargin),
+      height: dpToPx(overlaySize.height + androidOverlayMargin),
       startPosition: const OverlayPosition(20, 80),
     );
 
@@ -281,21 +286,23 @@ class AndroidOverlayController implements TrainerOverlayController {
   Future<void> _push({bool force = false}) async {
     final def = _def;
     if (def == null) return;
-    final s = TrainerOverlayState(
-      gear: def.currentGear.value,
-      maxGear: def.maxGear,
-      gearRatio: def.gearRatio.value,
-      mode: def.trainerMode.value,
-      powerW: def.powerW.value,
-      cadenceRpm: def.cadenceRpm.value,
-      ergTargetW: def.ergTargetPower.value,
-      fields: _fields,
-      frontShiftEnabled: def.frontShiftEnabled,
-      frontRingLarge: def.frontRing.value == FrontRing.large,
-    );
+    final s = _stateFor(def);
     if (!force && s == _lastPushed) return;
     _lastPushed = s;
     _lastPushAt = DateTime.now();
     await FlutterOverlayWindow.shareData(jsonEncode(s.toJson()));
   }
+
+  TrainerOverlayState _stateFor(FitnessBikeDefinition def) => TrainerOverlayState(
+    gear: def.currentGear.value,
+    maxGear: def.maxGear,
+    gearRatio: def.gearRatio.value,
+    mode: def.trainerMode.value,
+    powerW: def.powerW.value,
+    cadenceRpm: def.cadenceRpm.value,
+    ergTargetW: def.ergTargetPower.value,
+    fields: _fields,
+    frontShiftEnabled: def.frontShiftEnabled,
+    frontRingLarge: def.frontRing.value == FrontRing.large,
+  );
 }
