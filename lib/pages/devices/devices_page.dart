@@ -219,7 +219,6 @@ class _OtherInputsSectionState extends State<OtherInputsSection> {
               icon: LucideIcons.smartphone,
               title: l10n.devicesPhoneSteering,
               value: core.settings.getPhoneSteeringEnabled(),
-              proOnly: !IAPManager.instance.hasPurchasedBefore50RVC,
               onToggle: () {
                 final enable = !core.settings.getPhoneSteeringEnabled();
                 core.settings.setPhoneSteeringEnabled(enable);
