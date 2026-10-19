@@ -1171,6 +1171,7 @@
   "sramChecklistRestoring": "Przywracanie oryginalnego przełączania",
   "sramPressHold": "Naciśnij i przytrzymaj na przerzutce",
   "shimanoSetup": "Używaj przycisków Di2",
+  "shimanoDflyExplanation": "Naciśnij przycisk D-Fly, aby go skonfigurować.",
   "shimanoPanelIntro": "Używaj manetek Di2 jako przycisków BikeControl. Nic w Twojej Di2 nie jest zmieniane: gdy BikeControl jest połączony, dźwignie wysyłają naciśnięcia zamiast zmieniać biegi.",
   "shimanoSetupIntro": "Gdy BikeControl jest połączony, Twoja Di2 nie zmienia biegów. Jej dźwignie stają się przyciskami BikeControl. Po rozłączeniu znów zmienia biegi normalnie. Żadne ustawienie Di2 nie jest zmieniane.",
   "shimanoSetupSuccess": "Dźwignie Twojej Di2 są teraz przyciskami BikeControl. Rozłącz BikeControl, aby znów normalnie zmieniać biegi.",

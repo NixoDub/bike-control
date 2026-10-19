@@ -1171,6 +1171,7 @@
   "sramChecklistRestoring": "Ripristino del cambio originale",
   "sramPressHold": "Tieni premuto sul deragliatore",
   "shimanoSetup": "Usa i pulsanti Di2",
+  "shimanoDflyExplanation": "Premi un pulsante D-Fly per configurarlo.",
   "shimanoPanelIntro": "Usa i comandi Di2 come pulsanti di BikeControl. Sulla tua Di2 non cambia nulla: finché BikeControl è connesso, le leve inviano pressioni invece di cambiare.",
   "shimanoSetupIntro": "Finché BikeControl è connesso, la tua Di2 non cambia. Le leve diventano pulsanti di BikeControl. Disconnetti e torna a cambiare normalmente. Nessuna impostazione della Di2 viene modificata.",
   "shimanoSetupSuccess": "Le leve della tua Di2 ora sono pulsanti di BikeControl. Disconnetti BikeControl per tornare a cambiare normalmente.",

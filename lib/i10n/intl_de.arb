@@ -1183,6 +1183,7 @@
   "sramChecklistRestoring": "Ursprüngliche Schaltung wird wiederhergestellt",
   "sramPressHold": "Am Schaltwerk gedrückt halten",
   "shimanoSetup": "Di2-Tasten nutzen",
+  "shimanoDflyExplanation": "Drücke eine D-Fly-Taste, um sie einzurichten.",
   "shimanoPanelIntro": "Nutze deine Di2-Schalthebel als BikeControl-Tasten. An deiner Di2 wird nichts verändert: Solange BikeControl verbunden ist, senden die Hebel Tastendrücke statt zu schalten.",
   "shimanoSetupIntro": "Solange BikeControl verbunden ist, schaltet deine Di2 nicht. Die Hebel werden stattdessen zu BikeControl-Tasten. Trennst du die Verbindung, schaltet sie wieder normal. Keine Di2-Einstellung wird verändert.",
   "shimanoSetupSuccess": "Deine Di2-Hebel sind jetzt BikeControl-Tasten. Trenne BikeControl, um wieder normal zu schalten.",

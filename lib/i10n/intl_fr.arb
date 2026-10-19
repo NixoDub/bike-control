@@ -1171,6 +1171,7 @@
   "sramChecklistRestoring": "Restauration du fonctionnement d'origine",
   "sramPressHold": "Appui long sur le dérailleur",
   "shimanoSetup": "Utiliser les boutons Di2",
+  "shimanoDflyExplanation": "Appuyez sur un bouton D-Fly pour le configurer.",
   "shimanoPanelIntro": "Utilisez vos manettes Di2 comme boutons BikeControl. Rien n'est modifié sur votre Di2 : tant que BikeControl est connecté, les leviers envoient des appuis au lieu de changer de vitesse.",
   "shimanoSetupIntro": "Tant que BikeControl est connecté, votre Di2 ne change pas de vitesse. Ses leviers deviennent des boutons BikeControl. Déconnectez-vous et elle passe à nouveau les vitesses normalement. Aucun réglage de la Di2 n'est modifié.",
   "shimanoSetupSuccess": "Les leviers de votre Di2 sont maintenant des boutons BikeControl. Déconnectez BikeControl pour changer de vitesse normalement.",

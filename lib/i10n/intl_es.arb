@@ -1171,6 +1171,7 @@
   "sramChecklistRestoring": "Restaurando el cambio original",
   "sramPressHold": "Mantén pulsado en el desviador",
   "shimanoSetup": "Usar los botones Di2",
+  "shimanoDflyExplanation": "Pulsa un botón D-Fly para configurarlo.",
   "shimanoPanelIntro": "Usa tus mandos Di2 como botones de BikeControl. No se cambia nada en tu Di2: mientras BikeControl está conectado, las palancas envían pulsaciones en lugar de cambiar.",
   "shimanoSetupIntro": "Mientras BikeControl está conectado, tu Di2 no cambia. Sus palancas se convierten en botones de BikeControl. Desconecta y vuelve a cambiar con normalidad. No se cambia ningún ajuste de la Di2.",
   "shimanoSetupSuccess": "Las palancas de tu Di2 ahora son botones de BikeControl. Desconecta BikeControl para volver a cambiar con normalidad.",

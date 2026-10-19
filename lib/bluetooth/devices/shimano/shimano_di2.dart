@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:bike_control/bluetooth/messages/notification.dart';
+import 'package:bike_control/gen/l10n.dart';
 import 'package:bike_control/main.dart' show recordError;
 import 'package:bike_control/utils/core.dart';
 import 'package:bike_control/utils/keymap/buttons.dart';
@@ -27,6 +28,9 @@ class ShimanoDi2 extends BluetoothDevice {
   String get _serialKey => device.deviceId;
 
   bool get hasConfigService => _configTransport != null;
+
+  @visibleForTesting
+  void debugUseConfigTransport(ShimanoBleTransport transport) => _configTransport = transport;
 
   @override
   Future<void> handleServices(List<BleService> services) async {
@@ -62,7 +66,12 @@ class ShimanoDi2 extends BluetoothDevice {
   bool _isInitialized = false;
 
   @override
-  String get buttonExplanation => 'Click a D-Fly button to configure them.';
+  // Shown while no button is known yet. A Di2 with the config service sends
+  // nothing until button mode is set up, so pressing a paddle would do
+  // nothing — point at the setup instead.
+  String get buttonExplanation => hasConfigService
+      ? AppLocalizations.current.chainStepShimanoSetupHint
+      : AppLocalizations.current.shimanoDflyExplanation;
 
   @override
   Future<void> processCharacteristic(String characteristic, Uint8List bytes) async {
@@ -208,12 +217,29 @@ class ShimanoDi2 extends BluetoothDevice {
     final t = _configTransport;
     if (t == null) return;
     await ShimanoConfig.authenticate(t, passkey: passkey);
+    await startButtonSession(t);
+  }
+
+  /// Replay the button-mode sequence on [t]. Every step runs even if one
+  /// fails, so a single lost reply doesn't end it — but a Di2 that answered
+  /// none of them never switched, and saying "you're all set" would leave the
+  /// rider pressing paddles that do nothing. That fails as unresponsive, which
+  /// the setup sheet turns into "wake your Di2".
+  @visibleForTesting
+  Future<void> startButtonSession(ShimanoTransport t) async {
     await _buttonSession?.close();
-    _buttonSession = await ShimanoConfig.enterButtonMode(
-      t,
+    _buttonSession = null;
+    final counted = _CountingShimanoTransport(t);
+    final session = await ShimanoConfig.enterButtonMode(
+      counted,
       onPaddle: onPaddle,
       onStepError: (step, e, st) => unawaited(recordError(e, st, context: 'ShimanoDi2: button mode step $step')),
     );
+    if (counted.answered == 0 && counted.failed > 0) {
+      await session.close();
+      throw TimeoutException('Di2 answered none of the ${counted.failed} button mode steps');
+    }
+    _buttonSession = session;
     registerPaddleButtons();
   }
 
@@ -261,13 +287,27 @@ class ShimanoDi2 extends BluetoothDevice {
     }
   }
 
-  Future<void> _enterButtonModeLogged() async {
+  Future<void> _enterButtonModeLogged() =>
+      autoEnterButtonMode(() => enterButtonMode(passkey: core.settings.getShimanoPasskey(_serialKey)));
+
+  /// The automatic re-entry on connect. A stored passkey the Di2 now rejects
+  /// (changed in E-TUBE since setup) can't start working on its own, and a
+  /// rejection drops the link, so retrying it on every reconnect would only
+  /// cycle the connection while the card claims the paddles are buttons.
+  /// Switch button mode off instead: the setup step comes back and asks for
+  /// the passkey. Anything else (asleep, out of range) is retried next connect.
+  @visibleForTesting
+  Future<void> autoEnterButtonMode(Future<void> Function() enter) async {
     try {
-      await enterButtonMode(passkey: core.settings.getShimanoPasskey(_serialKey));
+      await enter();
       core.connection.signalChange(this);
     } catch (e, st) {
       actionStreamInternal.add(LogNotification('ShimanoDi2 could not enter button mode: $e'));
       await recordError(e, st, context: 'ShimanoDi2: enter button mode');
+      if (e is ShimanoPasskeyRejectedException) {
+        await core.settings.setShimanoButtonMode(_serialKey, false);
+        core.connection.signalChange(this);
+      }
     }
   }
 
@@ -402,4 +442,36 @@ enum _Di2State {
   keep,
   doublePress,
   released,
+}
+
+/// Counts which button-mode steps the Di2 answered.
+class _CountingShimanoTransport implements ShimanoTransport {
+  _CountingShimanoTransport(this._inner);
+  final ShimanoTransport _inner;
+  int answered = 0;
+  int failed = 0;
+
+  Future<T> _count<T>(Future<T> step) async {
+    try {
+      final result = await step;
+      answered++;
+      return result;
+    } catch (_) {
+      failed++;
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> subscribe(String characteristic) => _count(_inner.subscribe(characteristic));
+
+  @override
+  Future<void> write(String characteristic, Uint8List data, {bool withoutResponse = false}) =>
+      _count(_inner.write(characteristic, data, withoutResponse: withoutResponse));
+
+  @override
+  Future<Uint8List> read(String characteristic) => _count(_inner.read(characteristic));
+
+  @override
+  Stream<Uint8List> notifications(String characteristic) => _inner.notifications(characteristic);
 }

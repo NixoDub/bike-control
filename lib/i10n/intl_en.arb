@@ -1790,6 +1790,8 @@
   "sramChecklistRestoring": "Restoring original shifting",
   "sramPressHold": "Press & hold on the derailleur",
   "shimanoSetup": "Use Di2 buttons",
+  "shimanoDflyExplanation": "Press a D-Fly button to configure it.",
+  "@shimanoDflyExplanation": {"description": "Di2 controller settings, before any button is known: a Di2 without the E-TUBE config service sends its D-Fly buttons, so the rider presses one to add it."},
   "shimanoPanelIntro": "Use your Di2 shifters as BikeControl buttons. Nothing on your Di2 is changed: while BikeControl is connected, the paddles send button presses instead of shifting.",
   "shimanoSetupIntro": "While BikeControl is connected, your Di2 doesn't shift. Its paddles become BikeControl buttons instead. Disconnect and it shifts normally again. No Di2 setting is changed.",
   "shimanoSetupSuccess": "Your Di2 paddles are now BikeControl buttons. Disconnect BikeControl to shift normally again.",
