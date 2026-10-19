@@ -155,6 +155,7 @@ Future<void> setOnboardingMethodEnabled(
   SupportedApp app,
   bool value, {
   required VoidCallback onUpdate,
+  @visibleForTesting List<PlatformRequirement>? bluetoothRequirements,
 }) async {
   void toastError(Object e) {
     core.connection.signalNotification(
@@ -201,6 +202,17 @@ Future<void> setOnboardingMethodEnabled(
         }
       }
     case OnboardingMethod.bluetooth:
+      // The settings tile asks for these before its onChange runs (see
+      // ConnectionMethod); without them Android never advertises, while the
+      // method reads as on.
+      if (value &&
+          !await satisfyRequirements(
+            context,
+            bluetoothRequirements ?? core.permissions.getRemoteControlRequirements(),
+          )) {
+        onUpdate();
+        return;
+      }
       if (value) {
         await core.stopAllBleConnections();
       }
