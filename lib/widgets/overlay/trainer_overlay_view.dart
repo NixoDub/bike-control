@@ -154,10 +154,12 @@ class TrainerOverlayView extends StatelessWidget {
     return Size((width + 2).ceilToDouble(), (height + _padding.vertical + 2).ceilToDouble());
   }
 
-  /// The widest value each reading keeps room for: four-digit watts,
+  /// The widest value each reading keeps room for: three-digit watts,
   /// three-digit rpm, a ratio under ten. In tabular figures every digit is as
-  /// wide as an 8, so values within these ranges never change the width.
-  static const (String, String) _widestPower = ('8888', 'W');
+  /// wide as an 8, so values within these ranges never change the width. A
+  /// sprint past 999 W shrinks the readings a little rather than keeping
+  /// room for it all ride.
+  static const (String, String) _widestPower = ('888', 'W');
   static const (String, String) _widestCadence = ('188', 'rpm');
   static const (String, String) _widestRatio = ('×8.88', '');
 
@@ -418,7 +420,9 @@ class TrainerOverlayView extends StatelessWidget {
           return width;
         }
 
-        var room = constraints.maxWidth;
+        // The window keeps room for three-digit watts; a sprint's fourth
+        // digit shrinks the row a little instead of pushing a reading out.
+        var room = constraints.maxWidth + widthOf(('8', ''));
         final shown = <(String, String)>[];
         for (final r in readings) {
           final needed = widthOf(r) + (shown.isEmpty ? 0 : readingGap);
@@ -427,8 +431,8 @@ class TrainerOverlayView extends StatelessWidget {
           room -= needed;
         }
         if (shown.isEmpty) return const SizedBox.shrink();
-        // Only the very last reading can still be too wide (a huge text size
-        // in the narrowest window); it scales down, the gear doesn't.
+        // What is still too wide (that digit, or a huge text size in the
+        // narrowest window) scales down; the gear doesn't.
         return Align(
           alignment: AlignmentDirectional.centerStart,
           child: FittedBox(

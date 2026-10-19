@@ -1,5 +1,6 @@
 import 'package:bike_control/services/overlay/overlay_state.dart';
 import 'package:bike_control/widgets/overlay/trainer_overlay_view.dart';
+import 'package:bike_control/widgets/ui/type_scale.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prop/emulators/definitions/fitness_bike_definition.dart';
@@ -182,5 +183,47 @@ void main() {
         expect(tester.takeException(), isNull, reason: 'and nothing overflows');
       });
     }
+  });
+
+  group('room for watts', () {
+    TrainerOverlayState ride(int watts) => mkState(powerW: watts, cadenceRpm: 188).value;
+
+    testWidgets('keeps room for three-digit watts, not four', (tester) async {
+      await tester.pumpWidget(const ShadcnApp(home: SizedBox()));
+      final ctx = tester.element(find.byType(SizedBox));
+      final withPower = TrainerOverlayView.fitWindowSizeOf(ctx, ride(245), drag: false).width;
+      final withoutPower = TrainerOverlayView.fitWindowSizeOf(
+        ctx,
+        mkState(cadenceRpm: 92, fields: const {OverlayField.cadence}).value,
+        drag: false,
+      ).width;
+      final fourDigits = TextPainter(
+        text: TextSpan(
+          style: Theme.of(ctx).typography.caption,
+          children: [
+            TextSpan(text: '8888', style: BkNumerals.display(20, height: 1.0)),
+            const TextSpan(text: ' W'),
+          ],
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      expect(withPower - withoutPower, lessThan(fourDigits.width + 10), reason: 'no room kept for a fourth digit');
+      fourDigits.dispose();
+    });
+
+    testWidgets('a sprint over 999 W keeps cadence on, a little smaller', (tester) async {
+      await tester.pumpWidget(
+        ShadcnApp(
+          home: Scaffold(
+            child: Center(
+              child: TrainerOverlayView(state: ValueNotifier(ride(1888)), pill: true),
+            ),
+          ),
+        ),
+      );
+      expect(find.textContaining("1888"), findsOneWidget);
+      expect(find.textContaining("188 rpm"), findsOneWidget, reason: 'cadence does not give way to a sprint');
+      expect(tester.takeException(), isNull);
+    });
   });
 }

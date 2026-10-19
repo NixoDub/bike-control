@@ -115,13 +115,13 @@ Future<void> main() async {
   for (final mode in [TrainerMode.simMode, TrainerMode.ergMode]) {
     for (final MapEntry(key: name, value: fields) in combos.entries) {
       testWidgets('${mode.name}, $name: no more than 16 px of empty room, every reading shown', (tester) async {
-        await pumpFitted(tester, state(fields, mode: mode, power: 1999, cadence: 120, ratio: 3.53));
+        await pumpFitted(tester, state(fields, mode: mode, power: 999, cadence: 120, ratio: 3.53));
         expect(tester.takeException(), isNull, reason: 'no overflow');
         final s = slack(tester);
         expect(s, greaterThanOrEqualTo(-0.5), reason: 'the content fits');
         expect(s, lessThanOrEqualTo(16), reason: 'no room kept for what is off');
         if (fields.contains(OverlayField.power)) {
-          expect(find.textContaining('1999', findRichText: true), findsOneWidget);
+          expect(find.textContaining('999', findRichText: true), findsOneWidget);
         }
         if (fields.contains(OverlayField.cadence)) {
           expect(find.textContaining('120', findRichText: true), findsOneWidget);
