@@ -12,13 +12,16 @@ class OverlayNotificationReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != ACTION_HIDE) return
-        // Normally main Dart hides it and remembers the choice. With the main
-        // engine gone there is no Dart to ask, so stop the overlay service
-        // directly — the same thing the package's closeOverlay does.
-        if (!OverlayActionBridge.requestHideOverlay()) {
-            context.stopService(
-                Intent().setClassName(context, "flutter.overlay.window.flutter_overlay_window.OverlayService"),
+        // Normally main Dart hides it and remembers the choice. With no Dart
+        // to ask (main engine gone) or no Dart answering, stop the overlay
+        // service directly — the same thing the package's closeOverlay does.
+        val app = context.applicationContext
+        val stopOverlay = {
+            app.stopService(
+                Intent().setClassName(app, "flutter.overlay.window.flutter_overlay_window.OverlayService"),
             )
+            Unit
         }
+        if (!OverlayActionBridge.requestHideOverlay(onUnanswered = stopOverlay)) stopOverlay()
     }
 }

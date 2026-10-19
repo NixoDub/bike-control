@@ -8,6 +8,7 @@ import 'package:bike_control/bluetooth/emulation/real_ble_platform.dart';
 import 'package:bike_control/bluetooth/emulation/routing_ble_platform.dart';
 import 'package:bike_control/bluetooth/messages/notification.dart';
 import 'package:bike_control/gen/l10n.dart';
+import 'package:bike_control/services/overlay/trainer_overlay_service.dart';
 import 'package:bike_control/services/overlay/desktop_overlay_window.dart';
 import 'package:bike_control/services/overlay/overlay_entry_point.dart' as overlay_entry;
 import 'package:bike_control/utils/actions/android.dart';
@@ -762,6 +763,12 @@ class _BikeControlAppState extends State<BikeControlApp> {
           }),
         );
       }
+
+      // The overlay notification's "Hide overlay" reaches this isolate through
+      // the overlay controller, and the overlay service can still be running
+      // from before this screen was recreated — so create it now, not on the
+      // first show.
+      if (!kIsWeb && Platform.isAndroid) TrainerOverlayService.forCurrentPlatform();
 
       if (mounted) setState(() => _ready = true);
     } catch (e, s) {

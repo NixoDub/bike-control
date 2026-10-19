@@ -87,13 +87,37 @@ void main() {
     }
 
     test('switches the overlay off like the Overlay section\'s switch', () async {
-      final controller = AndroidOverlayController()..debugInstallMainHandler();
+      final controller = AndroidOverlayController();
 
       await tapHide();
 
       expect(pluginCalls, contains('closeOverlay'));
       expect(controller.isShowing.value, isFalse);
       // Persisted, or the next trainer reconnect would put it straight back.
+      expect(core.settings.getOverlayEnabled(), isFalse);
+    });
+
+    test('works in a run that never showed the overlay — the overlay can outlive the screen that opened it', () async {
+      // No show() in this isolate: Android recreated the app's screen while
+      // the overlay service kept running.
+      AndroidOverlayController();
+
+      await tapHide();
+
+      expect(pluginCalls, contains('closeOverlay'));
+      expect(core.settings.getOverlayEnabled(), isFalse);
+    });
+
+    test('a close that fails still switches the overlay off', () async {
+      AndroidOverlayController();
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(pluginChannel, (
+        call,
+      ) async {
+        throw PlatformException(code: 'service-gone');
+      });
+
+      await tapHide();
+
       expect(core.settings.getOverlayEnabled(), isFalse);
     });
   });

@@ -106,6 +106,13 @@ class AndroidOverlayController implements TrainerOverlayController {
   /// silently dropped.
   bool _mainHandlerInstalled = false;
 
+  /// Listens from the start, not from the first [show]: the overlay service
+  /// can outlive the screen that opened it, and the notification's "Hide
+  /// overlay" has to reach a recreated app that hasn't shown anything yet.
+  AndroidOverlayController() {
+    _installMainHandler();
+  }
+
   @override
   ValueListenable<bool> get isShowing => _showing;
 
@@ -251,9 +258,6 @@ class AndroidOverlayController implements TrainerOverlayController {
   /// Set up the main-side MethodCallHandler (idempotent). The Kotlin bridge
   /// invokes "action" on this channel whenever the overlay isolate calls
   /// `MethodChannel('bike_control/overlay_actions').invokeMethod('push', ...)`.
-  @visibleForTesting
-  void debugInstallMainHandler() => _installMainHandler();
-
   void _installMainHandler() {
     if (_mainHandlerInstalled) return;
     _mainHandlerInstalled = true;
@@ -263,8 +267,14 @@ class AndroidOverlayController implements TrainerOverlayController {
       // Overlay section's switch going off, persisted included — otherwise
       // the next trainer reconnect would put the overlay straight back.
       if (call.arguments == 'hideOverlay') {
-        await hide();
+        // Persist first: a close that fails must not leave the setting on,
+        // or the next trainer reconnect brings the overlay straight back.
         await core.settings.setOverlayEnabled(false);
+        try {
+          await hide();
+        } catch (e, s) {
+          recordError(e, s, context: 'overlay.android.hideAction');
+        }
         return null;
       }
       // Re-resolve the live FitnessBikeDefinition each call — see comment

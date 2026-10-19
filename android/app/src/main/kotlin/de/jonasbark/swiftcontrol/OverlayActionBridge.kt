@@ -40,11 +40,24 @@ object OverlayActionBridge {
      * off the way the Overlay section's switch does — persisted, so a trainer
      * reconnect doesn't bring it back. Returns false when the main engine is
      * gone (activity destroyed, process still alive for the overlay service),
-     * so the caller can stop the overlay itself.
+     * so the caller can stop the overlay itself. [onUnanswered] runs when the
+     * engine is there but Dart doesn't handle the call, for the same reason.
      */
-    fun requestHideOverlay(): Boolean {
+    fun requestHideOverlay(onUnanswered: () -> Unit): Boolean {
         val channel = mainChannel ?: return false
-        channel.invokeMethod("action", "hideOverlay")
+        channel.invokeMethod("action", "hideOverlay", object : MethodChannel.Result {
+            override fun success(result: Any?) {}
+
+            override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) {
+                Log.w(TAG, "hideOverlay failed in Dart: $errorCode $errorMessage")
+                onUnanswered()
+            }
+
+            override fun notImplemented() {
+                Log.w(TAG, "hideOverlay: no Dart handler on the main engine")
+                onUnanswered()
+            }
+        })
         return true
     }
 
