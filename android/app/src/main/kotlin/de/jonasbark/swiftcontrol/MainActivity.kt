@@ -42,6 +42,16 @@ class MainActivity: FlutterFragmentActivity(), GamepadsCompatibleActivity {
                     val enable = call.argument<Boolean>("enable") ?: true
                     result.success(OverlayActionBridge.setKeepScreenOn(enable))
                 }
+                "styleOverlayNotification" -> {
+                    result.success(
+                        OverlayNotification.style(
+                            applicationContext,
+                            title = call.argument<String>("title") ?: "BikeControl",
+                            text = call.argument<String>("text") ?: "",
+                            channelName = call.argument<String>("channelName") ?: "BikeControl",
+                        ),
+                    )
+                }
                 else -> result.notImplemented()
             }
         }

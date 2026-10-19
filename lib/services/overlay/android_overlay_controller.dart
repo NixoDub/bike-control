@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:bike_control/gen/l10n.dart';
 import 'package:bike_control/main.dart' show recordError;
 // Importing the entry point ensures it is compiled into the app binary.
 // `@pragma('vm:entry-point')` only prevents tree-shaking once a file is
@@ -26,6 +27,42 @@ const _overlayActionsChannel = MethodChannel('bike_control/overlay_actions');
 
 /// Room around the card in the Android overlay window, in dp, for its border.
 const double androidOverlayMargin = 16;
+
+/// Gives the overlay's foreground-service notification BikeControl's own
+/// status-bar icon, words and tap.
+///
+/// flutter_overlay_window 0.5.0 builds that notification itself: the launcher
+/// icon as the small icon — which Android draws as a filled circle — a bare
+/// title, and a tap that opens nothing. Android won't let the overlay run
+/// without it, so it is re-posted over the package's (same id, same channel)
+/// rather than removed. The service goes foreground after `showOverlay`
+/// returns, and until it has there is nothing to replace — hence the retry.
+Future<bool> styleAndroidOverlayNotification(
+  AppLocalizations l, {
+  int attempts = 20,
+  Duration retryDelay = const Duration(milliseconds: 100),
+}) async {
+  Object? lastError;
+  StackTrace? lastStack;
+  for (var i = 0; i < attempts; i++) {
+    try {
+      final ok = await _overlayActionsChannel.invokeMethod<bool>('styleOverlayNotification', {
+        'title': l.overlayNotificationTitle,
+        'text': l.overlayNotificationText,
+        'channelName': l.overlayNotificationChannel,
+      });
+      if (ok == true) return true;
+    } catch (e, s) {
+      lastError = e;
+      lastStack = s;
+    }
+    await Future.delayed(retryDelay);
+  }
+  if (lastError != null) {
+    recordError(lastError, lastStack, context: 'overlay.android.styleNotification');
+  }
+  return false;
+}
 
 class AndroidOverlayController implements TrainerOverlayController {
   static const _minPushIntervalMs = 100; // ~10 Hz
@@ -88,12 +125,12 @@ class AndroidOverlayController implements TrainerOverlayController {
 
     // Android requires a foreground-service notification for SYSTEM_ALERT_WINDOW
     // overlays — we can't suppress it entirely. Use visibilitySecret so it
-    // doesn't appear on the lock screen / heads-up, an empty content line, and
-    // a minimal title so it sits unobtrusively in the notification shade.
+    // doesn't appear on the lock screen / heads-up. Its icon, words and tap
+    // are replaced right after (see styleAndroidOverlayNotification).
     await FlutterOverlayWindow.showOverlay(
       enableDrag: true,
-      overlayTitle: 'BikeControl',
-      overlayContent: '',
+      overlayTitle: AppLocalizations.current.overlayNotificationTitle,
+      overlayContent: AppLocalizations.current.overlayNotificationText,
       flag: OverlayFlag.defaultFlag,
       visibility: NotificationVisibility.visibilitySecret,
       positionGravity: PositionGravity.none,
@@ -107,6 +144,7 @@ class AndroidOverlayController implements TrainerOverlayController {
     // creates it. Retry a few times because engine attach is async on some
     // OEMs (Oppo / OnePlus) and the cache lookup can race the show call.
     unawaited(_installOverlayHandlerWithRetry());
+    unawaited(styleAndroidOverlayNotification(AppLocalizations.current));
 
     // Keep the screen on while the overlay is visible. wakelock_plus only holds
     // the screen on via BikeControl's activity window, which is inert once the
