@@ -127,6 +127,42 @@ Future<void> main() async {
     );
   });
 
+  test('letting go of a two-button press one button at a time fires nothing more', () async {
+    // Stages and Di2 report every change of the held set, so a chord released
+    // finger by finger arrives as [A, B] → [A] → []. The leftover [A] is the
+    // tail of the chord, not a new press of A.
+    const other = ControllerButton('otherButton');
+    final stubActions = core.actionHandler as StubActions;
+    final app = buildApp(hasSingle: true, hasDouble: false, hasLong: false);
+    app.keymap.addKeyPair(
+      KeyPair(
+        buttons: [other],
+        physicalKey: null,
+        logicalKey: null,
+        trigger: ButtonTrigger.singleClick,
+        inGameAction: InGameAction.shiftDown,
+      ),
+    );
+    core.actionHandler.init(app);
+    final device = _ChordTestDevice(buttons: [testButton, other]);
+    activeDevices.add(device);
+
+    await device.handleButtonsClicked([testButton, other]);
+    final afterChord = stubActions.performedActions.length;
+
+    await device.handleButtonsClicked([testButton]);
+    await device.handleButtonsClicked([]);
+    await Future<void>.delayed(const Duration(milliseconds: 800));
+
+    expect(stubActions.performedActions.length, afterChord);
+
+    // The next press of the button on its own is a normal press again.
+    await device.handleButtonsClicked([testButton]);
+    await device.handleButtonsClicked([]);
+    await Future<void>.delayed(const Duration(milliseconds: 800));
+    expect(stubActions.performedActions.length, greaterThan(afterChord));
+  });
+
   group('implicit repeat on long press', () {
     test('starts repeating single click for Pro users with no explicit long press action', () async {
       final stubActions = core.actionHandler as StubActions;
@@ -305,6 +341,19 @@ class _ProTestDevice extends BaseDevice {
 
   @override
   bool get isProEnabledForRepeat => true;
+
+  @override
+  Future<void> connect() async {}
+}
+
+class _ChordTestDevice extends BaseDevice {
+  _ChordTestDevice({required List<ControllerButton> buttons})
+    : super(
+        'ChordTestDevice',
+        uniqueId: 'chord-test-device-id',
+        availableButtons: buttons,
+        icon: Icons.gamepad,
+      );
 
   @override
   Future<void> connect() async {}

@@ -125,7 +125,7 @@ void main() async {
       expect(stubActions.performedActions, isEmpty);
     });
 
-    test('both buttons pressed together click both, remaining hold clicks once more', () async {
+    test('both buttons pressed together click both, and letting go one at a time clicks nothing more', () async {
       final device = createDevice();
 
       await device.processCharacteristic(characteristic, _packet(0x01));
@@ -136,18 +136,14 @@ void main() async {
       await device.processCharacteristic(characteristic, _packet(0x02));
       expect(stubActions.performedActions.length, 2);
 
-      // Releasing one leaves the other pressed; the framework treats it as a
-      // fresh single press, so its click fires on the final release — the same
-      // semantics as other multi-button controllers in the app.
+      // Releasing one leaves the other held: that is the chord being let go,
+      // not a new press, so neither release fires another click.
       await device.processCharacteristic(characteristic, _packet(0x09));
       expect(stubActions.performedActions.length, 2);
 
       await device.processCharacteristic(characteristic, _packet(0x0a));
-      expect(stubActions.performedActions.length, 3);
-      expect(
-        stubActions.performedActions.last,
-        PerformedAction(WheeltopEdsButtons.shiftUp, isDown: true, isUp: true),
-      );
+      await Future<void>.delayed(const Duration(milliseconds: 800));
+      expect(stubActions.performedActions.length, 2);
     });
   });
 
