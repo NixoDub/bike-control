@@ -6,6 +6,7 @@ import 'package:bike_control/bluetooth/devices/zwift/constants.dart';
 import 'package:bike_control/bluetooth/devices/zwift/zwift_clickv2.dart';
 import 'package:bike_control/bluetooth/messages/notification.dart';
 import 'package:bike_control/gen/l10n.dart';
+import 'package:bike_control/utils/trainer_connect.dart' show trainerConnectErrorMessage;
 import 'package:bike_control/main.dart';
 import 'package:bike_control/services/sensors/sensor_quantity.dart';
 import 'package:bike_control/utils/actions/base_actions.dart';
@@ -1312,13 +1313,10 @@ class ProxyDevice extends BluetoothDevice {
       await core.connection.connectDevice(this);
     } catch (e, s) {
       recordError(e, s, context: 'ProxyDevice.reconnectUpstream');
-      final l10n = AppLocalizations.current;
       core.connection.signalNotification(
         AlertNotification(
           LogLevel.LOGLEVEL_ERROR,
-          e is TimeoutException
-              ? l10n.unableToConnectToDeviceTimeout(toString())
-              : l10n.connectionFailed(toString(), e.toString()),
+          trainerConnectErrorMessage(AppLocalizations.current, e, toString()),
         ),
       );
       return;
