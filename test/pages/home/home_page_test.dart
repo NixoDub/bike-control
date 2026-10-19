@@ -302,8 +302,8 @@ void _bannerStepTests() {
     });
 
     testWidgets('each outstanding step shows with its title and the Devices row\'s fix', (tester) async {
-      // A fresh install: no controller yet, MyWhoosh waiting for its
-      // connection.
+      // A fresh install: no controller yet, MyWhoosh chosen but nothing for
+      // it to connect to.
       await _pumpHome(tester);
       final banner = tester.widget<ReadyBanner>(find.byType(ReadyBanner));
       expect(banner.steps, isNotEmpty);
@@ -313,7 +313,9 @@ void _bannerStepTests() {
         expect(inBanner(find.byKey(ValueKey('ready-step-${step.linkId}-${step.step.id.name}'))), findsOneWidget);
       }
       expect(inBanner(find.text(l.chainStepControllerPairedPending)), findsOneWidget);
-      expect(inBanner(find.text(l.chainStepAppConnectedPending('MyWhoosh'))), findsOneWidget);
+      // Neither asks for something the missing controller has to come first for.
+      expect(inBanner(find.text(l.chainStepButtonsMappedPending)), findsNothing);
+      expect(inBanner(find.text(l.chainStepAppConnectedPending('MyWhoosh'))), findsNothing);
       // The controller's fix reads as on Devices — to a screen reader; on
       // screen the row is the button, with a chevron rather than a label.
       final controllerStep = banner.steps.firstWhere((s) => s.step.id == SetupStepId.controllerPaired);
@@ -544,6 +546,9 @@ void _twoPairingsTests() {
 
     setUp(() {
       l = AppLocalizations.current;
+      // A controller for the app to pick up — without one there is no
+      // connection step to word either way.
+      core.connection.devices.add(HidDevice('Keyboard')..isConnected = true);
     });
 
     tearDown(() {
