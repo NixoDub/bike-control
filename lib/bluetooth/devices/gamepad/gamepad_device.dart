@@ -63,14 +63,20 @@ class GamepadDevice extends BaseDevice {
   /// Android: a button press the accessibility service caught. Gamepad input
   /// only reaches the activity while BikeControl is in front; behind the
   /// trainer app, the service is the only way in (buttons only, no sticks).
-  void handleAccessibilityKey(String key, {required bool keyDown}) {
+  ///
+  /// Returns false for a key that is no gamepad button (volume, media, enter,
+  /// letters...): a HID keyboard or remote Android also lists as a gamepad
+  /// sends those, and they belong to the HID keyboard path.
+  bool handleAccessibilityKey(String key, {required bool keyDown}) {
     final value = keyDown ? 1.0 : 0.0;
-    final events = _androidNormalizer.normalize(
-      GamepadEvent(gamepadId: id, timestamp: 0, type: KeyType.button, key: key, value: value),
-    );
+    final events = _androidNormalizer
+        .normalize(GamepadEvent(gamepadId: id, timestamp: 0, type: KeyType.button, key: key, value: value))
+        .where((event) => event.button != null)
+        .toList();
     for (final event in events) {
       _handleEvent(event.button!.name, isAxis: false, value: event.value);
     }
+    return events.isNotEmpty;
   }
 
   void _handleEvent(String name, {required bool isAxis, required double value}) {
