@@ -184,6 +184,18 @@ void main() {
       expect(BluetoothDevice.fromScanResult(scan), isA<BlePowerDevice>());
     });
 
+    // Magene's crank power meters advertise as "PES-P515_<id>" with bare
+    // Cycling Power — without the name they were bridged as a trainer.
+    test('a Magene PES-P crank power meter resolves to BlePowerDevice', () {
+      final scan = BleDevice(
+        deviceId: 'pm-magene',
+        name: 'PES-P515_9849',
+        services: [BleSensorSource.cyclingPowerServiceUuid],
+      );
+
+      expect(BluetoothDevice.fromScanResult(scan), isA<BlePowerDevice>());
+    });
+
     // A brand this codebase used to hide entirely until the rider opted in
     // (Favero Assioma, Quarq, PowerCrank) is now just another known power
     // meter — nothing hides it any more.

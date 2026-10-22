@@ -135,6 +135,7 @@ abstract class BluetoothDevice extends BaseDevice {
     'ROTOR',
     'POWER2MAX',
     'POWRLINK', // Wahoo POWRLINK
+    'PES-P', // Magene crank power meters (PES-P505, PES-P515)
   ];
 
   /// Whether [name] matches one of the power-meter families BikeControl
