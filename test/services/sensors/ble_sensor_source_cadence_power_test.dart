@@ -97,6 +97,50 @@ void main() {
     });
   });
 
+  // A cadence sensor has no "stopped" message: the crank counter just stops
+  // advancing. Without an explicit 0 the last cadence stayed until the
+  // reading aged out (5 s), then fell back to the trainer's own estimate.
+  group('stopped crank', () {
+    final t0 = DateTime(2026, 10, 22, 20, 22);
+    DateTime at(int ms) => t0.add(Duration(milliseconds: ms));
+
+    for (final kind in ['CSC', 'CPS']) {
+      final source = kind == 'CSC' ? _cadenceSource : _powerSource;
+      void feed(BleSensorSource s, int revs, int t1024, int ms) => kind == 'CSC'
+          ? s.ingestCscMeasurement(_csc(revs, t1024), at: at(ms))
+          : s.ingestCpsMeasurement(_cpsWithCrank(150, revs, t1024), at: at(ms));
+
+      test('$kind: an unchanged counter for 3 s reads as 0 rpm', () {
+        final s = source();
+        feed(s, 100, 1024, 0);
+        feed(s, 101, 2048, 1000);
+        expect(s.readingFor(SensorQuantity.cadence).value!.value, 60);
+
+        feed(s, 101, 2048, 2000);
+        feed(s, 101, 2048, 3000);
+        expect(s.readingFor(SensorQuantity.cadence).value!.value, 60, reason: 'not yet 3 s');
+        feed(s, 101, 2048, 4000);
+        final reading = s.readingFor(SensorQuantity.cadence).value!;
+        expect(reading.value, 0);
+        expect(reading.timestamp, at(4000), reason: 'a fresh reading, so it does not drop out');
+      });
+
+      test('$kind: the first revolution after a pause only re-seeds', () {
+        final s = source();
+        feed(s, 100, 1024, 0);
+        feed(s, 101, 2048, 1000);
+        feed(s, 101, 2048, 4000);
+        expect(s.readingFor(SensorQuantity.cadence).value!.value, 0);
+
+        // Spans the pause (and possibly an event-time wrap): no cadence from it.
+        feed(s, 102, 40000, 5000);
+        expect(s.readingFor(SensorQuantity.cadence).value!.value, 0);
+        feed(s, 103, 41024, 6000);
+        expect(s.readingFor(SensorQuantity.cadence).value!.value, 60);
+      });
+    }
+  });
+
   group('CPS power', () {
     test('publishes instantaneous power from a single frame', () {
       final source = _powerSource();
