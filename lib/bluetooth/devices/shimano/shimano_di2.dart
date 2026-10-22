@@ -283,6 +283,7 @@ class ShimanoDi2 extends BluetoothDevice {
     final session = await ShimanoConfig.enterButtonMode(
       counted,
       onPaddle: onPaddle,
+      onUnknownFrame: onUnknownFrame,
       onStepError: (step, e, st) => unawaited(recordError(e, st, context: 'ShimanoDi2: button mode step $step')),
     );
     if (counted.answered == 0 && counted.failed > 0) {
@@ -295,7 +296,7 @@ class ShimanoDi2 extends BluetoothDevice {
 
   @visibleForTesting
   void registerPaddleButtons() {
-    for (final button in ShimanoDi2Buttons.values) {
+    for (final button in ShimanoDi2Buttons.paddles) {
       getOrAddButton(button.name, () => button.copyWith(sourceDeviceId: device.deviceId));
     }
   }
@@ -381,7 +382,14 @@ class ShimanoDi2 extends BluetoothDevice {
 
   @visibleForTesting
   void onPaddle(ShimanoPaddleEvent event) {
-    final button = availableButtons.firstOrNullWhere((b) => b.name == ShimanoDi2Buttons.of(event).name);
+    final template = ShimanoDi2Buttons.of(event);
+    var button = availableButtons.firstOrNullWhere((b) => b.name == template.name);
+    // Hood and satellite buttons only exist on some shifters: show them once
+    // the rider presses one rather than as dead chips on every Di2.
+    if (button == null && ShimanoDi2Buttons.extras.contains(template)) {
+      button = getOrAddButton(template.name, () => template.copyWith(sourceDeviceId: device.deviceId));
+      core.connection.signalChange(this);
+    }
     if (button == null) return;
     switch (event.state) {
       case ShimanoPaddleState.down:
@@ -393,6 +401,19 @@ class ShimanoDi2 extends BluetoothDevice {
         return;
     }
     unawaited(handleButtonsClicked(_pressed.toList()));
+  }
+
+  String? _lastUnknownFrame;
+
+  /// Button telemetry the decoder found no press in, e.g. a switch it doesn't
+  /// know yet. Logged raw (each distinct frame once in a row) so a rider's log
+  /// shows which bytes that switch uses.
+  @visibleForTesting
+  void onUnknownFrame(Uint8List frame) {
+    final hex = frame.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+    if (hex == _lastUnknownFrame) return;
+    _lastUnknownFrame = hex;
+    actionStreamInternal.add(LogNotification('ShimanoDi2 unknown button frame: $hex'));
   }
 
   @override
@@ -454,7 +475,8 @@ class ShimanoDi2 extends BluetoothDevice {
 }
 
 /// The two paddles of each wireless Di2 shifter in button mode, named with the
-/// same L1/L2/R1/R2 code their chip shows on the contour. Default
+/// same L1/L2/R1/R2 code their chip shows on the contour, plus the hood button
+/// (L3/R3) and satellite switch (L4/R4) some shifters have. Default
 /// actions follow Di2's own shifting: right lever → larger cog (easier), right
 /// button → smaller cog (harder); left lever → big ring (harder), left button
 /// → small ring (easier).
@@ -466,18 +488,30 @@ class ShimanoDi2Buttons {
   static const rightLever = ControllerButton('Di2 R1 (Lever)', label: 'R1', action: InGameAction.shiftDown);
   static const rightButton = ControllerButton('Di2 R2 (Button)', label: 'R2', action: InGameAction.shiftUp);
 
-  static const values = [leftLever, leftButton, rightLever, rightButton];
+  static const leftHood = ControllerButton('Di2 L3 (Hood)', label: 'L3');
+  static const leftSatellite = ControllerButton('Di2 L4 (Satellite)', label: 'L4');
+  static const rightHood = ControllerButton('Di2 R3 (Hood)', label: 'R3');
+  static const rightSatellite = ControllerButton('Di2 R4 (Satellite)', label: 'R4');
+
+  static const paddles = [leftLever, leftButton, rightLever, rightButton];
+  static const extras = [leftHood, leftSatellite, rightHood, rightSatellite];
+  static const values = [...paddles, ...extras];
 
   static ControllerButton of(ShimanoPaddleEvent e) => switch ((e.shifter, e.paddle)) {
         (ShimanoShifter.left, ShimanoPaddle.big) => leftLever,
         (ShimanoShifter.left, ShimanoPaddle.small) => leftButton,
         (ShimanoShifter.right, ShimanoPaddle.big) => rightLever,
         (ShimanoShifter.right, ShimanoPaddle.small) => rightButton,
+        (ShimanoShifter.left, ShimanoPaddle.hood) => leftHood,
+        (ShimanoShifter.right, ShimanoPaddle.hood) => rightHood,
+        (ShimanoShifter.left, ShimanoPaddle.satellite) => leftSatellite,
+        (ShimanoShifter.right, ShimanoPaddle.satellite) => rightSatellite,
       };
 
   /// The website's Di2 lever line art: the right lever as drawn, mirrored for
   /// the left. Chips sit on the shift lever (big paddle) and on the shift
-  /// button (small paddle) behind each brake lever.
+  /// button (small paddle) behind each brake lever, and on top of each hood.
+  /// The satellite switch isn't drawn; its chip sits beside the lever.
   static final layout = ControllerLayout(
     aspectRatio: 980 / 1054,
     shape: ContourShape.steeringPad,
@@ -487,6 +521,10 @@ class ShimanoDi2Buttons {
       leftLever: const Offset(0.277, 0.546),
       rightButton: const Offset(0.794, 0.350),
       rightLever: const Offset(0.723, 0.546),
+      leftHood: const Offset(0.200, 0.100),
+      rightHood: const Offset(0.800, 0.100),
+      leftSatellite: const Offset(0.400, 0.880),
+      rightSatellite: const Offset(0.600, 0.880),
     },
   );
 

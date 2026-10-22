@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:bike_control/bluetooth/devices/base_device.dart' show DeviceSetupNeed;
 import 'package:bike_control/bluetooth/devices/shimano/shimano_ble_transport.dart';
 import 'package:bike_control/bluetooth/devices/shimano/shimano_di2.dart';
+import 'package:bike_control/bluetooth/messages/notification.dart';
 import 'package:bike_control/gen/l10n.dart';
 import 'package:bike_control/utils/actions/base_actions.dart';
 import 'package:bike_control/utils/core.dart';
@@ -43,6 +44,46 @@ Future<void> main() async {
       ]);
     });
 
+    test('a hood button press is a click of its own button, which only shows up once pressed', () async {
+      stubActions.cleanup();
+      final instance = ShimanoDi2(BleDevice(name: 'RDR9250', deviceId: 'di2-hood'))..registerPaddleButtons();
+      expect(instance.availableButtons.map((b) => b.name), isNot(contains(ShimanoDi2Buttons.rightHood.name)));
+
+      instance.onPaddle(const ShimanoPaddleEvent(ShimanoShifter.right, ShimanoPaddle.hood, ShimanoPaddleState.down));
+      instance.onPaddle(const ShimanoPaddleEvent(ShimanoShifter.right, ShimanoPaddle.hood, ShimanoPaddleState.released));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(instance.availableButtons.map((b) => b.name), contains(ShimanoDi2Buttons.rightHood.name));
+      expect(stubActions.performedActions, [
+        PerformedAction(ShimanoDi2Buttons.rightHood, isDown: true, isUp: true),
+      ]);
+    });
+
+    test('button telemetry it cannot decode is logged with its raw bytes, repeats only once', () async {
+      final instance = ShimanoDi2(BleDevice(name: 'RDR9250', deviceId: 'di2-unknown'));
+      final logs = <String>[];
+      final sub = instance.actionStream.listen((n) {
+        if (n is LogNotification) logs.add(n.message);
+      });
+
+      instance.onUnknownFrame(ShimanoPce.fromHex('33411802e5e4e0e001ff'));
+      instance.onUnknownFrame(ShimanoPce.fromHex('33411802e5e4e0e001ff'));
+      instance.onUnknownFrame(ShimanoPce.fromHex('33411802e5e420e001ff'));
+      await Future<void>.delayed(Duration.zero);
+      await sub.cancel();
+
+      expect(logs, [
+        'ShimanoDi2 unknown button frame: 33411802e5e4e0e001ff',
+        'ShimanoDi2 unknown button frame: 33411802e5e420e001ff',
+      ]);
+    });
+
+    test('every Di2 button has a spot on the contour', () {
+      for (final button in ShimanoDi2Buttons.values) {
+        expect(ShimanoDi2Buttons.layout.positions.keys, contains(button), reason: button.name);
+      }
+    });
+
     test('the paddle buttons are known buttons, so a saved keymap keeps their labels', () {
       for (final button in ShimanoDi2Buttons.values) {
         final known = ControllerButton.values.firstWhere((b) => b.name == button.name);
@@ -58,6 +99,10 @@ Future<void> main() async {
       expect(of(ShimanoShifter.left, ShimanoPaddle.small), ShimanoDi2Buttons.leftButton);
       expect(of(ShimanoShifter.right, ShimanoPaddle.big), ShimanoDi2Buttons.rightLever);
       expect(of(ShimanoShifter.right, ShimanoPaddle.small), ShimanoDi2Buttons.rightButton);
+      expect(of(ShimanoShifter.left, ShimanoPaddle.hood), ShimanoDi2Buttons.leftHood);
+      expect(of(ShimanoShifter.right, ShimanoPaddle.hood), ShimanoDi2Buttons.rightHood);
+      expect(of(ShimanoShifter.left, ShimanoPaddle.satellite), ShimanoDi2Buttons.leftSatellite);
+      expect(of(ShimanoShifter.right, ShimanoPaddle.satellite), ShimanoDi2Buttons.rightSatellite);
     });
   });
 
@@ -92,7 +137,7 @@ Future<void> main() async {
 
       await instance.startButtonSession(_FakeShimanoTransport(fail: false));
 
-      expect(instance.availableButtons.map((b) => b.name), containsAll(ShimanoDi2Buttons.values.map((b) => b.name)));
+      expect(instance.availableButtons.map((b) => b.name), containsAll(ShimanoDi2Buttons.paddles.map((b) => b.name)));
     });
   });
 
