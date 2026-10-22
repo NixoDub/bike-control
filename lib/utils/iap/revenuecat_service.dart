@@ -406,9 +406,64 @@ class RevenueCatService {
     if (!_isConfigured) {
       return;
     }
-    await Purchases.logIn(supabaseUserId);
+    final result = await Purchases.logIn(supabaseUserId);
+    // Pro bought while signed out sits on the anonymous RevenueCat id until
+    // this logIn; the sync can run before RevenueCat's API shows it under the
+    // account, leaving the backend without Pro. When RevenueCat says Pro,
+    // ask the backend to wait for it, and heal if it still came back empty.
+    await _handleCustomerInfoUpdate(result.customerInfo);
     if (performSync) {
-      await core.supabase.functions.invoke('sync-subscriptions');
+      await _syncSubscriptions(expectActive: isProNotifier.value);
+    }
+    if (needsSubscriptionSync(signedIn: true, storePro: isProNotifier.value, backendPro: _backendPro)) {
+      await refreshEntitlementsWithRetry();
+    }
+  }
+
+  Future<void> _syncSubscriptions({required bool expectActive}) =>
+      core.supabase.functions.invoke('sync-subscriptions', body: syncSubscriptionsBody(expectActive: expectActive));
+
+  /// The `sync-subscriptions` request body. `expectActive` makes the backend
+  /// retry RevenueCat briefly instead of returning no subscription at once;
+  /// only sent when RevenueCat already says Pro on this device.
+  @visibleForTesting
+  static Map<String, dynamic>? syncSubscriptionsBody({required bool expectActive}) =>
+      expectActive ? const {'expectActive': true} : null;
+
+  bool get _backendPro =>
+      entitlementsService.hasActive(premiumProductKeyMonthly) || entitlementsService.hasActive(premiumProductKeyYearly);
+
+  /// Whether the backend must be told to re-read the store: signed into an
+  /// account, RevenueCat says Pro, but the account's entitlements don't.
+  @visibleForTesting
+  static bool needsSubscriptionSync({required bool signedIn, required bool storePro, required bool backendPro}) =>
+      signedIn && storePro && !backendPro;
+
+  static const List<Duration> _entitlementRetryDelays = [
+    Duration(seconds: 1),
+    Duration(seconds: 2),
+    Duration(seconds: 4),
+  ];
+
+  /// Re-reads the backend entitlements until they show Pro, backing off
+  /// between attempts. While [needsSync] holds, each retry first runs
+  /// `sync-subscriptions`, since RevenueCat's API can lag a few seconds
+  /// behind a logIn or purchase. Resolves to whether the backend has Pro.
+  @visibleForTesting
+  static Future<bool> refreshUntilBackendPro({
+    required Future<void> Function() refresh,
+    required bool Function() backendPro,
+    required bool Function() needsSync,
+    required Future<void> Function() syncSubscriptions,
+    List<Duration> retryDelays = _entitlementRetryDelays,
+    Future<void> Function(Duration delay) wait = Future.delayed,
+  }) async {
+    for (var attempt = 0; ; attempt++) {
+      if (attempt > 0 && needsSync()) await syncSubscriptions();
+      await refresh();
+      if (backendPro()) return true;
+      if (attempt == retryDelays.length) return false;
+      await wait(retryDelays[attempt]);
     }
   }
 
@@ -428,27 +483,24 @@ class RevenueCatService {
   }
 
   Future<void> refreshEntitlementsWithRetry() async {
-    const retryDelays = [
-      Duration(seconds: 1),
-      Duration(seconds: 2),
-      Duration(seconds: 4),
-    ];
-
-    await entitlementsService.refresh(force: true);
-    if (entitlementsService.hasActive(premiumProductKeyMonthly) ||
-        entitlementsService.hasActive(premiumProductKeyYearly)) {
+    final backendPro = await refreshUntilBackendPro(
+      refresh: () => entitlementsService.refresh(force: true),
+      backendPro: () => _backendPro,
+      needsSync: () => needsSubscriptionSync(
+        signedIn: hasAccount(core.supabase.auth.currentSession?.user),
+        storePro: isProNotifier.value,
+        backendPro: _backendPro,
+      ),
+      syncSubscriptions: () async {
+        try {
+          await _syncSubscriptions(expectActive: true);
+        } catch (e, s) {
+          recordError(e, s, context: 'Healing backend entitlements via sync-subscriptions');
+        }
+      },
+    );
+    if (backendPro) {
       isPurchasedNotifier.value = true;
-      return;
-    }
-
-    for (final delay in retryDelays) {
-      await Future.delayed(delay);
-      await entitlementsService.refresh(force: true);
-      if (entitlementsService.hasActive(premiumProductKeyMonthly) ||
-          entitlementsService.hasActive(premiumProductKeyYearly)) {
-        isPurchasedNotifier.value = true;
-        return;
-      }
     }
   }
 
