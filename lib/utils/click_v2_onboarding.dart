@@ -92,6 +92,11 @@ abstract final class ClickV2Onboarding {
     // left/right instances. They are not connected yet, so this costs nothing.
     if (!core.settings.getUseNewUnlockMethod()) {
       await core.settings.setUseNewUnlockMethod(true);
+      // The unified controller IS the left puck. Ignore it first, or the
+      // rescan below rebuilds it as a split left side that connects and runs
+      // the restart loop beside the right one.
+      ClickLogic.resetTimer();
+      await _ignoreLeftSides();
       for (final device in pendingDevices) {
         // forget: false is what drops the cached scan result, so the active
         // scan rediscovers the controller and rebuilds it with the class the

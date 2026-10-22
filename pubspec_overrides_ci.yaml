@@ -1,4 +1,11 @@
 dependency_overrides:
+  # 3.1.0 + Windows fix: closes failed connect attempts off the UI thread (a rebooting
+  # Click V2 froze the window). Upstream PR Navideck/universal_ble#358 -- drop
+  # once a release contains it.
+  universal_ble:
+    git:
+      url: https://github.com/jonasbark/universal_ble.git
+      ref: 66e3a45be4ef90565ed0a0d4465bfabcc3a07804
   path_provider_foundation: ">=2.3.0 <2.6.0"
   gamepads_windows:
     path: packages/gamepads_windows
