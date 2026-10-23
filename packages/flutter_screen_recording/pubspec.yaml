@@ -10,7 +10,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_foreground_task: ^9.1.0
+  # Vendored 9.2.2: BGTaskScheduler registration gated on the host Info.plist
+  # (it aborted iOS launches). Drop once upstream fixes it.
+  flutter_foreground_task:
+    path: ../flutter_foreground_task
   flutter_screen_recording_platform_interface: ^1.0.3
   flutter_screen_recording_web: ^1.0.8
 
