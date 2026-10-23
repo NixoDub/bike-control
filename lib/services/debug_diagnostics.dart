@@ -167,6 +167,11 @@ class DebugDiagnostics {
     caseSensitive: false,
   );
 
+  /// Mobile-data interfaces: iOS `pdp_ip`, Android `rmnet`/`ccmni` and the
+  /// 464XLAT `v4-`/`clat` ones. An address on one of them is the carrier's, and
+  /// no device on the rider's Wi-Fi can reach it.
+  static final cellularNamePattern = RegExp(r'^(pdp_ip|rmnet|ccmni|v4-|clat)', caseSensitive: false);
+
   /// 169.254/16 is link-local and 192.0.0/24 is the 464XLAT CLAT dummy range;
   /// neither is ever a VPN, and both show up on healthy devices.
   static bool _isRoutable(String address) =>
@@ -191,8 +196,22 @@ class DebugDiagnostics {
   /// [tunnelCandidates] over a bare picker report, for callers that have one
   /// without a full snapshot — the home card re-reads the address on its own,
   /// and must apply the same rule the self-test does.
-  static List<AddressCandidate> tunnelCandidatesIn(List<AddressCandidate> candidates) =>
-      candidates.where((c) => _tunnelNamePattern.hasMatch(c.interfaceName) && _isRoutable(c.address)).toList();
+  ///
+  /// A tunnel on the very address of a cellular interface is the carrier's own
+  /// IMS / Wi-Fi-calling tunnel (iOS `ipsec` next to `pdp_ip`), not a VPN — a
+  /// user VPN always gets a tunnel address of its own.
+  static List<AddressCandidate> tunnelCandidatesIn(List<AddressCandidate> candidates) {
+    final cellular = candidates
+        .where((c) => cellularNamePattern.hasMatch(c.interfaceName))
+        .map((c) => c.address)
+        .toSet();
+    return candidates
+        .where(
+          (c) =>
+              _tunnelNamePattern.hasMatch(c.interfaceName) && _isRoutable(c.address) && !cellular.contains(c.address),
+        )
+        .toList();
+  }
 
   String _txt(Map<String, String> txt) {
     final entries = txt.entries.toList()..sort((a, b) => a.key.compareTo(b.key));

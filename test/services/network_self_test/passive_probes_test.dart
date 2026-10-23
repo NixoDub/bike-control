@@ -544,6 +544,49 @@ void main() {
       );
       expect(check.verdict, NetworkVerdict.pass);
     });
+
+    // An iPhone with no VPN: the carrier's IMS / Wi-Fi-calling tunnel shows
+    // up as ipsec interfaces sharing the cellular pdp_ip address.
+    const carrierTunnelCandidates = [
+      AddressCandidate(interfaceName: 'pdp_ip0', address: '10.194.45.153', score: -70, isVirtual: true),
+      AddressCandidate(interfaceName: 'pdp_ip2', address: '10.230.165.219', score: -70, isVirtual: true),
+      AddressCandidate(interfaceName: 'en0', address: '192.168.1.96', score: 40, isVirtual: false),
+      AddressCandidate(interfaceName: 'ipsec2', address: '10.230.165.219', score: -199, isVirtual: false),
+      AddressCandidate(interfaceName: 'ipsec3', address: '10.230.165.219', score: -199, isVirtual: false),
+    ];
+
+    test('pass: ipsec tunnels on the cellular address are the carrier\'s, not a VPN', () {
+      final check = vpnCheck(
+        ctx(
+          platform: 'ios',
+          snapshot: _diag(
+            addressReport: const AddressPickReport(chosen: null, candidates: carrierTunnelCandidates),
+          ),
+        ),
+      );
+      expect(check.verdict, NetworkVerdict.pass);
+      expect(check.detail, isEmpty);
+    });
+
+    test('warn: a real VPN next to the carrier tunnel still counts', () {
+      final check = vpnCheck(
+        ctx(
+          platform: 'ios',
+          snapshot: _diag(
+            addressReport: const AddressPickReport(
+              chosen: null,
+              candidates: [
+                ...carrierTunnelCandidates,
+                AddressCandidate(interfaceName: 'utun4', address: '10.8.0.2', score: -70, isVirtual: true),
+                AddressCandidate(interfaceName: 'ipsec4', address: '10.99.0.7', score: -199, isVirtual: false),
+              ],
+            ),
+          ),
+        ),
+      );
+      expect(check.verdict, NetworkVerdict.warn);
+      expect(check.detail, {'utun4': '10.8.0.2', 'ipsec4': '10.99.0.7'});
+    });
   });
 
   group('advertisementVisibleCheck', () {
