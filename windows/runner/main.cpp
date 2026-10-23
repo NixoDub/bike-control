@@ -376,6 +376,17 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   // When the main window is closed (Alt-F4, the close button), close the
   // overlay with it, then clean up the main messenger.
   window.SetOnCloseCallback([](flutter::FlutterViewController* c) {
+    // Engine teardown can outlive the hidden window by seconds: universal_ble
+    // waits for a pending connect to time out. Drop the title SendAppLinkToInstance
+    // looks for, so a relaunch in that time starts instead of handing off to
+    // this exiting instance. Straight to DefWindowProc: Win32Window has already
+    // dropped its handle and would pass WM_SETTEXT on to a null window.
+    if (c) {
+      HWND root = GetAncestor(c->view()->GetNativeWindow(), GA_ROOT);
+      if (root) {
+        DefWindowProcW(root, WM_SETTEXT, 0, reinterpret_cast<LPARAM>(L""));
+      }
+    }
     DestroySecondaryWindows();
     if (c) MultiWindowNativePlugin::UnregisterMessenger(c->engine()->messenger());
   });
