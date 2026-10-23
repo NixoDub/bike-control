@@ -8,7 +8,9 @@
 
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "flutter_window.h"
@@ -221,8 +223,24 @@ static void DestroySecondaryWindows() {
   g_secondary_windows.clear();
 }
 
+// Ends the process if shutting down takes longer than a normal exit. Plugin
+// teardown can block the UI thread on Windows Bluetooth: universal_ble waits
+// for a pending connect to time out and for GATT Close calls to return, which
+// can take seconds or never happen. Nothing is left to save once the main
+// window is gone, and the OS releases the Bluetooth handles with the process.
+static void ArmExitWatchdog() {
+  static std::once_flag armed;
+  std::call_once(armed, [] {
+    std::thread([] {
+      Sleep(3000);
+      TerminateProcess(GetCurrentProcess(), EXIT_SUCCESS);
+    }).detach();
+  });
+}
+
 static void CloseWindow(bool isMainWindow, const std::string& windowId) {
   if (isMainWindow) {
+    ArmExitWatchdog();
     DestroySecondaryWindows();
     MultiWindowNativePlugin::ClearMessengers();
     PostQuitMessage(0);
@@ -376,6 +394,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   // When the main window is closed (Alt-F4, the close button), close the
   // overlay with it, then clean up the main messenger.
   window.SetOnCloseCallback([](flutter::FlutterViewController* c) {
+    ArmExitWatchdog();
     // Engine teardown can outlive the hidden window by seconds: universal_ble
     // waits for a pending connect to time out. Drop the title SendAppLinkToInstance
     // looks for, so a relaunch in that time starts instead of handing off to
