@@ -20,6 +20,7 @@ const OUT = path.join(ROOT, "out");
 // device id → orientation the deck is laid out in.
 const DECKS = {
   iphone: "portrait",
+  ipad: "portrait",
   android: "portrait",
   mac: "landscape",
   "android-10": "landscape",

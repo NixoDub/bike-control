@@ -3,14 +3,14 @@
 # Regenerates the store screenshot decks in store_screenshots/ from the
 # current app:
 #   1. test/screenshot_test.dart with EDITOR_CAPTURES=true renders the six
-#      store scenes bare (phone 1100x2390 + desktop 3840x2400, light + dark)
+#      store scenes bare (phone 1100x2390, iPad 2064x2752, desktop 3840x2400; light + dark)
 #      into the gitignored screenshots/editor/<locale>/.
 #   2. store_screenshots/scripts/sync-captures.mjs copies them into the
 #      editor's public/screenshots/.
 #   3. store_screenshots/scripts/export.mjs exports every deck headless into
 #      store_screenshots/out/<platform>/<device>/<WxH>/<locale>/.
-#   4. The sizes the stores get are copied into the committed
-#      screenshots/store/<locale>/<slot>/, which
+#   4. store_screenshots/scripts/publish.mjs compresses the sizes the stores
+#      get into the committed screenshots/store/<locale>/<slot>/, which
 #      scripts/prepare_store_screenshots.sh prefers over the Flutter-drawn
 #      boards for that locale.
 #
@@ -18,15 +18,15 @@
 # store_screenshots/app-store-screenshots.json; edit them in the editor:
 #   cd store_screenshots && bun dev
 #
-# Usage: scripts/store_screenshots.sh [--locales en,de] [--no-capture] [--no-export] [deck ...]
+# Usage: scripts/store_screenshots.sh [--locales en,de] (default: every store language) [--no-capture] [--no-export] [deck ...]
 #   --no-capture  reuse the existing screenshots/editor/ captures
 #   --no-export   stop after syncing (e.g. to open the editor)
-#   deck          iphone android mac android-10 android-7 feature-graphic (default: all)
+#   deck          iphone ipad android mac android-10 android-7 feature-graphic (default: all)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 EDITOR="$ROOT/store_screenshots"
-LOCALES=en
+LOCALES=en,de,es,fr,it,pl
 CAPTURE=1
 EXPORT=1
 DECKS=()
@@ -58,24 +58,5 @@ if [ "$EXPORT" = 1 ]; then
   (cd "$EDITOR" && node scripts/export.mjs ${DECKS[@]+"${DECKS[@]}"})
 
   echo "==> Publishing store sizes into screenshots/store/"
-  # slot <- export dir. iPhone 1284x2778 is a 6.5" size (APP_IPHONE_65);
-  # 2880x1800 is a Mac App Store size (APP_DESKTOP).
-  publish() {
-    local slot="$1" src="$EDITOR/out/$2"
-    [ -d "$src" ] || return 0
-    for dir in "$src"/*/; do
-      local loc dest
-      loc="$(basename "$dir")"
-      dest="$ROOT/screenshots/store/$loc/$slot"
-      rm -rf "$dest"
-      mkdir -p "$dest"
-      cp "$dir"*.png "$dest/"
-    done
-  }
-  publish iphone65 ios/iphone/1284x2778
-  publish desktop macos/mac/2880x1800
-  publish android android/android/1080x1920
-  publish androidTablet10 android/android-10/2560x1600
-  publish androidTablet7 android/android-7/1920x1200
-  publish featureGraphic android/feature-graphic/1024x500
+  (cd "$EDITOR" && node scripts/publish.mjs)
 fi

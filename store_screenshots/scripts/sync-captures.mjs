@@ -1,5 +1,5 @@
 // Copies the editor captures rendered by test/screenshot_test.dart
-// (EDITOR_CAPTURES=true → ../screenshots/editor/<locale>/<scene>-<slot>[-dark].png)
+// (EDITOR_CAPTURES=true → ../screenshots/editor/<locale>/<scene>-<slot>[-dark].png, slot = phone/tablet/desktop)
 // into public/screenshots/<slot>/<locale>/<scene>[-dark].png, where
 // app-store-screenshots.json expects them.
 //
@@ -27,7 +27,7 @@ for (const locale of locales) {
   const dir = path.join(SRC, locale);
   if (!(await fs.stat(dir)).isDirectory()) continue;
   for (const file of await fs.readdir(dir)) {
-    const m = file.match(/^(.+)-(phone|desktop)(-dark)?\.png$/);
+    const m = file.match(/^(.+)-(phone|tablet|desktop)(-dark)?\.png$/);
     if (!m) continue;
     const [, scene, slot, dark = ""] = m;
     const out = path.join(DEST, slot, locale, `${scene}${dark}.png`);

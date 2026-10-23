@@ -1,23 +1,30 @@
 # BikeControl store screenshots
 
-The store decks (iPhone, Android phone, Mac, Android 10"/7" tablets, Play
-feature graphic) live in `app-store-screenshots.json`. The app captures they
+The store decks (iPhone, iPad, Android phone, Mac, Android 10"/7" tablets,
+Play feature graphic; the 10" deck doubles for the Microsoft Store) live in `app-store-screenshots.json`. The app captures they
 frame are not committed; they are rendered from the current app by the golden
 test.
 
 ```bash
-scripts/store_screenshots.sh                 # capture (en) → sync → export every deck
-scripts/store_screenshots.sh --locales en,de # more locales (decks need copy for them)
+scripts/store_screenshots.sh                 # capture (all 6 languages) → sync → export → publish
+scripts/store_screenshots.sh --locales en     # just English, faster
 scripts/store_screenshots.sh --no-capture mac # re-export one deck from existing captures
 scripts/store_screenshots.sh --no-export     # capture + sync only, then edit:
 cd store_screenshots && bun dev              # http://localhost:3000
 ```
 
 - Captures: `test/screenshot_test.dart` with `EDITOR_CAPTURES=true` →
-  `screenshots/editor/<locale>/<scene>-{phone,desktop}[-dark].png`.
-- `scripts/sync-captures.mjs` → `public/screenshots/{phone,desktop}/<locale>/<scene>[-dark].png`
+  `screenshots/editor/<locale>/<scene>-{phone,tablet,desktop}[-dark].png`.
+- `scripts/sync-captures.mjs` → `public/screenshots/{phone,tablet,desktop}/<locale>/<scene>[-dark].png`
   (phone captures get a 150 px top band for the Dynamic Island).
-- `scripts/export.mjs` → `out/<platform>/<device>/<WxH>/<locale>/NN-<layout>.png`.
+- `scripts/export.mjs` → `out/<platform>/<device>/<WxH>/<locale>/NN-<layout>.png`;
+  `scripts/publish.mjs` then compresses the store sizes (palette PNG for Apple,
+  JPEG for Play) into the committed
+  `screenshots/store/<locale>/<slot>/`, which `scripts/prepare_store_screenshots.sh`
+  stages for fastlane. Screenshots-only uploads: `fastlane ios upload_screenshots`,
+  `fastlane ios upload_screenshots_macos`, `fastlane android upload_screenshots`.
+  The Microsoft Store listing (en-US only) is updated by hand in Partner Center
+  from `screenshots/store/en/androidTablet10/` (2560x1600).
 - Design follows `prop/design/DESIGN.md`: Barlow Condensed 800 headlines,
   `#F2F2F7` / `#121212` grounds, brand blue as the only accent; the two
   inverted slides use the dark-mode captures.

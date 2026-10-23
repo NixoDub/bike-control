@@ -245,14 +245,17 @@ Future<void> main() async {
       slotFilter.isEmpty ? sizes : sizes.where((s) => slotFilter.split(',').contains(s.type.name)).toList();
 
   // `--dart-define=EDITOR_CAPTURES=true` swaps the store boards for the bare
-  // captures the store_screenshots/ editor frames itself: a phone and a
-  // desktop size, each light and dark, written to the gitignored
+  // captures the store_screenshots/ editor frames itself: phone, iPad and
+  // desktop sizes, each light and dark, written to the gitignored
   // ../screenshots/editor/<locale>/<scene>-<name>[-dark].png.
   const editorCaptures = bool.fromEnvironment('EDITOR_CAPTURES');
   const kEditorVsBack = 16;
-  const editorSlots = <({String name, TargetPlatform platform, Size size})>[
-    (name: 'phone', platform: TargetPlatform.android, size: Size(1100, 2390)),
-    (name: 'desktop', platform: TargetPlatform.macOS, size: Size(3840, 2400)),
+  // The iPad slot is the 13" iPad in portrait at its real 2x, so the app lays
+  // out as it does on the device rather than as a narrow 3x phone.
+  const editorSlots = <({String name, TargetPlatform platform, Size size, double pixelRatio})>[
+    (name: 'phone', platform: TargetPlatform.android, size: Size(1100, 2390), pixelRatio: 3),
+    (name: 'tablet', platform: TargetPlatform.iOS, size: Size(2064, 2752), pixelRatio: 2),
+    (name: 'desktop', platform: TargetPlatform.macOS, size: Size(3840, 2400), pixelRatio: 3),
   ];
   final captureSlots = editorCaptures
       ? [
@@ -262,6 +265,7 @@ Future<void> main() async {
                 type: DeviceType.noFrame,
                 platform: slot.platform,
                 size: slot.size,
+                pixelRatio: slot.pixelRatio,
                 dark: dark,
                 file: '../screenshots/editor/{loc}/{scene}-${slot.name}${dark ? '-dark' : ''}.png',
               ),
@@ -272,6 +276,7 @@ Future<void> main() async {
               type: size.type,
               platform: size.platform,
               size: size.size,
+              pixelRatio: kStorePixelRatio,
               dark: false,
               file:
                   '../screenshots/{loc}/{scene}-${size.type.name}-${size.size.width.toInt()}x${size.size.height.toInt()}.png',
@@ -313,7 +318,7 @@ Future<void> main() async {
             device: ScreenshotDevice(
               platform: size.platform,
               resolution: size.size,
-              pixelRatio: 3,
+              pixelRatio: size.pixelRatio,
               goldenSubFolder: 'iphoneScreenshots/',
               frameBuilder:
                   ({
@@ -345,6 +350,9 @@ Future<void> main() async {
         // re-measure everything as it would have been.
         await tester.binding.reassembleApplication();
         await tester.pump();
+        // The editor captures alternate light and dark, and the app cross-fades
+        // between themes; let that finish so no capture is half of each.
+        if (editorCaptures) await tester.pump(const Duration(milliseconds: 600));
         await expectLater(
           find.byType(ma.Scaffold),
           matchesGoldenFile(size.file.replaceAll('{loc}', loc).replaceAll('{scene}', scene)),

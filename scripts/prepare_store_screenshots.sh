@@ -27,13 +27,15 @@ SCENES="device devices virtualshifting-settings customization trainer companion"
 EDITOR="$ROOT/screenshots/store"
 
 # use_editor <lang> <slot> <dest dir> <suffix>: copies the editor deck for
-# <slot> into <dest dir> as NN_editor<suffix>.png; fails if there is none.
+# <slot> (PNG for Apple, JPEG for Play) into <dest dir> as
+# NN_editor<suffix>.<ext>; fails if there is none.
 use_editor() {
   local src="$EDITOR/$1/$2" f n
-  ls "$src"/*.png >/dev/null 2>&1 || return 1
-  for f in "$src"/*.png; do
+  compgen -G "$src/*.*" >/dev/null || return 1
+  for f in "$src"/*.png "$src"/*.jpg; do
+    [ -e "$f" ] || continue
     n="$(basename "$f" | cut -c1-2)"
-    cp "$f" "$3/${n}_editor$4.png"
+    cp "$f" "$3/${n}_editor$4.${f##*.}"
   done
 }
 
@@ -77,7 +79,7 @@ done
 # --- App Store (deliver) ---------------------------------------------------
 # deliver detects the device class from the image resolution:
 #   iPhone 6.5"  <- 1242x2688
-#   iPad 12.9"   <- 2752x2064
+#   iPad 12.9"   <- 2752x2064 (boards) or 2064x2752 (editor deck)
 for loc in $IOS_LOCALES; do
   lang="${loc%%-*}"          # de-DE -> de, it -> it
   src="$SRC/$lang"
@@ -91,11 +93,13 @@ for loc in $IOS_LOCALES; do
       i=$((i + 1))
     done
   }
-  i=1
-  for scene in $SCENES; do
-    cp "$src/${scene}-iPad-2752x2064.png" "$d/$(printf '%02d' "$i")_${scene}_ipad129.png"
-    i=$((i + 1))
-  done
+  use_editor "$lang" ipad129 "$d" "_ipad129" || {
+    i=1
+    for scene in $SCENES; do
+      cp "$src/${scene}-iPad-2752x2064.png" "$d/$(printf '%02d' "$i")_${scene}_ipad129.png"
+      i=$((i + 1))
+    done
+  }
 done
 
 # --- Mac App Store (deliver, platform osx) ---------------------------------
