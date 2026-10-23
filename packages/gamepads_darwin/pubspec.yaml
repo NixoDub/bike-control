@@ -5,8 +5,8 @@ publish_to: none
 homepage: https://github.com/flame-engine/gamepads
 repository: https://github.com/flame-engine/gamepads/tree/main/packages/gamepads_darwin
 
-# Vendored from pub.dev gamepads_darwin 0.1.4, macOS only (iOS stays on
-# gamepads_ios). BikeControl changes:
+# Vendored from pub.dev gamepads_darwin 0.1.4, which gamepads 0.1.12+ uses on
+# both iOS and macOS. BikeControl changes (macOS only, iOS is upstream):
 # - GCController.shouldMonitorBackgroundEvents, so gamepads keep working while
 #   another app (Zwift, MyWhoosh, ...) has focus.
 # - Generic HID pads that the GameController framework doesn't support are read
@@ -17,6 +17,9 @@ flutter:
   plugin:
     implements: gamepads
     platforms:
+      ios:
+        pluginClass: GamepadsDarwinPlugin
+        sharedDarwinSource: true
       macos:
         pluginClass: GamepadsDarwinPlugin
         sharedDarwinSource: true
@@ -28,4 +31,4 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  gamepads_platform_interface: ^0.1.3
+  gamepads_platform_interface: ^0.1.4
