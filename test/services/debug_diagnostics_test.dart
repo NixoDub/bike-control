@@ -145,6 +145,30 @@ void main() {
 
       expect(text, contains('VPN: none detected'));
     });
+
+    test('ignores carrier ipsec tunnels that share the cellular address', () {
+      // iPhone without a VPN: the IMS / Wi-Fi-calling tunnel reuses pdp_ip2's
+      // address. A user VPN gets a tunnel address of its own.
+      final text = withCandidates(const [
+        AddressCandidate(interfaceName: 'pdp_ip0', address: '10.194.45.153', score: -70, isVirtual: true),
+        AddressCandidate(interfaceName: 'pdp_ip2', address: '10.230.165.219', score: -70, isVirtual: true),
+        AddressCandidate(interfaceName: 'en0', address: '192.168.1.96', score: 40, isVirtual: false),
+        AddressCandidate(interfaceName: 'ipsec2', address: '10.230.165.219', score: -199, isVirtual: false),
+        AddressCandidate(interfaceName: 'ipsec3', address: '10.230.165.219', score: -199, isVirtual: false),
+      ]).toText();
+
+      expect(text, contains('VPN: none detected'));
+    });
+
+    test('still names an ipsec VPN with its own tunnel address', () {
+      final text = withCandidates(const [
+        AddressCandidate(interfaceName: 'pdp_ip0', address: '10.194.45.153', score: -70, isVirtual: true),
+        AddressCandidate(interfaceName: 'en0', address: '192.168.1.96', score: 40, isVirtual: false),
+        AddressCandidate(interfaceName: 'ipsec4', address: '10.99.0.7', score: -199, isVirtual: false),
+      ]).toText();
+
+      expect(text, contains('VPN: likely active — ipsec4/10.99.0.7'));
+    });
   });
   group('mDNS queries received', () {
     // What this fixture "advertises" — the two service types BikeControl

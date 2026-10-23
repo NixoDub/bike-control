@@ -46,6 +46,8 @@ class BleSensorSource extends SensorSource {
   // nothing — that is correct, not a dropped reading.
   CscMeasurement? _prevCsc;
   CpsMeasurement? _prevCps;
+  final _cscCrank = _CrankTracker();
+  final _cpsCrank = _CrankTracker();
 
   /// Heart Rate Measurement (0x2A37). Bit 0 of the flags byte selects uint16
   /// over uint8. A short frame is dropped rather than guessed at: a wrong
@@ -69,9 +71,15 @@ class BleSensorSource extends SensorSource {
     _prevCsc = cur;
     if (prev == null) return;
     if (!provides.contains(SensorQuantity.cadence)) return;
-    final rpm = cscCadenceRpm(prev, cur);
+    final stamp = at ?? DateTime.now();
+    final rpm = _cscCrank.cadence(
+      changed: prev.cumCrankRevs != cur.cumCrankRevs || prev.lastCrankEventTime1024s != cur.lastCrankEventTime1024s,
+      hasCrank: cur.cumCrankRevs != null,
+      now: stamp,
+      delta: () => cscCadenceRpm(prev, cur),
+    );
     if (rpm == null) return;
-    _notifierFor(SensorQuantity.cadence).value = SensorReading(rpm, at ?? DateTime.now());
+    _notifierFor(SensorQuantity.cadence).value = SensorReading(rpm, stamp);
   }
 
   /// Cycling Power Measurement (0x2A63). Power publishes from a single frame;
@@ -88,7 +96,12 @@ class BleSensorSource extends SensorSource {
       _notifierFor(SensorQuantity.power).value = SensorReading(cur.powerWatts, stamp);
     }
     if (prev != null && provides.contains(SensorQuantity.cadence)) {
-      final rpm = cpsCadenceRpm(prev, cur);
+      final rpm = _cpsCrank.cadence(
+        changed: prev.cumCrankRevs != cur.cumCrankRevs || prev.lastCrankEventTime1024s != cur.lastCrankEventTime1024s,
+        hasCrank: cur.cumCrankRevs != null,
+        now: stamp,
+        delta: () => cpsCadenceRpm(prev, cur),
+      );
       if (rpm != null) {
         _notifierFor(SensorQuantity.cadence).value = SensorReading(rpm, stamp);
       }
@@ -102,8 +115,47 @@ class BleSensorSource extends SensorSource {
   Future<void> stop() async {
     _prevCsc = null;
     _prevCps = null;
+    _cscCrank.reset();
+    _cpsCrank.reset();
     for (final notifier in _readings.values) {
       notifier.value = null;
     }
+  }
+}
+
+/// A crank counter has no "stopped" message — it just stops advancing. Left
+/// alone, the last cadence would hold until the reading aged out and then fall
+/// back to the trainer's own (sometimes wildly wrong) estimate; instead, no
+/// new revolution for [stoppedAfter] reads as 0 rpm. The first revolution
+/// after that only re-seeds: its delta spans the whole pause, and the uint16
+/// event time may have wrapped within it.
+class _CrankTracker {
+  static const stoppedAfter = Duration(seconds: 3);
+
+  DateTime? _movedAt;
+  bool _stopped = false;
+
+  /// The cadence to publish for this frame, or null for none.
+  int? cadence({required bool changed, required bool hasCrank, required DateTime now, required int? Function() delta}) {
+    if (!hasCrank) return null;
+    if (changed) {
+      _movedAt = now;
+      if (_stopped) {
+        _stopped = false;
+        return null;
+      }
+      return delta();
+    }
+    final movedAt = _movedAt ??= now;
+    if (!_stopped && now.difference(movedAt) >= stoppedAfter) {
+      _stopped = true;
+      return 0;
+    }
+    return null;
+  }
+
+  void reset() {
+    _movedAt = null;
+    _stopped = false;
   }
 }

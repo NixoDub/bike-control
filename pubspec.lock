@@ -446,10 +446,9 @@ packages:
   flutter_foreground_task:
     dependency: transitive
     description:
-      name: flutter_foreground_task
-      sha256: fc5c01a5e1b8f7bb51d0c737714f0c50440dbdf1aeddc5f8cbba313aa6fd4856
-      url: "https://pub.dev"
-    source: hosted
+      path: "packages/flutter_foreground_task"
+      relative: true
+    source: path
     version: "9.2.2"
   flutter_lints:
     dependency: "direct dev"
@@ -523,10 +522,9 @@ packages:
   flutter_overlay_window:
     dependency: "direct main"
     description:
-      name: flutter_overlay_window
-      sha256: "17988420249da68e421d1b44b511e6113d3de7a9e52c3fbd6d99730508af4580"
-      url: "https://pub.dev"
-    source: hosted
+      path: "packages/flutter_overlay_window"
+      relative: true
+    source: path
     version: "0.5.0"
   flutter_plugin_android_lifecycle:
     dependency: transitive
@@ -690,18 +688,18 @@ packages:
     dependency: "direct main"
     description:
       name: gamepads
-      sha256: "8134c967c29496cbc20e73c88b31c6d11765e846b8e465c52b436fe6e88339ce"
+      sha256: ed72d5f3698fc2468e8444012823587379bbbb09e70c9063e332023aa65bdebb
       url: "https://pub.dev"
     source: hosted
-    version: "0.1.11"
+    version: "0.1.13"
   gamepads_android:
     dependency: transitive
     description:
       name: gamepads_android
-      sha256: f3a600e1212374771bdd47206088940a36fb75791b3c4223eccfa487dfd1ed0f
+      sha256: c50ccad8cd5dab70b9a1eda11862f2756da2a82005b9b580fbb0f4b2c0fbd3a2
       url: "https://pub.dev"
     source: hosted
-    version: "0.1.9"
+    version: "0.1.10"
   gamepads_darwin:
     dependency: "direct overridden"
     description:
@@ -709,45 +707,37 @@ packages:
       relative: true
     source: path
     version: "0.1.4"
-  gamepads_ios:
-    dependency: transitive
-    description:
-      name: gamepads_ios
-      sha256: "9a65f16797c7479d2bc6d7967d45e8b2448c6302b128fcf3231460f839021a37"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.1.4"
   gamepads_linux:
     dependency: transitive
     description:
       name: gamepads_linux
-      sha256: "80bf70df6da6185926e6d8b2feb98e725e6fe99290afafaea91dba471e8c1c1e"
+      sha256: "7177a3a24aeb41f7bcb273621a0cc8f46b97e198d1d624c04d43af74faca84a0"
       url: "https://pub.dev"
     source: hosted
-    version: "0.1.2"
+    version: "0.1.4"
   gamepads_platform_interface:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: gamepads_platform_interface
-      sha256: "9ddb3b61c780284a17739d759929d2e32b912d12d9145ee493ffe2b43fc6256a"
+      sha256: "51b243f64c3d02900ac37eef0ed0177710ef5b0a1265dbf46bb93ca0f4200f17"
       url: "https://pub.dev"
     source: hosted
-    version: "0.1.3"
+    version: "0.1.4"
   gamepads_web:
     dependency: transitive
     description:
       name: gamepads_web
-      sha256: "4f044a6003b34a8d5c5854924fbbfd64b6653bcb49169cf2aca26938f812672e"
+      sha256: "5ceaa635cdba536f1ee2b650227c39f5e4a8b1ec6588b00ea0ea6e7291d8e62e"
       url: "https://pub.dev"
     source: hosted
-    version: "0.1.2"
+    version: "0.1.3"
   gamepads_windows:
     dependency: "direct overridden"
     description:
       path: "packages/gamepads_windows"
       relative: true
     source: path
-    version: "0.3.0+1"
+    version: "0.3.2"
   gap:
     dependency: transitive
     description:
@@ -1980,10 +1970,11 @@ packages:
   universal_ble:
     dependency: "direct main"
     description:
-      name: universal_ble
-      sha256: "6aa8d5a1de5ac8e41133d44b9c35f92bf87079188a0ee9a23a68a97f9068f4a0"
-      url: "https://pub.dev"
-    source: hosted
+      path: "."
+      ref: "04f3030d06fefed68ad72f2441c3587d59f736a0"
+      resolved-ref: "04f3030d06fefed68ad72f2441c3587d59f736a0"
+      url: "https://github.com/jonasbark/universal_ble.git"
+    source: git
     version: "3.1.0"
   url_launcher:
     dependency: "direct main"

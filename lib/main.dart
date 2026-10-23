@@ -119,6 +119,10 @@ var onboardingActive = false;
 /// localized store screenshots; defaults to English when unset.
 Locale? screenshotLocale;
 
+/// Theme to render in [screenshotMode]; null follows the platform brightness.
+/// Lets the screenshot test capture the dark app for the store editor.
+ThemeMode? screenshotThemeMode;
+
 /// Android overlay isolate entry point. Must live in this library because
 /// flutter_overlay_window's `DartEntrypoint(bundlePath, "overlayMain")` only
 /// resolves symbols in the default Dart library (the one with `main()`).
@@ -808,7 +812,7 @@ class _BikeControlAppState extends State<BikeControlApp> {
               : (screenshotMode ? (screenshotLocale ?? const Locale('en')) : localeOverride),
           theme: BkTheme.build(Brightness.light),
           materialTheme: BkTheme.material(MediaQuery.platformBrightnessOf(context)),
-          //themeMode: ThemeMode.dark,
+          themeMode: screenshotMode ? (screenshotThemeMode ?? ThemeMode.system) : ThemeMode.system,
           // Swap splash → content in place inside the always-mounted ShadcnApp so
           // the themed background is painted the whole time — no black flash while
           // the real content takes over from the splash. The Builder gives _home a

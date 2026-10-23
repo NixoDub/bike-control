@@ -8,7 +8,9 @@
 
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "flutter_window.h"
@@ -209,15 +211,37 @@ static void CreateNewWindow(const std::vector<std::string>& args) {
   g_secondary_windows.push_back(std::move(ctx));
 }
 
+// Shuts down every secondary engine and destroys its window. Must run while
+// the message loop is still pumping: left to the static destructor of
+// g_secondary_windows (after wWinMain returns), the engine shutdown hangs the
+// process with the overlay still on screen.
+static void DestroySecondaryWindows() {
+  for (auto& ctx : g_secondary_windows) {
+    MultiWindowNativePlugin::UnregisterMessenger(
+        ctx->controller->engine()->messenger());
+  }
+  g_secondary_windows.clear();
+}
+
+// Ends the process if shutting down takes longer than a normal exit. Plugin
+// teardown can block the UI thread on Windows Bluetooth: universal_ble waits
+// for a pending connect to time out and for GATT Close calls to return, which
+// can take seconds or never happen. Nothing is left to save once the main
+// window is gone, and the OS releases the Bluetooth handles with the process.
+static void ArmExitWatchdog() {
+  static std::once_flag armed;
+  std::call_once(armed, [] {
+    std::thread([] {
+      Sleep(3000);
+      TerminateProcess(GetCurrentProcess(), EXIT_SUCCESS);
+    }).detach();
+  });
+}
+
 static void CloseWindow(bool isMainWindow, const std::string& windowId) {
   if (isMainWindow) {
-    for (auto& ctx : g_secondary_windows) {
-      if (ctx->windowId != windowId) {
-        HWND hwnd = ctx->window->GetHandle();
-        if (hwnd) ::PostMessage(hwnd, WM_CLOSE, 0, 0);
-      }
-    }
-    g_secondary_windows.clear();
+    ArmExitWatchdog();
+    DestroySecondaryWindows();
     MultiWindowNativePlugin::ClearMessengers();
     PostQuitMessage(0);
     return;
@@ -367,8 +391,22 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   SetMainWindowMethodHandler(window.GetController());
   RegisterStoreEnvironmentChannel(window.GetController());
 
-  // Clean up the main messenger when the window is closed.
+  // When the main window is closed (Alt-F4, the close button), close the
+  // overlay with it, then clean up the main messenger.
   window.SetOnCloseCallback([](flutter::FlutterViewController* c) {
+    ArmExitWatchdog();
+    // Engine teardown can outlive the hidden window by seconds: universal_ble
+    // waits for a pending connect to time out. Drop the title SendAppLinkToInstance
+    // looks for, so a relaunch in that time starts instead of handing off to
+    // this exiting instance. Straight to DefWindowProc: Win32Window has already
+    // dropped its handle and would pass WM_SETTEXT on to a null window.
+    if (c) {
+      HWND root = GetAncestor(c->view()->GetNativeWindow(), GA_ROOT);
+      if (root) {
+        DefWindowProcW(root, WM_SETTEXT, 0, reinterpret_cast<LPARAM>(L""));
+      }
+    }
+    DestroySecondaryWindows();
     if (c) MultiWindowNativePlugin::UnregisterMessenger(c->engine()->messenger());
   });
 

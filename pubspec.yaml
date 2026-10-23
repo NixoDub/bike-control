@@ -16,7 +16,8 @@ dependencies:
 
   # fork to allow iOS background BLE connections
   universal_ble: ^3.1.0
-  gamepads: ^0.1.10+1
+  gamepads: ^0.1.13
+  gamepads_platform_interface: ^0.1.4
 
   lottie: ^3.3.2
   d4rt: ^0.2.2
@@ -66,7 +67,11 @@ dependencies:
     path: packages/multi_window_native
   local_network_permission:
     path: packages/local_network_permission
-  flutter_overlay_window: ^0.5.0
+  # Vendored 0.5.0: the service no longer crashes when Android restarts it with no
+  # intent after killing the app. Stay on 0.5.x (1.0.0 breaks dragging), and keep
+  # the class name -- OverlayActionBridge reflects into OverlayService.
+  flutter_overlay_window:
+    path: packages/flutter_overlay_window
   live_activities: ^2.4.9
   device_info_plus: ^12.1.0
   keypress_simulator:
@@ -125,6 +130,16 @@ dev_dependencies:
   video_player_platform_interface: ^6.9.0
 
 dependency_overrides:
+  # 3.1.0 + Windows fixes: closes failed connect attempts (a rebooting Click V2 froze
+  # the window, upstream PR Navideck/universal_ble#358) and refreshes GATT services
+  # off the UI thread (GattDeviceService::Close hang in Store crash reports).
+  # + Apple: queues notifications CoreBluetooth refuses (transmit queue full) and
+  # resends them when it is ready, so a release sent right after its press is not
+  # lost (#417). Drop once a release contains all of them.
+  universal_ble:
+    git:
+      url: https://github.com/jonasbark/universal_ble.git
+      ref: 04f3030d06fefed68ad72f2441c3587d59f736a0
   path_provider_foundation: ">=2.3.0 <2.6.0"
   # Vendored: GameInput v2 with background input, so gamepads keep working
   # while the trainer app has focus. Keep in sync with pubspec_overrides*.yaml, which

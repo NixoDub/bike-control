@@ -25,6 +25,8 @@ class ChangelogDialog extends StatelessWidget {
   /// latest few here and the rest one tap away.
   static const int maxReleases = 3;
 
+  static final BorderRadius _radius = BorderRadius.circular(20);
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -36,84 +38,97 @@ class ChangelogDialog extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: changelogMaxWidth, maxHeight: size.height * 0.86),
-          child: Container(
-            decoration: BoxDecoration(color: cs.card, borderRadius: BorderRadius.circular(20)),
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 4),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    spacing: 4,
-                    children: [
-                      Semantics(
-                        header: true,
-                        child: Text(l.whatsNew, style: BkDisplay.title(context)),
-                      ),
-                      Text(
-                        l.changelogWhatsNewSince,
-                        style: context.typography.small.copyWith(color: cs.mutedForeground),
-                      ),
-                    ],
-                  ),
-                ),
-                Flexible(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+          // shadcn's dialog route has a transparent barrier; the backdrop dims
+          // the page, the outline and shadow lift the card off it.
+          child: ModalBackdrop(
+            borderRadius: _radius,
+            child: Container(
+              key: const ValueKey('whats-new-card'),
+              decoration: BoxDecoration(
+                color: cs.card,
+                borderRadius: _radius,
+                border: Border.all(color: cs.border),
+                boxShadow: const [
+                  BoxShadow(color: Color(0x40000000), offset: Offset(0, 16), blurRadius: 40, spreadRadius: -8),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 4),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      spacing: 4,
                       children: [
-                        for (final (i, r) in shown.indexed) ...[
-                          if (i > 0)
-                            const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 28),
-                              child: BkGroupedDivider(indent: 0),
-                            ),
-                          ChangelogReleaseFull(
-                            key: ValueKey('whats-new-${r.version}'),
-                            release: r,
-                            isCurrent: currentVersion != null && r.version == currentVersion,
-                          ),
-                        ],
+                        Semantics(
+                          header: true,
+                          child: Text(l.whatsNew, style: BkDisplay.title(context)),
+                        ),
+                        Text(
+                          l.changelogWhatsNewSince,
+                          style: context.typography.small.copyWith(color: cs.mutedForeground),
+                        ),
                       ],
                     ),
                   ),
-                ),
-                const BkGroupedDivider(indent: 0),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 14, 24, 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    spacing: 4,
-                    children: [
-                      BkPillButton(
-                        key: const ValueKey('whats-new-close'),
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: Text(l.gotIt),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          for (final (i, r) in shown.indexed) ...[
+                            if (i > 0)
+                              const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 28),
+                                child: BkGroupedDivider(indent: 0),
+                              ),
+                            ChangelogReleaseFull(
+                              key: ValueKey('whats-new-${r.version}'),
+                              release: r,
+                              isCurrent: currentVersion != null && r.version == currentVersion,
+                            ),
+                          ],
+                        ],
                       ),
-                      Button.ghost(
-                        key: const ValueKey('whats-new-all'),
-                        alignment: Alignment.center,
-                        onPressed: () {
-                          final navigator = Navigator.of(context);
-                          navigator.pop();
-                          navigator.push(MaterialPageRoute(builder: (_) => const ChangelogPage()));
-                        },
-                        child: Text(
-                          l.changelogAllVersions,
-                          style: context.typography.small.copyWith(
-                            color: bkAccentText(context),
-                            fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const BkGroupedDivider(indent: 0),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 14, 24, 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      spacing: 4,
+                      children: [
+                        BkPillButton(
+                          key: const ValueKey('whats-new-close'),
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: Text(l.gotIt),
+                        ),
+                        Button.ghost(
+                          key: const ValueKey('whats-new-all'),
+                          alignment: Alignment.center,
+                          onPressed: () {
+                            final navigator = Navigator.of(context);
+                            navigator.pop();
+                            navigator.push(MaterialPageRoute(builder: (_) => const ChangelogPage()));
+                          },
+                          child: Text(
+                            l.changelogAllVersions,
+                            style: context.typography.small.copyWith(
+                              color: bkAccentText(context),
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

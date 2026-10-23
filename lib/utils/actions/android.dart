@@ -13,7 +13,7 @@ import 'package:bike_control/utils/keymap/keymap.dart';
 import 'package:bike_control/widgets/keymap_explanation.dart';
 import 'package:dartx/dartx.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart' show AppLifecycleListener, ValueNotifier;
+import 'package:flutter/widgets.dart' show AppLifecycleListener, ValueNotifier, visibleForTesting;
 
 import '../keymap/apps/supported_app.dart';
 import '../single_line_exception.dart';
@@ -67,32 +67,38 @@ class AndroidActions extends BaseActions {
       updateHandledKeys();
     });
 
-    _hidKeyPressedSubscription = hidKeyPressed().listen((keyPressed) async {
-      final gamepad = core.connection.gamepadDevices.firstOrNullWhere((d) => d.name == keyPressed.source);
-      if (gamepad != null) {
-        if (keyPressed.keyDown || keyPressed.keyUp) {
-          gamepad.handleAccessibilityKey(keyPressed.hidKey, keyDown: keyPressed.keyDown);
-        }
-        return;
-      }
-      final hidDevice = HidDevice(keyPressed.source);
-      final button = hidDevice.getOrAddButton(keyPressed.hidKey, () => ControllerButton(keyPressed.hidKey));
+    _hidKeyPressedSubscription = hidKeyPressed().listen(handleHidKey);
+  }
 
-      var availableDevice = core.connection.controllerDevices.firstOrNullWhere(
-        (e) => e.toString() == hidDevice.toString(),
-      );
-      if (availableDevice == null) {
-        core.connection.addDevices([hidDevice]);
-        availableDevice = hidDevice;
-      } else {
-        availableDevice.supportsLongPress = false;
-      }
-      if (keyPressed.keyDown) {
-        availableDevice.handleButtonsClicked([button]);
-      } else if (keyPressed.keyUp) {
-        availableDevice.handleButtonsClicked([]);
-      }
-    });
+  /// A key the accessibility service caught from a HID device (keyboard,
+  /// remote, or a gamepad behind the trainer app).
+  @visibleForTesting
+  void handleHidKey(AKeyEvent keyPressed) {
+    final gamepad = core.connection.gamepadDevices.firstOrNullWhere((d) => d.name == keyPressed.source);
+    if (gamepad != null && (keyPressed.keyDown || keyPressed.keyUp)) {
+      if (gamepad.handleAccessibilityKey(keyPressed.hidKey, keyDown: keyPressed.keyDown)) return;
+      // Not a gamepad button: a HID keyboard or remote that Android also lists
+      // as a gamepad. Its keys are handled like any other HID keyboard's.
+    }
+    final hidDevice = HidDevice(keyPressed.source);
+    final button = hidDevice.getOrAddButton(keyPressed.hidKey, () => ControllerButton(keyPressed.hidKey));
+
+    // Not the gamepad of the same name: its buttons are the normalized gamepad
+    // ones, these keys get a HID device of their own.
+    var availableDevice = core.connection.controllerDevices.firstOrNullWhere(
+      (e) => e is! GamepadDevice && e.toString() == hidDevice.toString(),
+    );
+    if (availableDevice == null) {
+      core.connection.addDevices([hidDevice]);
+      availableDevice = hidDevice;
+    } else {
+      availableDevice.supportsLongPress = false;
+    }
+    if (keyPressed.keyDown) {
+      availableDevice.handleButtonsClicked([button]);
+    } else if (keyPressed.keyUp) {
+      availableDevice.handleButtonsClicked([]);
+    }
   }
 
   @override

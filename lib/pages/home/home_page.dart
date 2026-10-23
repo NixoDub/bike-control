@@ -738,7 +738,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             unlockUncertain: _unlockUncertain(device),
             unlockIsRideV2: device is ZwiftUnlock && device.isRideV2,
             sramSetupDone: device is SramAxs ? !device.needsGuidedSetup : null,
-            shimanoSetupDone: device is ShimanoDi2 && device.hasConfigService ? device.isButtonModeEnabled : null,
+            shimanoSetupDone: device is ShimanoDi2 ? device.buttonModeSetupDone : null,
             sramCanRestore: device is SramAxs && device.canRestoreShifting,
             needsUnlockModeChoice:
                 (device is ZwiftClickV2 || device is ZwiftClickV2RightSide) && ClickV2Onboarding.isPending,

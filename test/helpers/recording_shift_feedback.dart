@@ -14,14 +14,23 @@ class RecordingShiftFeedback extends ShiftFeedbackService {
 
   final cues = <ShiftCue>[];
 
+  /// The controller each cue came from, in the order of [cues].
+  final sources = <String?>[];
+
   /// `(setting, enabled)` pairs the UI asked for, e.g. `('sound', true)`.
   final toggles = <(String, bool)>[];
 
   @override
-  Future<void> shifted({required bool up}) async => cues.add(up ? ShiftCue.up : ShiftCue.down);
+  Future<void> shifted({required bool up, String? sourceDeviceId}) async {
+    cues.add(up ? ShiftCue.up : ShiftCue.down);
+    sources.add(sourceDeviceId);
+  }
 
   @override
-  Future<void> atLimit() async => cues.add(ShiftCue.limit);
+  Future<void> atLimit({String? sourceDeviceId}) async {
+    cues.add(ShiftCue.limit);
+    sources.add(sourceDeviceId);
+  }
 
   @override
   Future<void> setHapticsEnabled(bool enabled) async => toggles.add(('haptics', enabled));

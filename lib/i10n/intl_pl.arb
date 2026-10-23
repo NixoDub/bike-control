@@ -1191,6 +1191,10 @@
   "shimanoPasskeyHint": "Zostaw 000000, chyba że ustawiłeś własny klucz w aplikacji E-TUBE.",
   "shimanoPasskeyWrongTitle": "Nieprawidłowy klucz dostępu",
   "shimanoPasskeyWrongBody": "Twoja Di2 odrzuciła klucz. Wpisz klucz ustawiony w aplikacji E-TUBE.",
+  "shimanoPairTitle": "Sparuj Di2 z Windows",
+  "shimanoPairBody": "Przyciski Di2 wymagają sparowania Di2 z Windows, a Windows nie zdołał go sparować. Otwórz Ustawienia Windows → Bluetooth i urządzenia → Dodaj urządzenie → Bluetooth i wybierz swoje Di2 (naciśnij przycisk manetki, aby je wybudzić). Jeśli jest już na liście, usuń je i dodaj ponownie. Następnie dotknij Spróbuj ponownie.",
+  "shimanoUseDfly": "Użyj zamiast tego kanałów D-Fly",
+  "shimanoDflyActive": "Twoje Di2 zmienia biegi normalnie. Przyciski przypisane do kanałów D-Fly w aplikacji E-TUBE pojawią się tutaj po naciśnięciu.",
   "actionInclineIncrease": "Zwiększ nachylenie",
   "actionInclineDecrease": "Zmniejsz nachylenie",
   "actionInclineZero": "Wypoziomuj nachylenie (0%)",
@@ -2919,5 +2923,7 @@
   "chainHintTitle": "Przełóż łańcuch na środkowy bieg",
   "chainHintVeryBigGear": "Łańcuch na trenażerze jest na bardzo twardym biegu (przełożenie ok. {ratio}). Wirtualne biegi działają realistycznie, gdy łańcuch jest na środkowym biegu, np. 34/17 lub 50/25. Zostaw go tam i zmieniaj biegi tylko wirtualnie.",
   "chainHintVerySmallGear": "Łańcuch na trenażerze jest na bardzo lekkim biegu (przełożenie ok. {ratio}). Wirtualne biegi działają realistycznie, gdy łańcuch jest na środkowym biegu, np. 34/17 lub 50/25. Zostaw go tam i zmieniaj biegi tylko wirtualnie.",
-  "ignoredDevicesNearby": "Znaleziono w pobliżu zignorowane urządzenia"
+  "ignoredDevicesNearby": "Znaleziono w pobliżu zignorowane urządzenia",
+  "trainerActionGearUpErgUp": "Trenażer: bieg w górę / ERG w górę",
+  "trainerActionGearDownErgDown": "Trenażer: bieg w dół / ERG w dół"
 }

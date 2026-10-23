@@ -503,9 +503,9 @@ abstract class BaseActions {
       // press/release pair would cue twice.
       if (directConnectHandled is Success && isKeyDown) {
         if (keyPair.inGameAction == InGameAction.shiftUp) {
-          unawaited(core.shiftFeedback.shifted(up: true));
+          unawaited(core.shiftFeedback.shifted(up: true, sourceDeviceId: button.sourceDeviceId));
         } else if (keyPair.inGameAction == InGameAction.shiftDown) {
-          unawaited(core.shiftFeedback.shifted(up: false));
+          unawaited(core.shiftFeedback.shifted(up: false, sourceDeviceId: button.sourceDeviceId));
         }
       }
     }

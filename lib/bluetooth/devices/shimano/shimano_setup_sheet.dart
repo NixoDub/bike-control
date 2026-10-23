@@ -19,6 +19,8 @@ Future<void> showShimanoSetup(
   required Future<void> Function(String passkey) operation,
   required bool Function(Object error) isUnresponsive,
   required bool Function(Object error) isPasskeyRejected,
+  required bool Function(Object error) isPairingRequired,
+  VoidCallback? onUseDfly,
 }) async {
   final l = context.i18n;
   await openSheet<void>(
@@ -37,17 +39,23 @@ Future<void> showShimanoSetup(
       operation: operation,
       isUnresponsive: isUnresponsive,
       isPasskeyRejected: isPasskeyRejected,
+      isPairingRequired: isPairingRequired,
+      onUseDfly: onUseDfly,
     ),
   );
 }
 
 /// The device-card panel: what button mode does, and the action to turn it on
-/// or off. Mirrors SRAM's `_buildSetupPanel`.
+/// or off. Mirrors SRAM's `_buildSetupPanel`. Until button mode is on it also
+/// offers the D-Fly channel buttons, which need no pairing; with [dfly] chosen
+/// it explains those and keeps button mode one tap away.
 Widget shimanoSetupPanel(
   BuildContext context, {
   required bool active,
+  required bool dfly,
   required VoidCallback onSetup,
   required VoidCallback onTurnOff,
+  required VoidCallback onUseDfly,
 }) {
   final scheme = Theme.of(context).colorScheme;
   final l = context.i18n;
@@ -58,18 +66,31 @@ Widget shimanoSetupPanel(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          l.shimanoPanelIntro,
+          dfly ? l.shimanoDflyActive : l.shimanoPanelIntro,
           style: context.typography.small.copyWith(height: 1.4, color: scheme.mutedForeground),
         ),
         const Gap(12),
         SizedBox(
           width: double.infinity,
-          child: PrimaryButton(
-            leading: const Icon(LucideIcons.slidersHorizontal, size: 16),
-            onPressed: onSetup,
-            child: Text(l.shimanoSetup),
-          ),
+          child: dfly
+              ? SecondaryButton(
+                  leading: const Icon(LucideIcons.slidersHorizontal, size: 16),
+                  onPressed: onSetup,
+                  child: Text(l.shimanoSetup),
+                )
+              : PrimaryButton(
+                  leading: const Icon(LucideIcons.slidersHorizontal, size: 16),
+                  onPressed: onSetup,
+                  child: Text(l.shimanoSetup),
+                ),
         ),
+        if (!dfly) ...[
+          const Gap(8),
+          SizedBox(
+            width: double.infinity,
+            child: GhostButton(onPressed: onUseDfly, child: Text(l.shimanoUseDfly)),
+          ),
+        ],
       ],
     );
   }
@@ -113,8 +134,9 @@ Widget shimanoSetupPanel(
 /// The stages the guided operation walks through. Di2 needs no mid-flow
 /// authorize gesture of its own (auth is automatic), so [authorize] doubles as
 /// the "wake the Di2 / press a shifter button" prompt shown on failure, and
-/// [passkey] asks again after the Di2 rejected the passkey.
-enum ShimanoSetupStage { confirm, running, authorize, passkey, success, error }
+/// [passkey] asks again after the Di2 rejected the passkey. [pair] (Windows)
+/// asks the rider to pair the Di2 in Windows Settings.
+enum ShimanoSetupStage { confirm, running, authorize, passkey, pair, success, error }
 
 // ── Di2 setup/restore palette ───────────────────────────────────────────────
 const Color shimanoSuccess = Color(0xFF22C55E);
@@ -146,6 +168,14 @@ class ShimanoGuidedSheet extends StatefulWidget {
   /// Whether a thrown error means the Di2 rejected the passkey (→ ask again).
   final bool Function(Object error) isPasskeyRejected;
 
+  /// Whether a thrown error means Windows has no usable bond with the Di2
+  /// (→ pair it in Windows Settings, then retry).
+  final bool Function(Object error) isPairingRequired;
+
+  /// Keep the D-Fly channel buttons instead (offered where pairing failed);
+  /// the sheet closes afterwards. Null hides the option.
+  final VoidCallback? onUseDfly;
+
   const ShimanoGuidedSheet({
     super.key,
     required this.title,
@@ -159,6 +189,8 @@ class ShimanoGuidedSheet extends StatefulWidget {
     required this.operation,
     required this.isUnresponsive,
     required this.isPasskeyRejected,
+    required this.isPairingRequired,
+    this.onUseDfly,
   });
 
   @override
@@ -188,6 +220,8 @@ class _ShimanoGuidedSheetState extends State<ShimanoGuidedSheet> {
       setState(() {
         _stage = widget.isPasskeyRejected(e)
             ? ShimanoSetupStage.passkey
+            : widget.isPairingRequired(e)
+            ? ShimanoSetupStage.pair
             : widget.isUnresponsive(e)
                 ? ShimanoSetupStage.authorize
                 : ShimanoSetupStage.error;
@@ -223,6 +257,12 @@ class _ShimanoGuidedSheetState extends State<ShimanoGuidedSheet> {
               passkeyField: ShimanoPasskeyField(controller: _passkey),
               onClose: () => closeSheet(context),
               onProceed: _attempt,
+              onUseDfly: widget.onUseDfly == null
+                  ? null
+                  : () {
+                      widget.onUseDfly!();
+                      closeSheet(context);
+                    },
             ),
           ),
         ),
@@ -246,6 +286,7 @@ Widget shimanoGuidedBody(
   required Widget passkeyField,
   required VoidCallback onClose,
   required VoidCallback onProceed,
+  VoidCallback? onUseDfly,
   int runningStep = 0,
   bool checklistAutoAdvance = true,
 }) {
@@ -320,6 +361,33 @@ Widget shimanoGuidedBody(
       body = l.shimanoPasskeyWrongBody;
       stepIndex = null;
       extra = passkeyField;
+      actions = [
+        GhostButton(onPressed: onClose, child: Text(l.cancel)),
+        PrimaryButton(
+          leading: const Icon(LucideIcons.rotateCw, size: 16),
+          onPressed: onProceed,
+          child: Text(l.retry),
+        ),
+      ];
+    case ShimanoSetupStage.pair:
+      icon = LucideIcons.bluetooth;
+      tone = _shimanoBlue;
+      wash = dark ? const Color(0x1A2563EB) : _shimanoBlueWash;
+      heading = l.shimanoPairTitle;
+      body = l.shimanoPairBody;
+      stepIndex = null;
+      // The D-Fly channel buttons need no pairing: the way out when Windows
+      // can't pair this Di2.
+      extra = onUseDfly == null
+          ? null
+          : SizedBox(
+              width: double.infinity,
+              child: SecondaryButton(
+                leading: const Icon(LucideIcons.radio, size: 16),
+                onPressed: onUseDfly,
+                child: Text(l.shimanoUseDfly),
+              ),
+            );
       actions = [
         GhostButton(onPressed: onClose, child: Text(l.cancel)),
         PrimaryButton(

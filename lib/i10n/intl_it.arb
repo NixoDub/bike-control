@@ -1191,6 +1191,10 @@
   "shimanoPasskeyHint": "Lascia 000000, a meno che tu non abbia impostato una passkey nell'app E-TUBE.",
   "shimanoPasskeyWrongTitle": "Passkey errata",
   "shimanoPasskeyWrongBody": "La tua Di2 ha rifiutato la passkey. Inserisci la passkey impostata nell'app E-TUBE.",
+  "shimanoPairTitle": "Associa il tuo Di2 a Windows",
+  "shimanoPairBody": "I pulsanti Di2 richiedono che il tuo Di2 sia associato a Windows, e Windows non è riuscito ad associarlo. Apri Impostazioni di Windows → Bluetooth e dispositivi → Aggiungi dispositivo → Bluetooth e scegli il tuo Di2 (premi un pulsante del comando per risvegliarlo). Se è già nell'elenco, rimuovilo e aggiungilo di nuovo. Poi tocca Riprova.",
+  "shimanoUseDfly": "Usa invece i canali D-Fly",
+  "shimanoDflyActive": "Il tuo Di2 cambia normalmente. I pulsanti assegnati ai canali D-Fly nell'app E-TUBE compaiono qui quando li premi.",
   "actionInclineIncrease": "Aumenta pendenza",
   "actionInclineDecrease": "Riduci pendenza",
   "actionInclineZero": "Pendenza in piano (0%)",
@@ -2919,5 +2923,7 @@
   "chainHintTitle": "Sposta la catena su un rapporto intermedio",
   "chainHintVeryBigGear": "La catena sui rulli è su un rapporto molto lungo (rapporto di circa {ratio}). I rapporti virtuali risultano realistici con la catena su un rapporto intermedio, ad es. 34/17 o 50/25. Lasciala lì e cambia solo virtualmente.",
   "chainHintVerySmallGear": "La catena sui rulli è su un rapporto molto corto (rapporto di circa {ratio}). I rapporti virtuali risultano realistici con la catena su un rapporto intermedio, ad es. 34/17 o 50/25. Lasciala lì e cambia solo virtualmente.",
-  "ignoredDevicesNearby": "Trovati dispositivi ignorati nelle vicinanze"
+  "ignoredDevicesNearby": "Trovati dispositivi ignorati nelle vicinanze",
+  "trainerActionGearUpErgUp": "Trainer: marcia su / ERG su",
+  "trainerActionGearDownErgDown": "Trainer: marcia giù / ERG giù"
 }

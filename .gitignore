@@ -72,6 +72,9 @@ private_keys/
 # submodule (gitignored there). The listing text lives in prop/store_metadata/.
 ios/fastlane/screenshots/
 ios/fastlane/screenshots_macos/
+# Bare app captures for the store_screenshots/ editor, rebuilt by
+# scripts/store_screenshots.sh.
+screenshots/editor/
 .superpowers/
 android/build/reports/problems/problems-report.html
 assets/generated

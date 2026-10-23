@@ -1,0 +1,1507 @@
+{
+  "schemaVersion": 3,
+  "appName": "BikeControl",
+  "themeId": "bikecontrol",
+  "fontId": "self-hosted",
+  "connectedCanvas": true,
+  "locales": [
+    "en",
+    "de",
+    "es",
+    "fr",
+    "it",
+    "pl"
+  ],
+  "locale": "en",
+  "device": "iphone",
+  "orientation": "portrait",
+  "appIcon": "/app-icon.png",
+  "slidesByDevice": {
+    "iphone": [
+      {
+        "id": "bc_1",
+        "layout": "hero",
+        "label": {
+          "en": "Zwift · MyWhoosh · TPV & more",
+          "de": "Zwift · MyWhoosh · TPV & mehr",
+          "es": "Zwift · MyWhoosh · TPV y más",
+          "fr": "Zwift · MyWhoosh · TPV et plus",
+          "it": "Zwift · MyWhoosh · TPV e altro",
+          "pl": "Zwift · MyWhoosh · TPV i więcej"
+        },
+        "headline": {
+          "en": "Any controller.\nAny trainer app.",
+          "de": "Jeder Controller.\nJede App.",
+          "es": "Cualquier mando.\nCualquier app.",
+          "fr": "Tous les contrôleurs.\nToutes les applis.",
+          "it": "Ogni controller.\nOgni app.",
+          "pl": "Każdy kontroler.\nKażda aplikacja."
+        },
+        "screenshot": "/screenshots/phone/{locale}/device.png",
+        "typography": {
+          "labelScale": 1.7
+        }
+      },
+      {
+        "id": "bc_2",
+        "layout": "device-top",
+        "label": {
+          "en": "Virtual shifting",
+          "de": "Virtual Shifting",
+          "es": "Cambio virtual",
+          "fr": "Vitesses virtuelles",
+          "it": "Cambio virtuale",
+          "pl": "Wirtualna zmiana biegów"
+        },
+        "headline": {
+          "en": "Shift gears on\nany smart trainer.",
+          "de": "Schalten auf\njedem Trainer.",
+          "es": "Marchas en\ncualquier rodillo.",
+          "fr": "Des vitesses\nsur tout\nhome-trainer.",
+          "it": "Cambia marcia\nsu ogni rullo smart.",
+          "pl": "Zmieniaj biegi\nna każdym trenażerze."
+        },
+        "screenshot": "/screenshots/phone/{locale}/virtualshifting-settings-dark.png",
+        "inverted": true,
+        "typography": {
+          "labelScale": 1.7
+        }
+      },
+      {
+        "id": "bc_3",
+        "layout": "two-devices",
+        "label": {
+          "en": "Button mapping",
+          "de": "Tastenbelegung",
+          "es": "Asignación de botones",
+          "fr": "Affectation des boutons",
+          "it": "Mappatura dei pulsanti",
+          "pl": "Mapowanie przycisków"
+        },
+        "headline": {
+          "en": "Every button,\nyour way.",
+          "de": "Jede Taste,\nwie du willst.",
+          "es": "Cada botón,\na tu manera.",
+          "fr": "Chaque bouton,\nà ta façon.",
+          "it": "Ogni pulsante,\na modo tuo.",
+          "pl": "Każdy przycisk\npo twojemu."
+        },
+        "screenshot": "/screenshots/phone/{locale}/customization.png",
+        "screenshotSecondary": "/screenshots/phone/{locale}/trainer.png",
+        "typography": {
+          "labelScale": 1.7
+        }
+      },
+      {
+        "id": "bc_4",
+        "layout": "device-bottom",
+        "label": {
+          "en": "Devices",
+          "de": "Geräte",
+          "es": "Dispositivos",
+          "fr": "Appareils",
+          "it": "Dispositivi",
+          "pl": "Urządzenia"
+        },
+        "headline": {
+          "en": "Set up\nin minutes.",
+          "de": "In Minuten\neingerichtet.",
+          "es": "Listo en\nminutos.",
+          "fr": "Prêt en\nquelques minutes.",
+          "it": "Pronto in\npochi minuti.",
+          "pl": "Gotowe\nw kilka minut."
+        },
+        "screenshot": "/screenshots/phone/{locale}/devices.png",
+        "typography": {
+          "labelScale": 1.7
+        }
+      },
+      {
+        "id": "bc_5",
+        "layout": "hero",
+        "label": {
+          "en": "Trainer controls",
+          "de": "Trainersteuerung",
+          "es": "Controles de entrenamiento",
+          "fr": "Commandes de l'entraîneur",
+          "it": "Controlli del trainer",
+          "pl": "Sterowanie trenażerem"
+        },
+        "headline": {
+          "en": "Steer, shift,\nchange camera.",
+          "de": "Lenken, schalten,\nKamera wechseln.",
+          "es": "Dirección, marchas,\ncámara.",
+          "fr": "Direction, vitesses,\ncaméra.",
+          "it": "Sterzo, marce,\ntelecamera.",
+          "pl": "Skręt, biegi,\nkamera."
+        },
+        "screenshot": "/screenshots/phone/{locale}/companion-dark.png",
+        "inverted": true,
+        "typography": {
+          "labelScale": 1.7
+        }
+      },
+      {
+        "id": "bc_6",
+        "layout": "no-device",
+        "label": {
+          "en": "Works with",
+          "de": "Funktioniert mit",
+          "es": "Compatible con",
+          "fr": "Compatible avec",
+          "it": "Compatibile con",
+          "pl": "Działa z"
+        },
+        "headline": {
+          "en": "Zwift Click\nZwift Play · Ride\nShimano Di2\nSRAM AXS\nWheeltop EDS\nGamepads\nKeyboards\nMedia keys",
+          "de": "Zwift Click\nZwift Play · Ride\nShimano Di2\nSRAM AXS\nWheeltop EDS\nGamepads\nTastaturen\nMedientasten",
+          "es": "Zwift Click\nZwift Play · Ride\nShimano Di2\nSRAM AXS\nWheeltop EDS\nGamepads\nTeclados\nTeclas multimedia",
+          "fr": "Zwift Click\nZwift Play · Ride\nShimano Di2\nSRAM AXS\nWheeltop EDS\nManettes de jeu\nClaviers\nTouches multimédia",
+          "it": "Zwift Click\nZwift Play · Ride\nShimano Di2\nSRAM AXS\nWheeltop EDS\nGamepad\nTastiere\nTasti multimediali",
+          "pl": "Zwift Click\nZwift Play · Ride\nShimano Di2\nSRAM AXS\nWheeltop EDS\nGamepady\nKlawiatury\nKlawisze multimedialne"
+        },
+        "screenshot": "",
+        "typography": {
+          "labelScale": 1.7,
+          "headlineScale": 0.78
+        }
+      }
+    ],
+    "android": [
+      {
+        "id": "bc_1",
+        "layout": "hero",
+        "label": {
+          "en": "Zwift · MyWhoosh · TPV & more",
+          "de": "Zwift · MyWhoosh · TPV & mehr",
+          "es": "Zwift · MyWhoosh · TPV y más",
+          "fr": "Zwift · MyWhoosh · TPV et plus",
+          "it": "Zwift · MyWhoosh · TPV e altro",
+          "pl": "Zwift · MyWhoosh · TPV i więcej"
+        },
+        "headline": {
+          "en": "Any controller.\nAny trainer app.",
+          "de": "Jeder Controller.\nJede App.",
+          "es": "Cualquier mando.\nCualquier app.",
+          "fr": "Tous les contrôleurs.\nToutes les applis.",
+          "it": "Ogni controller.\nOgni app.",
+          "pl": "Każdy kontroler.\nKażda aplikacja."
+        },
+        "screenshot": "/screenshots/phone/{locale}/device.png",
+        "typography": {
+          "labelScale": 1.7
+        }
+      },
+      {
+        "id": "bc_2",
+        "layout": "device-top",
+        "label": {
+          "en": "Virtual shifting",
+          "de": "Virtual Shifting",
+          "es": "Cambio virtual",
+          "fr": "Vitesses virtuelles",
+          "it": "Cambio virtuale",
+          "pl": "Wirtualna zmiana biegów"
+        },
+        "headline": {
+          "en": "Shift gears on\nany trainer.",
+          "de": "Schalten auf\njedem Trainer.",
+          "es": "Marchas en\ncualquier rodillo.",
+          "fr": "Des vitesses\nsur tout\nhome-trainer.",
+          "it": "Cambia marcia\nsu ogni rullo.",
+          "pl": "Zmieniaj biegi\nna każdym trenażerze."
+        },
+        "screenshot": "/screenshots/phone/{locale}/virtualshifting-settings-dark.png",
+        "inverted": true,
+        "typography": {
+          "labelScale": 1.7
+        },
+        "transforms": {
+          "device": {
+            "x": 230,
+            "y": -260,
+            "width": 620,
+            "height": 1347.8260869565217,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        }
+      },
+      {
+        "id": "bc_3",
+        "layout": "two-devices",
+        "label": {
+          "en": "Button mapping",
+          "de": "Tastenbelegung",
+          "es": "Asignación de botones",
+          "fr": "Affectation des boutons",
+          "it": "Mappatura dei pulsanti",
+          "pl": "Mapowanie przycisków"
+        },
+        "headline": {
+          "en": "Every button,\nyour way.",
+          "de": "Jede Taste,\nwie du willst.",
+          "es": "Cada botón,\na tu manera.",
+          "fr": "Chaque bouton,\nà ta façon.",
+          "it": "Ogni pulsante,\na modo tuo.",
+          "pl": "Każdy przycisk\npo twojemu."
+        },
+        "screenshot": "/screenshots/phone/{locale}/customization.png",
+        "screenshotSecondary": "/screenshots/phone/{locale}/trainer.png",
+        "typography": {
+          "labelScale": 1.7
+        },
+        "transforms": {
+          "device": {
+            "x": 500,
+            "y": 900,
+            "width": 640,
+            "height": 1391.304347826087,
+            "rotation": 0,
+            "zIndex": 3
+          },
+          "deviceSecondary": {
+            "x": -90,
+            "y": 720,
+            "width": 640,
+            "height": 1391.304347826087,
+            "rotation": 0,
+            "zIndex": 2
+          }
+        }
+      },
+      {
+        "id": "bc_4",
+        "layout": "device-bottom",
+        "label": {
+          "en": "Devices",
+          "de": "Geräte",
+          "es": "Dispositivos",
+          "fr": "Appareils",
+          "it": "Dispositivi",
+          "pl": "Urządzenia"
+        },
+        "headline": {
+          "en": "Set up\nin minutes.",
+          "de": "In Minuten\neingerichtet.",
+          "es": "Listo en\nminutos.",
+          "fr": "Prêt en\nquelques minutes.",
+          "it": "Pronto in\npochi minuti.",
+          "pl": "Gotowe\nw kilka minut."
+        },
+        "screenshot": "/screenshots/phone/{locale}/devices.png",
+        "typography": {
+          "labelScale": 1.7
+        },
+        "transforms": {
+          "device": {
+            "x": 200,
+            "y": 720,
+            "width": 680,
+            "height": 1478.2608695652173,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        }
+      },
+      {
+        "id": "bc_5",
+        "layout": "hero",
+        "label": {
+          "en": "Trainer controls",
+          "de": "Trainersteuerung",
+          "es": "Controles de entrenamiento",
+          "fr": "Commandes de l'entraîneur",
+          "it": "Controlli del trainer",
+          "pl": "Sterowanie trenażerem"
+        },
+        "headline": {
+          "en": "Steer, shift,\nchange camera.",
+          "de": "Lenken, schalten,\nKamera wechseln.",
+          "es": "Dirección, marchas,\ncámara.",
+          "fr": "Direction, vitesses,\ncaméra.",
+          "it": "Sterzo, marce,\ntelecamera.",
+          "pl": "Skręt, biegi,\nkamera."
+        },
+        "screenshot": "/screenshots/phone/{locale}/companion-dark.png",
+        "inverted": true,
+        "typography": {
+          "labelScale": 1.7
+        }
+      },
+      {
+        "id": "bc_6",
+        "layout": "no-device",
+        "label": {
+          "en": "Works with",
+          "de": "Funktioniert mit",
+          "es": "Compatible con",
+          "fr": "Compatible avec",
+          "it": "Compatibile con",
+          "pl": "Działa z"
+        },
+        "headline": {
+          "en": "Zwift Click\nZwift Play · Ride\nShimano Di2\nSRAM AXS\nWheeltop EDS\nGamepads\nKeyboards\nMedia keys",
+          "de": "Zwift Click\nZwift Play · Ride\nShimano Di2\nSRAM AXS\nWheeltop EDS\nGamepads\nTastaturen\nMedientasten",
+          "es": "Zwift Click\nZwift Play · Ride\nShimano Di2\nSRAM AXS\nWheeltop EDS\nGamepads\nTeclados\nTeclas multimedia",
+          "fr": "Zwift Click\nZwift Play · Ride\nShimano Di2\nSRAM AXS\nWheeltop EDS\nManettes de jeu\nClaviers\nTouches multimédia",
+          "it": "Zwift Click\nZwift Play · Ride\nShimano Di2\nSRAM AXS\nWheeltop EDS\nGamepad\nTastiere\nTasti multimediali",
+          "pl": "Zwift Click\nZwift Play · Ride\nShimano Di2\nSRAM AXS\nWheeltop EDS\nGamepady\nKlawiatury\nKlawisze multimedialne"
+        },
+        "screenshot": "",
+        "typography": {
+          "labelScale": 1.7,
+          "headlineScale": 0.78
+        }
+      }
+    ],
+    "ipad": [
+      {
+        "id": "bc_ipad_1",
+        "layout": "hero",
+        "label": {
+          "en": "Zwift · MyWhoosh · TPV & more",
+          "de": "Zwift · MyWhoosh · TPV & mehr",
+          "es": "Zwift · MyWhoosh · TPV y más",
+          "fr": "Zwift · MyWhoosh · TPV et plus",
+          "it": "Zwift · MyWhoosh · TPV e altro",
+          "pl": "Zwift · MyWhoosh · TPV i więcej"
+        },
+        "headline": {
+          "en": "Any controller.\nAny trainer app.",
+          "de": "Jeder Controller.\nJede App.",
+          "es": "Cualquier mando.\nCualquier app.",
+          "fr": "Tous les contrôleurs.\nToutes les applis.",
+          "it": "Ogni controller.\nOgni app.",
+          "pl": "Każdy kontroler.\nKażda aplikacja."
+        },
+        "screenshot": "/screenshots/tablet/{locale}/device.png",
+        "typography": {
+          "labelScale": 1.7,
+          "headlineScale": 0.9
+        },
+        "transforms": {
+          "device": {
+            "x": 332,
+            "y": 1150,
+            "width": 1400,
+            "height": 1818.1818181818182,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        }
+      },
+      {
+        "id": "bc_ipad_2",
+        "layout": "device-top",
+        "label": {
+          "en": "Virtual shifting",
+          "de": "Virtual Shifting",
+          "es": "Cambio virtual",
+          "fr": "Vitesses virtuelles",
+          "it": "Cambio virtuale",
+          "pl": "Wirtualna zmiana biegów"
+        },
+        "headline": {
+          "en": "Shift gears on\nany smart trainer.",
+          "de": "Schalten auf\njedem Trainer.",
+          "es": "Marchas en\ncualquier rodillo.",
+          "fr": "Des vitesses\nsur tout\nhome-trainer.",
+          "it": "Cambia marcia\nsu ogni rullo smart.",
+          "pl": "Zmieniaj biegi\nna każdym trenażerze."
+        },
+        "screenshot": "/screenshots/tablet/{locale}/virtualshifting-settings-dark.png",
+        "inverted": true,
+        "typography": {
+          "labelScale": 1.7,
+          "headlineScale": 0.9
+        }
+      },
+      {
+        "id": "bc_ipad_3",
+        "layout": "two-devices",
+        "label": {
+          "en": "Button mapping",
+          "de": "Tastenbelegung",
+          "es": "Asignación de botones",
+          "fr": "Affectation des boutons",
+          "it": "Mappatura dei pulsanti",
+          "pl": "Mapowanie przycisków"
+        },
+        "headline": {
+          "en": "Every button,\nyour way.",
+          "de": "Jede Taste,\nwie du willst.",
+          "es": "Cada botón,\na tu manera.",
+          "fr": "Chaque bouton,\nà ta façon.",
+          "it": "Ogni pulsante,\na modo tuo.",
+          "pl": "Każdy przycisk\npo twojemu."
+        },
+        "screenshot": "/screenshots/tablet/{locale}/customization.png",
+        "screenshotSecondary": "/screenshots/tablet/{locale}/trainer.png",
+        "typography": {
+          "labelScale": 1.7,
+          "headlineScale": 0.9
+        },
+        "transforms": {
+          "device": {
+            "x": 820,
+            "y": 1180,
+            "width": 1130,
+            "height": 1467.5324675324675,
+            "rotation": 0,
+            "zIndex": 3
+          },
+          "deviceSecondary": {
+            "x": 110,
+            "y": 1020,
+            "width": 1130,
+            "height": 1467.5324675324675,
+            "rotation": 0,
+            "zIndex": 2
+          }
+        }
+      },
+      {
+        "id": "bc_ipad_4",
+        "layout": "device-bottom",
+        "label": {
+          "en": "Devices",
+          "de": "Geräte",
+          "es": "Dispositivos",
+          "fr": "Appareils",
+          "it": "Dispositivi",
+          "pl": "Urządzenia"
+        },
+        "headline": {
+          "en": "Set up\nin minutes.",
+          "de": "In Minuten\neingerichtet.",
+          "es": "Listo en\nminutos.",
+          "fr": "Prêt en\nquelques minutes.",
+          "it": "Pronto in\npochi minuti.",
+          "pl": "Gotowe\nw kilka minut."
+        },
+        "screenshot": "/screenshots/tablet/{locale}/devices.png",
+        "typography": {
+          "labelScale": 1.7,
+          "headlineScale": 0.9
+        },
+        "transforms": {
+          "device": {
+            "x": 332,
+            "y": 1150,
+            "width": 1400,
+            "height": 1818.1818181818182,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        }
+      },
+      {
+        "id": "bc_ipad_5",
+        "layout": "hero",
+        "label": {
+          "en": "Trainer controls",
+          "de": "Trainersteuerung",
+          "es": "Controles de entrenamiento",
+          "fr": "Commandes de l'entraîneur",
+          "it": "Controlli del trainer",
+          "pl": "Sterowanie trenażerem"
+        },
+        "headline": {
+          "en": "Steer, shift,\nchange camera.",
+          "de": "Lenken, schalten,\nKamera wechseln.",
+          "es": "Dirección, marchas,\ncámara.",
+          "fr": "Direction, vitesses,\ncaméra.",
+          "it": "Sterzo, marce,\ntelecamera.",
+          "pl": "Skręt, biegi,\nkamera."
+        },
+        "screenshot": "/screenshots/tablet/{locale}/companion-dark.png",
+        "inverted": true,
+        "typography": {
+          "labelScale": 1.7,
+          "headlineScale": 0.9
+        },
+        "transforms": {
+          "device": {
+            "x": 332,
+            "y": 1150,
+            "width": 1400,
+            "height": 1818.1818181818182,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        }
+      },
+      {
+        "id": "bc_ipad_6",
+        "layout": "no-device",
+        "label": {
+          "en": "Works with",
+          "de": "Funktioniert mit",
+          "es": "Compatible con",
+          "fr": "Compatible avec",
+          "it": "Compatibile con",
+          "pl": "Działa z"
+        },
+        "headline": {
+          "en": "Zwift Click\nZwift Play · Ride\nShimano Di2\nSRAM AXS\nWheeltop EDS\nGamepads\nKeyboards\nMedia keys",
+          "de": "Zwift Click\nZwift Play · Ride\nShimano Di2\nSRAM AXS\nWheeltop EDS\nGamepads\nTastaturen\nMedientasten",
+          "es": "Zwift Click\nZwift Play · Ride\nShimano Di2\nSRAM AXS\nWheeltop EDS\nGamepads\nTeclados\nTeclas multimedia",
+          "fr": "Zwift Click\nZwift Play · Ride\nShimano Di2\nSRAM AXS\nWheeltop EDS\nManettes de jeu\nClaviers\nTouches multimédia",
+          "it": "Zwift Click\nZwift Play · Ride\nShimano Di2\nSRAM AXS\nWheeltop EDS\nGamepad\nTastiere\nTasti multimediali",
+          "pl": "Zwift Click\nZwift Play · Ride\nShimano Di2\nSRAM AXS\nWheeltop EDS\nGamepady\nKlawiatury\nKlawisze multimedialne"
+        },
+        "screenshot": "",
+        "typography": {
+          "labelScale": 1.7,
+          "headlineScale": 0.78
+        }
+      }
+    ],
+    "tvos": [
+      {
+        "id": "s_mvjvt805_d",
+        "layout": "hero",
+        "label": {
+          "en": "MEET YOUR APP"
+        },
+        "headline": {
+          "en": "Made for\nthe living room."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mvjvt805_e",
+        "layout": "split-landscape",
+        "label": {
+          "en": "FEATURE 01"
+        },
+        "headline": {
+          "en": "One idea\nper screen."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mvjvt805_f",
+        "layout": "device-top",
+        "label": {
+          "en": "FEATURE 02"
+        },
+        "headline": {
+          "en": "Flip the contrast."
+        },
+        "screenshot": "",
+        "inverted": true
+      },
+      {
+        "id": "s_mvjvt805_g",
+        "layout": "no-device",
+        "label": {
+          "en": "MORE"
+        },
+        "headline": {
+          "en": "And so\nmuch more."
+        },
+        "screenshot": ""
+      }
+    ],
+    "watchos": [
+      {
+        "id": "s_mvjvt805_h",
+        "layout": "hero",
+        "label": {
+          "en": "MEET YOUR APP"
+        },
+        "headline": {
+          "en": "On your\nwrist."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mvjvt805_i",
+        "layout": "device-bottom",
+        "label": {
+          "en": "FEATURE 01"
+        },
+        "headline": {
+          "en": "One glance.\nDone."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mvjvt805_j",
+        "layout": "device-top",
+        "label": {
+          "en": "FEATURE 02"
+        },
+        "headline": {
+          "en": "Always\nwith you."
+        },
+        "screenshot": "",
+        "inverted": true
+      }
+    ],
+    "carplay": [
+      {
+        "id": "s_mvjvt805_k",
+        "layout": "split-landscape",
+        "label": {
+          "en": "CARPLAY"
+        },
+        "headline": {
+          "en": "Eyes on\nthe road."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mvjvt805_l",
+        "layout": "device-bottom",
+        "label": {
+          "en": "FEATURE 01"
+        },
+        "headline": {
+          "en": "Everything, one tap away."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mvjvt805_m",
+        "layout": "device-top",
+        "label": {
+          "en": "FEATURE 02"
+        },
+        "headline": {
+          "en": "Made for every drive."
+        },
+        "screenshot": "",
+        "inverted": true
+      }
+    ],
+    "mac": [
+      {
+        "id": "bc_1",
+        "layout": "hero",
+        "label": {
+          "en": "Zwift · MyWhoosh · TPV & more",
+          "de": "Zwift · MyWhoosh · TPV & mehr",
+          "es": "Zwift · MyWhoosh · TPV y más",
+          "fr": "Zwift · MyWhoosh · TPV et plus",
+          "it": "Zwift · MyWhoosh · TPV e altro",
+          "pl": "Zwift · MyWhoosh · TPV i więcej"
+        },
+        "headline": {
+          "en": "Any controller.\nAny trainer app.",
+          "de": "Jeder Controller.\nJede App.",
+          "es": "Cualquier mando.\nCualquier app.",
+          "fr": "Tous les contrôleurs.\nToutes les applis.",
+          "it": "Ogni controller.\nOgni app.",
+          "pl": "Każdy kontroler.\nKażda aplikacja."
+        },
+        "screenshot": "/screenshots/desktop/{locale}/device.png",
+        "typography": {
+          "labelScale": 1.5,
+          "headlineScale": 0.85
+        }
+      },
+      {
+        "id": "bc_2",
+        "layout": "split-landscape",
+        "label": {
+          "en": "Virtual shifting",
+          "de": "Virtual Shifting",
+          "es": "Cambio virtual",
+          "fr": "Vitesses virtuelles",
+          "it": "Cambio virtuale",
+          "pl": "Wirtualna zmiana biegów"
+        },
+        "headline": {
+          "en": "Shift gears\non any\nsmart trainer.",
+          "de": "Schalten\nauf jedem\nTrainer.",
+          "es": "Marchas\nen cualquier\nrodillo.",
+          "fr": "Des vitesses\nsur tout\nhome-trainer.",
+          "it": "Cambia marcia\nsu ogni\nrullo smart.",
+          "pl": "Zmieniaj biegi\nna każdym\ntrenażerze."
+        },
+        "screenshot": "/screenshots/desktop/{locale}/virtualshifting-settings-dark.png",
+        "typography": {
+          "labelScale": 1.5
+        },
+        "inverted": true
+      },
+      {
+        "id": "bc_3",
+        "layout": "device-top",
+        "label": {
+          "en": "Devices",
+          "de": "Geräte",
+          "es": "Dispositivos",
+          "fr": "Appareils",
+          "it": "Dispositivi",
+          "pl": "Urządzenia"
+        },
+        "headline": {
+          "en": "Set up in minutes.",
+          "de": "In Minuten eingerichtet.",
+          "es": "Listo en minutos.",
+          "fr": "Prêt en quelques minutes.",
+          "it": "Pronto in pochi minuti.",
+          "pl": "Gotowe w kilka minut."
+        },
+        "screenshot": "/screenshots/desktop/{locale}/devices.png",
+        "typography": {
+          "labelScale": 1.5
+        }
+      },
+      {
+        "id": "bc_4",
+        "layout": "two-devices",
+        "label": {
+          "en": "Button mapping",
+          "de": "Tastenbelegung",
+          "es": "Asignación de botones",
+          "fr": "Affectation des boutons",
+          "it": "Mappatura dei pulsanti",
+          "pl": "Mapowanie przycisków"
+        },
+        "headline": {
+          "en": "Every button, your way.",
+          "de": "Jede Taste, wie du willst.",
+          "es": "Cada botón, a tu manera.",
+          "fr": "Chaque bouton, à ta façon.",
+          "it": "Ogni pulsante, a modo tuo.",
+          "pl": "Każdy przycisk po twojemu."
+        },
+        "screenshot": "/screenshots/desktop/{locale}/customization.png",
+        "typography": {
+          "labelScale": 1.5
+        },
+        "screenshotSecondary": "/screenshots/desktop/{locale}/companion.png"
+      },
+      {
+        "id": "bc_5",
+        "layout": "split-landscape",
+        "label": {
+          "en": "Trainer controls",
+          "de": "Trainersteuerung",
+          "es": "Controles de entrenamiento",
+          "fr": "Commandes de l'entraîneur",
+          "it": "Controlli del trainer",
+          "pl": "Sterowanie trenażerem"
+        },
+        "headline": {
+          "en": "Steer, shift,\nchange\ncamera.",
+          "de": "Lenken,\nschalten,\nKamera wechseln.",
+          "es": "Dirección,\nmarchas,\ncámara.",
+          "fr": "Direction,\nvitesses,\ncaméra.",
+          "it": "Sterzo,\nmarce,\ntelecamera.",
+          "pl": "Skręt,\nbiegi,\nkamera."
+        },
+        "screenshot": "/screenshots/desktop/{locale}/companion-dark.png",
+        "typography": {
+          "labelScale": 1.5
+        },
+        "inverted": true
+      },
+      {
+        "id": "bc_6",
+        "layout": "no-device",
+        "label": {
+          "en": "Works with",
+          "de": "Funktioniert mit",
+          "es": "Compatible con",
+          "fr": "Compatible avec",
+          "it": "Compatibile con",
+          "pl": "Działa z"
+        },
+        "headline": {
+          "en": "Zwift Click · Play · Ride\nShimano Di2 · SRAM AXS\nWheeltop EDS · Gamepads\nKeyboards · Media keys",
+          "de": "Zwift Click · Play · Ride\nShimano Di2 · SRAM AXS\nWheeltop EDS · Gamepads\nTastaturen · Medientasten",
+          "es": "Zwift Click · Play · Ride\nShimano Di2 · SRAM AXS\nWheeltop EDS · Gamepads\nTeclados · Teclas multimedia",
+          "fr": "Zwift Click · Play · Ride\nShimano Di2 · SRAM AXS\nWheeltop EDS · Manettes\nClaviers · Touches multimédia",
+          "it": "Zwift Click · Play · Ride\nShimano Di2 · SRAM AXS\nWheeltop EDS · Gamepad\nTastiere · Tasti multimediali",
+          "pl": "Zwift Click · Play · Ride\nShimano Di2 · SRAM AXS\nWheeltop EDS · Gamepady\nKlawiatury · Klawisze multimedialne"
+        },
+        "screenshot": "",
+        "typography": {
+          "labelScale": 1.5,
+          "headlineScale": 0.8
+        }
+      }
+    ],
+    "android-7": [
+      {
+        "id": "bc_1",
+        "layout": "hero",
+        "label": {
+          "en": "Zwift · MyWhoosh · TPV & more",
+          "de": "Zwift · MyWhoosh · TPV & mehr",
+          "es": "Zwift · MyWhoosh · TPV y más",
+          "fr": "Zwift · MyWhoosh · TPV et plus",
+          "it": "Zwift · MyWhoosh · TPV e altro",
+          "pl": "Zwift · MyWhoosh · TPV i więcej"
+        },
+        "headline": {
+          "en": "Any controller.\nAny trainer app.",
+          "de": "Jeder Controller.\nJede App.",
+          "es": "Cualquier mando.\nCualquier app.",
+          "fr": "Tous les contrôleurs.\nToutes les applis.",
+          "it": "Ogni controller.\nOgni app.",
+          "pl": "Każdy kontroler.\nKażda aplikacja."
+        },
+        "screenshot": "/screenshots/desktop/{locale}/device.png",
+        "typography": {
+          "labelScale": 1.5,
+          "headlineScale": 0.85
+        }
+      },
+      {
+        "id": "bc_2",
+        "layout": "split-landscape",
+        "label": {
+          "en": "Virtual shifting",
+          "de": "Virtual Shifting",
+          "es": "Cambio virtual",
+          "fr": "Vitesses virtuelles",
+          "it": "Cambio virtuale",
+          "pl": "Wirtualna zmiana biegów"
+        },
+        "headline": {
+          "en": "Shift gears\non any\nsmart trainer.",
+          "de": "Schalten\nauf jedem\nTrainer.",
+          "es": "Marchas\nen cualquier\nrodillo.",
+          "fr": "Des vitesses\nsur tout\nhome-trainer.",
+          "it": "Cambia marcia\nsu ogni\nrullo smart.",
+          "pl": "Zmieniaj biegi\nna każdym\ntrenażerze."
+        },
+        "screenshot": "/screenshots/desktop/{locale}/virtualshifting-settings-dark.png",
+        "typography": {
+          "labelScale": 1.5
+        },
+        "inverted": true,
+        "transforms": {
+          "device": {
+            "x": 885,
+            "y": 247.5,
+            "width": 975,
+            "height": 628.875,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        }
+      },
+      {
+        "id": "bc_3",
+        "layout": "device-top",
+        "label": {
+          "en": "Devices",
+          "de": "Geräte",
+          "es": "Dispositivos",
+          "fr": "Appareils",
+          "it": "Dispositivi",
+          "pl": "Urządzenia"
+        },
+        "headline": {
+          "en": "Set up in minutes.",
+          "de": "In Minuten eingerichtet.",
+          "es": "Listo en minutos.",
+          "fr": "Prêt en quelques minutes.",
+          "it": "Pronto in pochi minuti.",
+          "pl": "Gotowe w kilka minut."
+        },
+        "screenshot": "/screenshots/desktop/{locale}/devices.png",
+        "typography": {
+          "labelScale": 1.5
+        },
+        "transforms": {
+          "device": {
+            "x": 435,
+            "y": 52.5,
+            "width": 1050,
+            "height": 677.25,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        }
+      },
+      {
+        "id": "bc_4",
+        "layout": "two-devices",
+        "label": {
+          "en": "Button mapping",
+          "de": "Tastenbelegung",
+          "es": "Asignación de botones",
+          "fr": "Affectation des boutons",
+          "it": "Mappatura dei pulsanti",
+          "pl": "Mapowanie przycisków"
+        },
+        "headline": {
+          "en": "Every button, your way.",
+          "de": "Jede Taste, wie du willst.",
+          "es": "Cada botón, a tu manera.",
+          "fr": "Chaque bouton, à ta façon.",
+          "it": "Ogni pulsante, a modo tuo.",
+          "pl": "Każdy przycisk po twojemu."
+        },
+        "screenshot": "/screenshots/desktop/{locale}/customization.png",
+        "typography": {
+          "labelScale": 1.5
+        },
+        "screenshotSecondary": "/screenshots/desktop/{locale}/companion.png",
+        "transforms": {
+          "deviceSecondary": {
+            "x": 82.5,
+            "y": 480,
+            "width": 915,
+            "height": 590.175,
+            "rotation": 0,
+            "zIndex": 2
+          },
+          "device": {
+            "x": 915,
+            "y": 435,
+            "width": 930,
+            "height": 599.85,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        }
+      },
+      {
+        "id": "bc_5",
+        "layout": "split-landscape",
+        "label": {
+          "en": "Trainer controls",
+          "de": "Trainersteuerung",
+          "es": "Controles de entrenamiento",
+          "fr": "Commandes de l'entraîneur",
+          "it": "Controlli del trainer",
+          "pl": "Sterowanie trenażerem"
+        },
+        "headline": {
+          "en": "Steer, shift,\nchange\ncamera.",
+          "de": "Lenken,\nschalten,\nKamera wechseln.",
+          "es": "Dirección,\nmarchas,\ncámara.",
+          "fr": "Direction,\nvitesses,\ncaméra.",
+          "it": "Sterzo,\nmarce,\ntelecamera.",
+          "pl": "Skręt,\nbiegi,\nkamera."
+        },
+        "screenshot": "/screenshots/desktop/{locale}/companion-dark.png",
+        "typography": {
+          "labelScale": 1.5
+        },
+        "inverted": true,
+        "transforms": {
+          "device": {
+            "x": 885,
+            "y": 247.5,
+            "width": 975,
+            "height": 628.875,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        }
+      },
+      {
+        "id": "bc_6",
+        "layout": "no-device",
+        "label": {
+          "en": "Works with",
+          "de": "Funktioniert mit",
+          "es": "Compatible con",
+          "fr": "Compatible avec",
+          "it": "Compatibile con",
+          "pl": "Działa z"
+        },
+        "headline": {
+          "en": "Zwift Click · Play · Ride\nShimano Di2 · SRAM AXS\nWheeltop EDS · Gamepads\nKeyboards · Media keys",
+          "de": "Zwift Click · Play · Ride\nShimano Di2 · SRAM AXS\nWheeltop EDS · Gamepads\nTastaturen · Medientasten",
+          "es": "Zwift Click · Play · Ride\nShimano Di2 · SRAM AXS\nWheeltop EDS · Gamepads\nTeclados · Teclas multimedia",
+          "fr": "Zwift Click · Play · Ride\nShimano Di2 · SRAM AXS\nWheeltop EDS · Manettes\nClaviers · Touches multimédia",
+          "it": "Zwift Click · Play · Ride\nShimano Di2 · SRAM AXS\nWheeltop EDS · Gamepad\nTastiere · Tasti multimediali",
+          "pl": "Zwift Click · Play · Ride\nShimano Di2 · SRAM AXS\nWheeltop EDS · Gamepady\nKlawiatury · Klawisze multimedialne"
+        },
+        "screenshot": "",
+        "typography": {
+          "labelScale": 1.5,
+          "headlineScale": 0.8
+        }
+      }
+    ],
+    "android-10": [
+      {
+        "id": "bc_1",
+        "layout": "hero",
+        "label": {
+          "en": "Zwift · MyWhoosh · TPV & more",
+          "de": "Zwift · MyWhoosh · TPV & mehr",
+          "es": "Zwift · MyWhoosh · TPV y más",
+          "fr": "Zwift · MyWhoosh · TPV et plus",
+          "it": "Zwift · MyWhoosh · TPV e altro",
+          "pl": "Zwift · MyWhoosh · TPV i więcej"
+        },
+        "headline": {
+          "en": "Any controller.\nAny trainer app.",
+          "de": "Jeder Controller.\nJede App.",
+          "es": "Cualquier mando.\nCualquier app.",
+          "fr": "Tous les contrôleurs.\nToutes les applis.",
+          "it": "Ogni controller.\nOgni app.",
+          "pl": "Każdy kontroler.\nKażda aplikacja."
+        },
+        "screenshot": "/screenshots/desktop/{locale}/device.png",
+        "typography": {
+          "labelScale": 1.5,
+          "headlineScale": 0.85
+        }
+      },
+      {
+        "id": "bc_2",
+        "layout": "split-landscape",
+        "label": {
+          "en": "Virtual shifting",
+          "de": "Virtual Shifting",
+          "es": "Cambio virtual",
+          "fr": "Vitesses virtuelles",
+          "it": "Cambio virtuale",
+          "pl": "Wirtualna zmiana biegów"
+        },
+        "headline": {
+          "en": "Shift gears\non any\nsmart trainer.",
+          "de": "Schalten\nauf jedem\nTrainer.",
+          "es": "Marchas\nen cualquier\nrodillo.",
+          "fr": "Des vitesses\nsur tout\nhome-trainer.",
+          "it": "Cambia marcia\nsu ogni\nrullo smart.",
+          "pl": "Zmieniaj biegi\nna każdym\ntrenażerze."
+        },
+        "screenshot": "/screenshots/desktop/{locale}/virtualshifting-settings-dark.png",
+        "typography": {
+          "labelScale": 1.5
+        },
+        "inverted": true,
+        "transforms": {
+          "device": {
+            "x": 1180,
+            "y": 330,
+            "width": 1300,
+            "height": 838.5,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        }
+      },
+      {
+        "id": "bc_3",
+        "layout": "device-top",
+        "label": {
+          "en": "Devices",
+          "de": "Geräte",
+          "es": "Dispositivos",
+          "fr": "Appareils",
+          "it": "Dispositivi",
+          "pl": "Urządzenia"
+        },
+        "headline": {
+          "en": "Set up in minutes.",
+          "de": "In Minuten eingerichtet.",
+          "es": "Listo en minutos.",
+          "fr": "Prêt en quelques minutes.",
+          "it": "Pronto in pochi minuti.",
+          "pl": "Gotowe w kilka minut."
+        },
+        "screenshot": "/screenshots/desktop/{locale}/devices.png",
+        "typography": {
+          "labelScale": 1.5
+        },
+        "transforms": {
+          "device": {
+            "x": 580,
+            "y": 70,
+            "width": 1400,
+            "height": 903,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        }
+      },
+      {
+        "id": "bc_4",
+        "layout": "two-devices",
+        "label": {
+          "en": "Button mapping",
+          "de": "Tastenbelegung",
+          "es": "Asignación de botones",
+          "fr": "Affectation des boutons",
+          "it": "Mappatura dei pulsanti",
+          "pl": "Mapowanie przycisków"
+        },
+        "headline": {
+          "en": "Every button, your way.",
+          "de": "Jede Taste, wie du willst.",
+          "es": "Cada botón, a tu manera.",
+          "fr": "Chaque bouton, à ta façon.",
+          "it": "Ogni pulsante, a modo tuo.",
+          "pl": "Każdy przycisk po twojemu."
+        },
+        "screenshot": "/screenshots/desktop/{locale}/customization.png",
+        "typography": {
+          "labelScale": 1.5
+        },
+        "screenshotSecondary": "/screenshots/desktop/{locale}/companion.png",
+        "transforms": {
+          "deviceSecondary": {
+            "x": 110,
+            "y": 640,
+            "width": 1220,
+            "height": 786.9,
+            "rotation": 0,
+            "zIndex": 2
+          },
+          "device": {
+            "x": 1220,
+            "y": 580,
+            "width": 1240,
+            "height": 799.8000000000001,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        }
+      },
+      {
+        "id": "bc_5",
+        "layout": "split-landscape",
+        "label": {
+          "en": "Trainer controls",
+          "de": "Trainersteuerung",
+          "es": "Controles de entrenamiento",
+          "fr": "Commandes de l'entraîneur",
+          "it": "Controlli del trainer",
+          "pl": "Sterowanie trenażerem"
+        },
+        "headline": {
+          "en": "Steer, shift,\nchange\ncamera.",
+          "de": "Lenken,\nschalten,\nKamera wechseln.",
+          "es": "Dirección,\nmarchas,\ncámara.",
+          "fr": "Direction,\nvitesses,\ncaméra.",
+          "it": "Sterzo,\nmarce,\ntelecamera.",
+          "pl": "Skręt,\nbiegi,\nkamera."
+        },
+        "screenshot": "/screenshots/desktop/{locale}/companion-dark.png",
+        "typography": {
+          "labelScale": 1.5
+        },
+        "inverted": true,
+        "transforms": {
+          "device": {
+            "x": 1180,
+            "y": 330,
+            "width": 1300,
+            "height": 838.5,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        }
+      },
+      {
+        "id": "bc_6",
+        "layout": "no-device",
+        "label": {
+          "en": "Works with",
+          "de": "Funktioniert mit",
+          "es": "Compatible con",
+          "fr": "Compatible avec",
+          "it": "Compatibile con",
+          "pl": "Działa z"
+        },
+        "headline": {
+          "en": "Zwift Click · Play · Ride\nShimano Di2 · SRAM AXS\nWheeltop EDS · Gamepads\nKeyboards · Media keys",
+          "de": "Zwift Click · Play · Ride\nShimano Di2 · SRAM AXS\nWheeltop EDS · Gamepads\nTastaturen · Medientasten",
+          "es": "Zwift Click · Play · Ride\nShimano Di2 · SRAM AXS\nWheeltop EDS · Gamepads\nTeclados · Teclas multimedia",
+          "fr": "Zwift Click · Play · Ride\nShimano Di2 · SRAM AXS\nWheeltop EDS · Manettes\nClaviers · Touches multimédia",
+          "it": "Zwift Click · Play · Ride\nShimano Di2 · SRAM AXS\nWheeltop EDS · Gamepad\nTastiere · Tasti multimediali",
+          "pl": "Zwift Click · Play · Ride\nShimano Di2 · SRAM AXS\nWheeltop EDS · Gamepady\nKlawiatury · Klawisze multimedialne"
+        },
+        "screenshot": "",
+        "typography": {
+          "labelScale": 1.5,
+          "headlineScale": 0.8
+        }
+      }
+    ],
+    "feature-graphic": [
+      {
+        "id": "bc_1",
+        "layout": "feature-graphic",
+        "label": {
+          "en": ""
+        },
+        "headline": {
+          "en": "Any controller.\nAny trainer app.",
+          "de": "Jeder Controller.\nJede App.",
+          "es": "Cualquier mando.\nCualquier app.",
+          "fr": "Tous les contrôleurs.\nToutes les applis.",
+          "it": "Ogni controller.\nOgni app.",
+          "pl": "Każdy kontroler.\nKażda aplikacja."
+        },
+        "screenshot": ""
+      }
+    ],
+    "duo-outer": [
+      {
+        "id": "s_mvjvt805_x",
+        "layout": "hero",
+        "label": {
+          "en": "MEET YOUR APP"
+        },
+        "headline": {
+          "en": "Everything,\none hand."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mvjvt805_y",
+        "layout": "device-bottom",
+        "label": {
+          "en": "FEATURE 01"
+        },
+        "headline": {
+          "en": "One idea\nper screen."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mvjvt805_z",
+        "layout": "two-devices",
+        "label": {
+          "en": "OPEN IT"
+        },
+        "headline": {
+          "en": "Open it for\nthe full view."
+        },
+        "screenshot": "",
+        "screenshotSecondary": ""
+      },
+      {
+        "id": "s_mvjvt805_10",
+        "layout": "device-top",
+        "label": {
+          "en": "FEATURE 02"
+        },
+        "headline": {
+          "en": "Flip the contrast."
+        },
+        "screenshot": "",
+        "inverted": true
+      },
+      {
+        "id": "s_mvjvt805_11",
+        "layout": "no-device",
+        "label": {
+          "en": "MORE"
+        },
+        "headline": {
+          "en": "And so\nmuch more."
+        },
+        "screenshot": ""
+      }
+    ],
+    "duo-outer-landscape": [
+      {
+        "id": "s_mvjvt805_12",
+        "layout": "hero",
+        "label": {
+          "en": "TURN IT"
+        },
+        "headline": {
+          "en": "Made for the wide view."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mvjvt805_13",
+        "layout": "split-landscape",
+        "label": {
+          "en": "FEATURE 01"
+        },
+        "headline": {
+          "en": "One idea\nper screen."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mvjvt805_14",
+        "layout": "device-top",
+        "label": {
+          "en": "FEATURE 02"
+        },
+        "headline": {
+          "en": "Flip the contrast."
+        },
+        "screenshot": "",
+        "inverted": true
+      }
+    ],
+    "duo-inner": [
+      {
+        "id": "s_mvjvt805_15",
+        "layout": "hero",
+        "label": {
+          "en": "UNFOLD IT"
+        },
+        "headline": {
+          "en": "Room for\nthe whole view."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mvjvt805_16",
+        "layout": "device-bottom",
+        "label": {
+          "en": "FEATURE 01"
+        },
+        "headline": {
+          "en": "One idea\nper screen."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mvjvt805_17",
+        "layout": "two-devices",
+        "label": {
+          "en": "FOLDED + OPEN"
+        },
+        "headline": {
+          "en": "Turn it, open it,\nkeep going."
+        },
+        "screenshot": "",
+        "screenshotSecondary": ""
+      },
+      {
+        "id": "s_mvjvt805_18",
+        "layout": "device-top",
+        "label": {
+          "en": "FEATURE 02"
+        },
+        "headline": {
+          "en": "Flip the contrast."
+        },
+        "screenshot": "",
+        "inverted": true
+      }
+    ],
+    "duo-inner-landscape": [
+      {
+        "id": "s_mvjvt805_19",
+        "layout": "hero",
+        "label": {
+          "en": "UNFOLD IT"
+        },
+        "headline": {
+          "en": "Lead with the two-pane view."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mvjvt805_1a",
+        "layout": "two-devices",
+        "label": {
+          "en": "FOLDED + OPEN"
+        },
+        "headline": {
+          "en": "Same moment, closed and open."
+        },
+        "screenshot": "",
+        "screenshotSecondary": ""
+      },
+      {
+        "id": "s_mvjvt805_1b",
+        "layout": "split-landscape",
+        "label": {
+          "en": "FEATURE 02"
+        },
+        "headline": {
+          "en": "One idea\nper screen."
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "s_mvjvt805_1c",
+        "layout": "device-top",
+        "label": {
+          "en": "FEATURE 03"
+        },
+        "headline": {
+          "en": "Show what only the wide screen can."
+        },
+        "screenshot": "",
+        "inverted": true
+      },
+      {
+        "id": "s_mvjvt805_1d",
+        "layout": "no-device",
+        "label": {
+          "en": "MORE"
+        },
+        "headline": {
+          "en": "And so much more."
+        },
+        "screenshot": ""
+      }
+    ],
+    "creative-universal": [
+      {
+        "id": "s_mvjvt805_1e",
+        "layout": "split-landscape",
+        "label": {
+          "en": "NEW"
+        },
+        "headline": {
+          "en": "Your app,\nat a glance."
+        },
+        "screenshot": ""
+      }
+    ],
+    "creative-header": [
+      {
+        "id": "s_mvjvt805_1f",
+        "layout": "split-landscape",
+        "label": {
+          "en": "NEW"
+        },
+        "headline": {
+          "en": "Your app,\nat a glance."
+        },
+        "screenshot": ""
+      }
+    ],
+    "creative-search": [
+      {
+        "id": "s_mvjvt805_1g",
+        "layout": "split-landscape",
+        "label": {
+          "en": "NEW"
+        },
+        "headline": {
+          "en": "Your app,\nat a glance."
+        },
+        "screenshot": ""
+      }
+    ]
+  },
+  "crossScreenMockupsByDevice": {},
+  "scene": {
+    "backdrop": "solid",
+    "span": false,
+    "decoration": "none",
+    "shadow": 35,
+    "glow": 0,
+    "tilt": 0,
+    "headlineWeight": 800,
+    "headlineScale": 1.15,
+    "headlineCase": "upper",
+    "captionAlign": "auto"
+  },
+  "importedFont": {
+    "src": "/fonts/imported/barlowcondensed800.ttf",
+    "format": "truetype",
+    "name": "Barlow Condensed ExtraBold"
+  }
+}

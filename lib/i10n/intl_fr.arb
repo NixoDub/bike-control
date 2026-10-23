@@ -1191,6 +1191,10 @@
   "shimanoPasskeyHint": "Gardez 000000, sauf si vous avez défini votre propre code dans l'app E-TUBE.",
   "shimanoPasskeyWrongTitle": "Code d'accès incorrect",
   "shimanoPasskeyWrongBody": "Votre Di2 a refusé le code. Saisissez le code défini dans l'app E-TUBE.",
+  "shimanoPairTitle": "Associez votre Di2 à Windows",
+  "shimanoPairBody": "Les boutons Di2 nécessitent que votre Di2 soit associé à Windows, et Windows n'a pas pu l'associer. Ouvrez Paramètres Windows → Bluetooth et appareils → Ajouter un appareil → Bluetooth et choisissez votre Di2 (appuyez sur un bouton de commande pour le réveiller). S'il figure déjà dans la liste, supprimez-le puis ajoutez-le à nouveau. Touchez ensuite Réessayer.",
+  "shimanoUseDfly": "Utiliser plutôt les canaux D-Fly",
+  "shimanoDflyActive": "Votre Di2 passe les vitesses normalement. Les boutons affectés aux canaux D-Fly dans l'app E-TUBE apparaissent ici dès que vous appuyez dessus.",
   "actionInclineIncrease": "Augmenter la pente",
   "actionInclineDecrease": "Diminuer la pente",
   "actionInclineZero": "Pente à plat (0 %)",
@@ -2919,5 +2923,7 @@
   "chainHintTitle": "Place ta chaîne sur un rapport moyen",
   "chainHintVeryBigGear": "Ta chaîne sur le home trainer est sur un très grand rapport (développement d'environ {ratio}). Les vitesses virtuelles sont réalistes avec la chaîne sur un rapport moyen, par ex. 34/17 ou 50/25. Laisse-la là et change uniquement de vitesse virtuellement.",
   "chainHintVerySmallGear": "Ta chaîne sur le home trainer est sur un très petit rapport (développement d'environ {ratio}). Les vitesses virtuelles sont réalistes avec la chaîne sur un rapport moyen, par ex. 34/17 ou 50/25. Laisse-la là et change uniquement de vitesse virtuellement.",
-  "ignoredDevicesNearby": "Appareils ignorés détectés à proximité"
+  "ignoredDevicesNearby": "Appareils ignorés détectés à proximité",
+  "trainerActionGearUpErgUp": "Trainer : monter un rapport / ERG plus",
+  "trainerActionGearDownErgDown": "Trainer : descendre un rapport / ERG moins"
 }

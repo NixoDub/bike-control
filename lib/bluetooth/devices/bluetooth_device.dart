@@ -50,6 +50,7 @@ import 'sensors/ble_cadence_device.dart';
 import 'sensors/ble_heart_rate_device.dart';
 import 'sensors/ble_power_device.dart';
 import 'stages/stages_smart_bike.dart';
+import 'muov/muov_bike.dart';
 import 'thinkrider/thinkrider_vs200.dart';
 import 'wheeltop/wheeltop_eds.dart';
 
@@ -134,6 +135,7 @@ abstract class BluetoothDevice extends BaseDevice {
     'ROTOR',
     'POWER2MAX',
     'POWRLINK', // Wahoo POWRLINK
+    'PES-P', // Magene crank power meters (PES-P505, PES-P515)
   ];
 
   /// Whether [name] matches one of the power-meter families BikeControl
@@ -272,6 +274,9 @@ abstract class BluetoothDevice extends BaseDevice {
         // advertises FTMS, but its buttons only work on this class (the
         // trainer role is attached at connect time).
         _ when StagesSmartBikeConstants.matchesName(scanResult.name!) => StagesSmartBike(scanResult),
+        // Same for a MUOV smart bike: it advertises FTMS and Cycling Power, and
+        // its hood buttons (Zwift Ride service) only work on this class.
+        _ when MuovBikeConstants.matchesName(scanResult.name!) => MuovBike(scanResult),
         _ when scanResult.name!.toUpperCase().startsWith('CYCPLUS') && scanResult.name!.toUpperCase().contains('BC2') =>
           CycplusBc2(scanResult),
         _ when scanResult.name!.toUpperCase().startsWith('THINK VS') => ThinkRiderVs200(scanResult),
@@ -357,6 +362,9 @@ abstract class BluetoothDevice extends BaseDevice {
         // advertises FTMS, but its buttons only work on this class (the
         // trainer role is attached at connect time).
         _ when StagesSmartBikeConstants.matchesName(scanResult.name!) => StagesSmartBike(scanResult),
+        // Same for a MUOV smart bike: it advertises FTMS and Cycling Power, and
+        // its hood buttons (Zwift Ride service) only work on this class.
+        _ when MuovBikeConstants.matchesName(scanResult.name!) => MuovBike(scanResult),
         _ when scanResult.name!.toUpperCase().startsWith('CYCPLUS') && scanResult.name!.toUpperCase().contains('BC2') =>
           CycplusBc2(scanResult),
         _ when scanResult.name!.toUpperCase().startsWith('THINK VS') => ThinkRiderVs200(scanResult),

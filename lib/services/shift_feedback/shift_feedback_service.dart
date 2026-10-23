@@ -21,6 +21,12 @@ abstract class ShiftHaptics {
   Future<void> play(ShiftCue cue);
 }
 
+/// Vibration on the controller whose button shifted, e.g. a gamepad's rumble
+/// motors. A no-op for controllers that can't vibrate or buzz by themselves.
+abstract class ControllerShiftHaptics {
+  Future<void> play(ShiftCue cue, {required String deviceId});
+}
+
 /// Short-clip sink. One implementation per audio stack (just_audio on
 /// iOS/Android/macOS, winmm on Windows, silent otherwise).
 abstract class ShiftSoundPlayer {
@@ -50,15 +56,18 @@ class ShiftFeedbackService {
   ShiftFeedbackService({
     required Settings settings,
     required ShiftHaptics haptics,
+    ControllerShiftHaptics? controllerHaptics,
     required ShiftSoundPlayer Function() createSoundPlayer,
     required ShiftFeedbackErrorHandler onError,
   }) : _settings = settings,
        _haptics = haptics,
+       _controllerHaptics = controllerHaptics,
        _createSoundPlayer = createSoundPlayer,
        _onError = onError;
 
   final Settings _settings;
   final ShiftHaptics _haptics;
+  final ControllerShiftHaptics? _controllerHaptics;
   final ShiftSoundPlayer Function() _createSoundPlayer;
   final ShiftFeedbackErrorHandler _onError;
 
@@ -69,17 +78,23 @@ class ShiftFeedbackService {
   bool get hapticsEnabled => _settings.isInitialized && _settings.getShiftHapticsEnabled();
   bool get soundEnabled => _settings.isInitialized && _settings.getShiftSoundEnabled();
 
+  /// The controller-side buzz, shown on the controller page of each
+  /// controller that can vibrate. On by default, like Zwift controllers.
+  bool get controllerHapticsEnabled => _settings.isInitialized && _settings.getVibrationEnabled();
+
   /// Call once at startup: warms the sound player if the rider has sound on.
   Future<void> prepare() async {
     if (!soundEnabled) return;
     await _ensureSounds();
   }
 
-  /// A rear shift went through, [up] = harder gear.
-  Future<void> shifted({required bool up}) => _emit(up ? ShiftCue.up : ShiftCue.down);
+  /// A rear shift went through, [up] = harder gear. [sourceDeviceId] is the
+  /// controller whose button shifted, if any, so it can buzz too.
+  Future<void> shifted({required bool up, String? sourceDeviceId}) =>
+      _emit(up ? ShiftCue.up : ShiftCue.down, sourceDeviceId: sourceDeviceId);
 
   /// A shift was rejected because there is no next gear.
-  Future<void> atLimit() => _emit(ShiftCue.limit);
+  Future<void> atLimit({String? sourceDeviceId}) => _emit(ShiftCue.limit, sourceDeviceId: sourceDeviceId);
 
   Future<void> setHapticsEnabled(bool enabled) async {
     await _settings.setShiftHapticsEnabled(enabled);
@@ -95,11 +110,22 @@ class ShiftFeedbackService {
     }
   }
 
-  Future<void> _emit(ShiftCue cue) async {
+  Future<void> _emit(ShiftCue cue, {String? sourceDeviceId}) async {
     await Future.wait([
       if (hapticsEnabled) _playHaptic(cue),
       if (soundEnabled) _playSound(cue),
+      if (sourceDeviceId != null && controllerHapticsEnabled) _playControllerHaptic(cue, sourceDeviceId),
     ]);
+  }
+
+  Future<void> _playControllerHaptic(ShiftCue cue, String deviceId) async {
+    final controllerHaptics = _controllerHaptics;
+    if (controllerHaptics == null) return;
+    try {
+      await controllerHaptics.play(cue, deviceId: deviceId);
+    } catch (e, s) {
+      _onError('ShiftFeedback.controllerHaptic', e, s);
+    }
   }
 
   Future<void> _playHaptic(ShiftCue cue) async {

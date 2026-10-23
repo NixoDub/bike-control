@@ -68,4 +68,15 @@ Future<void> main() async {
     device.handleTrainerAction(ZwiftButtons.shiftUpRight, InGameAction.trainerSwitchMode);
     expect(feedback.cues, isEmpty);
   });
+
+  test('reports the controller that shifted, so it can buzz too', () {
+    def.setTargetGear(5);
+    const pad = ControllerButton('a', sourceDeviceId: 'pad-1');
+    device.handleTrainerAction(pad, InGameAction.shiftUp);
+    def.setTargetGear(def.gearRatios.value.length);
+    device.handleTrainerAction(pad, InGameAction.shiftUp);
+
+    expect(feedback.cues, [ShiftCue.up, ShiftCue.limit]);
+    expect(feedback.sources, ['pad-1', 'pad-1']);
+  });
 }

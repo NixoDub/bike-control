@@ -9,6 +9,7 @@ import 'dart:async';
 
 import 'package:bike_control/bluetooth/devices/base_device.dart';
 import 'package:bike_control/bluetooth/devices/bluetooth_device.dart';
+import 'package:bike_control/bluetooth/devices/gamepad/gamepad_device.dart';
 import 'package:bike_control/bluetooth/devices/gyroscope/gyroscope_steering.dart';
 import 'package:bike_control/bluetooth/devices/steering_device.dart';
 import 'package:bike_control/bluetooth/devices/zwift/zwift_device.dart';
@@ -377,7 +378,7 @@ class _ControllerSettingsPageState extends State<ControllerSettingsPage> {
       dividerIndent: BkGroupedSection.inset + BkIconTile.size + BkGroupedRow.gap,
       children: [
         // The controller's own buzz on every shift, for the ones that can.
-        if (device is ZwiftDevice && device.canVibrate)
+        if ((device is ZwiftDevice && device.canVibrate) || (device is GamepadDevice && device.canRumble))
           BkGroupedRow(
             key: const ValueKey('controller-vibration'),
             icon: LucideIcons.vibrate,

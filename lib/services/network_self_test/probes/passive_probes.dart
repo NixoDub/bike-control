@@ -91,11 +91,6 @@ bool _chosenLooksUnreachable(AddressPickReport report, String chosen) {
 /// Android's 464XLAT CLAT interface both carry a 192.0.0.x dummy from it.
 bool _isUnreachableAddress(String address) => address.startsWith('169.254.') || address.startsWith('192.0.0.');
 
-/// Mobile-data interfaces: iOS `pdp_ip`, Android `rmnet`/`ccmni` and the
-/// 464XLAT `v4-`/`clat` ones. An address on one of them is the carrier's, and
-/// no device on the rider's Wi-Fi can reach it.
-final _cellularNamePattern = RegExp(r'^(pdp_ip|rmnet|ccmni|v4-|clat)', caseSensitive: false);
-
 /// Interface names of a real Wi-Fi or Ethernet port: `en0`/`enp3s0`/`eth0`,
 /// `wlan0`/`wlp2s0`, and Windows' "Ethernet"/"Wi-Fi"/"WLAN" (numbered when
 /// there are several, the same in every Windows language).
@@ -147,7 +142,7 @@ AddressWarningKind? advertisedAddressWarningKind(AddressPickReport report) {
 bool _chosenIsCellular(AddressPickReport report, String chosen) {
   final candidate = report.candidates.firstOrNullWhere((c) => c.address == chosen);
   if (candidate == null) return false;
-  return _cellularNamePattern.hasMatch(candidate.interfaceName) || _isUnreachableAddress(chosen);
+  return DebugDiagnostics.cellularNamePattern.hasMatch(candidate.interfaceName) || _isUnreachableAddress(chosen);
 }
 
 /// The advertised address [advertisedAddressCheck] would flag, or null when

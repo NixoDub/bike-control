@@ -25,6 +25,7 @@ import 'package:bike_control/services/rides/ride_preferences.dart';
 import 'package:bike_control/services/rides/ride_service.dart';
 import 'package:bike_control/services/rides/ride_sources.dart';
 import 'package:bike_control/services/screen_recording/screen_recording_service.dart';
+import 'package:bike_control/services/shift_feedback/gamepad_shift_haptics.dart';
 import 'package:bike_control/services/shift_feedback/shift_feedback_service.dart';
 import 'package:bike_control/services/shift_feedback/shift_haptics.dart';
 import 'package:bike_control/services/shift_feedback/sound_players/shift_sound_player_factory.dart';
@@ -119,6 +120,7 @@ class Core {
   late ShiftFeedbackService shiftFeedback = ShiftFeedbackService(
     settings: settings,
     haptics: const PlatformShiftHaptics(),
+    controllerHaptics: const GamepadShiftHaptics(),
     createSoundPlayer: createShiftSoundPlayer,
     onError: (context, e, s) => recordError(e, s, context: context),
   );

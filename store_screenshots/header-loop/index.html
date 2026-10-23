@@ -1,0 +1,319 @@
+<!doctype html>
+<html
+  lang="en"
+  data-composition-variables='[
+    {"id":"headline","type":"string","label":"Headline","default":"Virtual shifting for any smart trainer.\nShift from your handlebars."},
+    {"id":"ofMax","type":"string","label":"Gear count line","default":"of 24"},
+    {"id":"trainer","type":"string","label":"Trainer name","default":"Smart Trainer"}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=3840, height=1646" />
+    <script src="assets/js/gsap-3.14.2.min.js"></script>
+    <script src="assets/js/drivetrain-geometry.js"></script>
+    <script src="assets/js/drivetrain.js"></script>
+    <style>
+      /* App Store product page header loop. The brand band of the app
+         (lib/widgets/ui/bk_brand_band.dart), the still's layout
+         (store_screenshots/scripts/graphics.mjs) and Apple's header art safe
+         area: x 1097–2743, y 493–1154. */
+      @font-face {
+        font-family: "Barlow Condensed";
+        src: url("assets/fonts/BarlowCondensed-ExtraBold.ttf");
+        font-weight: 800;
+      }
+      :root {
+        --band-start: #0e74b7;
+        --band-end: #0b7478;
+        --contour: rgba(255, 255, 255, 0.16);
+        --card: #1b1f25;
+        --card-raised: #2a2e35;
+        --secondary-ink: #a3a3a3;
+        --lifted: #4da9e8;
+        --on-lifted: #04121c;
+        --success: #22c55e;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 3840px;
+        height: 1646px;
+        overflow: hidden;
+        background: var(--band-start);
+      }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+      #ground {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(120deg, var(--band-start) 0%, var(--band-end) 100%);
+      }
+      .contours {
+        position: absolute;
+        overflow: visible;
+        fill: none;
+        stroke: var(--contour);
+      }
+      #contours-a {
+        right: -700px;
+        top: -560px;
+        width: 2700px;
+        height: 1980px;
+      }
+      #contours-b {
+        left: -760px;
+        bottom: -900px;
+        width: 2200px;
+        height: 1610px;
+      }
+      #headline-box {
+        position: absolute;
+        left: 1097px;
+        top: 493px;
+        width: 760px;
+        height: 661px;
+        display: flex;
+        align-items: center;
+      }
+      #headline {
+        font-family: "Barlow Condensed", sans-serif;
+        font-weight: 800;
+        font-size: 112px;
+        line-height: 0.96;
+        text-transform: uppercase;
+        color: #fff;
+        white-space: pre-line;
+        text-wrap: balance;
+      }
+      #card {
+        position: absolute;
+        left: 1927px;
+        top: 630px;
+        width: 816px;
+        height: 386px;
+        border-radius: 28px;
+        background: var(--card);
+        box-shadow: 0 34px 86px rgba(4, 18, 28, 0.45);
+        font-family: Inter, sans-serif;
+        color: #fff;
+      }
+      #card-label {
+        position: absolute;
+        left: 26px;
+        top: 22px;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--secondary-ink);
+      }
+      #card-label i {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--success);
+      }
+      #dt {
+        position: absolute;
+        left: 22px;
+        top: 70px;
+        width: 590px;
+        height: 258px;
+        overflow: visible;
+      }
+      #gear-col {
+        position: absolute;
+        right: 22px;
+        top: 70px;
+        width: 150px;
+        height: 290px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .shift-btn {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #btn-down {
+        background: var(--card-raised);
+      }
+      #btn-up {
+        background: var(--lifted);
+      }
+      .shift-btn svg {
+        width: 26px;
+        height: 26px;
+      }
+      #gear-readout {
+        text-align: center;
+      }
+      #gear-number {
+        font-family: "Barlow Condensed", sans-serif;
+        font-weight: 800;
+        font-size: 104px;
+        line-height: 0.9;
+        font-feature-settings: "tnum";
+      }
+      #gear-of {
+        margin-top: 6px;
+        font-size: 17px;
+        color: var(--secondary-ink);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="10" data-width="3840" data-height="1646" data-fps="30">
+      <div id="ground" data-layout-ignore></div>
+      <svg id="contours-a" class="contours" viewBox="0 0 300 220" data-layout-ignore></svg>
+      <svg id="contours-b" class="contours" viewBox="0 0 300 220" data-layout-ignore></svg>
+
+      <div id="headline-box">
+        <p id="headline" data-var-text="headline">Virtual shifting for any smart trainer.
+Shift from your handlebars.</p>
+      </div>
+
+      <div id="card">
+        <div id="card-label" data-layout-ignore><i></i><span id="card-trainer" data-var-text="trainer">Smart Trainer</span></div>
+        <svg id="dt" data-layout-allow-overflow data-layout-ignore></svg>
+        <div id="gear-col">
+          <div id="btn-down" class="shift-btn">
+            <svg viewBox="0 0 24 24"><path d="M5 12h14" stroke="#fff" stroke-width="2.2" stroke-linecap="round" /></svg>
+          </div>
+          <div id="gear-readout">
+            <div id="gear-number">12</div>
+            <div id="gear-of" data-var-text="ofMax" data-layout-ignore>of 24</div>
+          </div>
+          <div id="btn-up" class="shift-btn">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="#04121c" stroke-width="2.4" stroke-linecap="round" /></svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        const LOOP = 10;
+        const G = window.BKGeometry;
+
+        // Copy from the render's variables (one row per store language).
+        const vars = (window.__hyperframes && window.__hyperframes.getVariables && window.__hyperframes.getVariables()) || {};
+        if (vars.headline) document.getElementById("headline").textContent = vars.headline;
+        if (vars.ofMax) document.getElementById("gear-of").textContent = vars.ofMax;
+        if (vars.trainer) document.getElementById("card-trainer").textContent = vars.trainer;
+
+        // Longer languages shrink the headline until it fits four lines.
+        const headline = document.getElementById("headline");
+        let size = 112;
+        while (headline.getBoundingClientRect().height > size * 0.96 * 4 + 2 && size > 60) {
+          size *= 0.97;
+          headline.style.fontSize = size + "px";
+        }
+
+        // BkContourPainter's nine nested terrain lines (lib/widgets/ui/bk_brand_band.dart).
+        function contourPaths() {
+          let out = "";
+          for (let k = 0; k < 9; k++) {
+            const pts = [];
+            const radius = 18 + k * 15;
+            for (let s = 0; s <= 72; s++) {
+              const t = (s / 72) * Math.PI * 2;
+              const r = radius * (1 + 0.1 * Math.sin(3 * t + k * 0.45) + 0.06 * Math.sin(5 * t - k * 0.3) + 0.03 * Math.sin(7 * t + k));
+              pts.push((190 + Math.cos(t) * r * 1.25).toFixed(2) + "," + (110 + Math.sin(t) * r * 0.9).toFixed(2));
+            }
+            out += '<path vector-effect="non-scaling-stroke" stroke-width="5" d="M' + pts.join("L") + 'Z"/>';
+          }
+          return out;
+        }
+        for (const id of ["contours-a", "contours-b"]) document.getElementById(id).innerHTML = contourPaths();
+
+        // The drivetrain: 34T chainring with the 50T ghost ring, gear 12 of 24.
+        const dt = window.BKDrivetrain.createDrivetrain(document.getElementById("dt"), { prefix: "hdr" });
+        const s = dt.state;
+        s.gearCount = 24;
+        s.gear = 12;
+        s.rRear = G.rearRadius(12, 24);
+        s.frontShift = 1;
+        s.largeRing = 0;
+        s.smallTeeth = 34;
+        s.largeTeeth = 50;
+        s.rFront = 34 * G.TOOTH_PX;
+        s.pulse = 1;
+        s.travel = 0;
+        s.linkTravel = 0;
+        dt.render();
+
+        // Four shifts: up, up, down, down — back on gear 12 well before the loop ends.
+        const shifts = [
+          { at: 1.6, to: 13, btn: "#btn-up" },
+          { at: 3.2, to: 14, btn: "#btn-up" },
+          { at: 6.0, to: 13, btn: "#btn-down" },
+          { at: 7.6, to: 12, btn: "#btn-down" },
+        ];
+
+        const tl = gsap.timeline({ paused: true });
+        const number = document.getElementById("gear-number");
+        // The readout is a function of timeline time, so any seek shows the right gear.
+        const paint = () => {
+          dt.render();
+          const t = tl.time();
+          let gear = 12;
+          for (const sh of shifts) if (t >= sh.at) gear = sh.to;
+          number.textContent = String(gear);
+        };
+
+        // Pedalling at a steady cadence. 2832.7 px of chain over the loop turns
+        // the 5-spoke crank and the 4-armed cassette (at gear 12) a whole number
+        // of their symmetry periods to within 0.2°, so the loop has no seam; the
+        // link pattern runs on travel rounded to whole links (2832 = 354 × 8).
+        tl.fromTo(s, { travel: 0, linkTravel: 0 }, { travel: 2832.7, linkTravel: 2832, duration: LOOP, ease: "none", onUpdate: paint }, 0);
+
+        // Terrain drift on a closed path: the contours return to where they began.
+        const drift = { p: 0 };
+        const a = document.getElementById("contours-a");
+        const b = document.getElementById("contours-b");
+        tl.fromTo(drift, { p: 0 }, {
+          p: 1, duration: LOOP, ease: "none",
+          onUpdate: () => {
+            const t = drift.p * Math.PI * 2;
+            gsap.set(a, { x: Math.sin(t) * 46, y: (1 - Math.cos(t)) * 22, rotation: Math.sin(t) * 1.2 });
+            gsap.set(b, { x: -Math.sin(t) * 38, y: -(1 - Math.cos(t)) * 18, rotation: -Math.sin(t) * 1.0 });
+          },
+        }, 0);
+
+        let from = 12;
+        for (const sh of shifts) {
+          const press = sh.at - 0.16;
+          // The controller press on the card's button.
+          tl.fromTo(sh.btn, { scale: 1 }, { scale: 0.86, duration: 0.12, ease: "power2.out" }, press);
+          tl.fromTo(sh.btn, { scale: 0.86 }, { scale: 1, duration: 0.34, ease: "back.out(2.2)" }, press + 0.12);
+          // The chain moves to the next cog, then the cog ripples where it lands.
+          tl.fromTo(s, { rRear: G.rearRadius(from, 24) }, { rRear: G.rearRadius(sh.to, 24), duration: 0.42, ease: "power3.out", immediateRender: false, onUpdate: paint }, sh.at);
+          tl.fromTo(s, { pulse: 0 }, { pulse: 1, duration: 0.5, ease: "none", immediateRender: false, onUpdate: paint }, sh.at + 0.18);
+          // The readout steps with the shift.
+          tl.fromTo(number, { y: sh.to > from ? 14 : -14, opacity: 0.35 }, { y: 0, opacity: 1, duration: 0.3, ease: "power3.out", immediateRender: false }, sh.at);
+          from = sh.to;
+        }
+
+        window.__timelines["main"] = tl;
+      })();
+    </script>
+  </body>
+</html>

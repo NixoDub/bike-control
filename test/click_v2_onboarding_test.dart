@@ -178,9 +178,19 @@ void main() {
       await core.settings.setClickV2RightSideOnly(true);
       await core.settings.setUnlockWithZwift(false);
 
-      // The left side is kept away by the ignored list, not by a gate here —
-      // see the ignore/un-ignore group below.
+      // The left side is normally kept away by the ignored list — see the
+      // ignore/un-ignore group below.
       expect(_rightSide().shouldAutoConnect, isTrue);
+    });
+
+    // Backstop for a left puck that slipped past the ignored list: connecting
+    // it would run the left-side restart loop next to the working right side,
+    // rebooting the puck every few seconds.
+    test('right-side-only: a left side that is not ignored stays disconnected', () async {
+      await core.settings.setClickV2RightSideOnly(true);
+      await core.settings.setUnlockWithZwift(false);
+
+      expect(_leftSide().shouldAutoConnect, isFalse);
     });
 
     test('unlock-with-Zwift: both sides connect', () async {

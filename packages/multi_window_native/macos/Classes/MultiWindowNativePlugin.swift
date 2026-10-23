@@ -12,6 +12,12 @@ public class MultiWindowNativePlugin: NSObject, FlutterPlugin,  NSWindowDelegate
 
     private static var messengers: [FlutterBinaryMessenger] = []
     private  var secondaryWindowControllers: [SecondaryWindowControllers] = []
+
+    // Every messenger a secondary engine added to `messengers`. Its plugins'
+    // `register(with:)` appends `registrar.messenger`, which is not the same
+    // object as `engine.binaryMessenger`, so removing only the latter on
+    // close leaked one dead messenger per overlay that was ever opened.
+    private var secondaryMessengers: [ObjectIdentifier: [FlutterBinaryMessenger]] = [:]
     private  var mainWindow: NSWindow?
     private static let channelName = "com.coditas.multi_window_native/pluginChannel"
 
@@ -108,20 +114,22 @@ public class MultiWindowNativePlugin: NSObject, FlutterPlugin,  NSWindowDelegate
             //    was set yet — so the overlay never actually closed from
             //    the main side.
             //
-            // 2. We must NOT call `self.closeWindow(window)` directly here:
-            //    that calls `window.close()`, which synchronously fires the
-            //    `windowWillClose` delegate, which calls back into
-            //    `self.closeWindow(window)` — and then the outer call's
-            //    `secondaryWindowControllers.remove(at: index)` blows up on
-            //    a now-stale index. Just call `window.close()` and let the
-            //    delegate path do the one-pass cleanup.
+            // 2. Go through `self.closeWindow(window)`, not a bare
+            //    `window.close()` that relies on our `windowWillClose`:
+            //    window_manager makes itself the window's delegate as soon as
+            //    the overlay engine initialises it, so that callback never
+            //    fires. The engine then kept running against the closed
+            //    window, kept rendering on every state broadcast, and
+            //    eventually crashed the raster thread on a null texture.
+            //    `closeWindow` drops the entry before closing, so the
+            //    `windowWillClose` it may still trigger is a no-op.
             if let args = call.arguments as? [String: Any],
                let isMain = args["isMainWindow"] as? Bool, !isMain {
                 // We don't track windowId per secondary, but for our usage
                 // there's at most one secondary at a time. Close them all.
                 let windows = self.secondaryWindowControllers.map { $0.window }
                 for window in windows {
-                    window.close()
+                    self.closeWindow(window)
                 }
             } else if let mainWindow = NSApp.mainWindow {
                 self.closeWindow(mainWindow)
@@ -247,6 +255,8 @@ public class MultiWindowNativePlugin: NSObject, FlutterPlugin,  NSWindowDelegate
             // Run engine and show window
             engine.run(withEntrypoint: "main")
 
+            let messengerCountBefore = Self.messengers.count
+
              // ⚡ Call the callback to register all plugins
             MultiWindowNativePlugin.onEngineCreatedCallback?(engine)
 
@@ -295,6 +305,7 @@ public class MultiWindowNativePlugin: NSObject, FlutterPlugin,  NSWindowDelegate
             newWindow.delegate = self
 
             registerMessenger(engine.binaryMessenger, controller: controller)
+            secondaryMessengers[ObjectIdentifier(newWindow)] = Array(Self.messengers[messengerCountBefore...])
 
             newWindow.contentViewController = controller
             secondaryWindowControllers.append((newWindow, controller))
@@ -325,21 +336,39 @@ public class MultiWindowNativePlugin: NSObject, FlutterPlugin,  NSWindowDelegate
             if let index = secondaryWindowControllers.firstIndex(where: { $0.window == win }) {
                 let controller = secondaryWindowControllers[index].flutterViewController
                 let engine = controller.engine
-                let messenger = engine.binaryMessenger
                 let window = secondaryWindowControllers[index].window
+                let messengers = secondaryMessengers.removeValue(forKey: ObjectIdentifier(window)) ?? [engine.binaryMessenger]
+
+                // Forget the window before closing it: `close()` posts
+                // `windowWillClose`, which calls back in here. With the entry
+                // still listed that re-entered `close()` and, when AppKit
+                // re-posted the notification, recursed until the main thread's
+                // stack overflowed.
+                secondaryWindowControllers.remove(at: index)
 
                 // Allow Flutter's onWindowClose to execute before shutting down
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    engine.viewController = nil
-                    window.delegate = nil
-                    window.contentViewController = nil
+                    Self.messengers.removeAll(where: { m in messengers.contains(where: { $0 === m }) })
+                    // Stop the engine while its view is still attached. Detaching
+                    // first removes the view from the compositor at once while a
+                    // present for it can still be queued on the main run loop,
+                    // which then crashes in FlutterCompositor::Present.
                     engine.shutDownEngine()
-                    Self.messengers.removeAll(where: { $0 === messenger })
+                    // Release the view only after anything already queued for it
+                    // has run.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        // An overlay closed while it was still starting up can
+                        // be shown again by its own window_manager call during
+                        // the delay above; its engine is gone now, so hide it.
+                        window.orderOut(nil)
+                        engine.viewController = nil
+                        window.delegate = nil
+                        window.contentViewController = nil
+                    }
                 }
 
                 // Close window immediately for visual feedback
                 window.close()
-                secondaryWindowControllers.remove(at: index)
             }
         }
     }

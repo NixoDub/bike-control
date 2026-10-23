@@ -37,16 +37,29 @@ class _FakeSounds implements ShiftSoundPlayer {
   Future<void> dispose() async => disposes++;
 }
 
+class _FakeControllerHaptics implements ControllerShiftHaptics {
+  final played = <(ShiftCue, String)>[];
+  Object? throwOnPlay;
+
+  @override
+  Future<void> play(ShiftCue cue, {required String deviceId}) async {
+    if (throwOnPlay != null) throw throwOnPlay!;
+    played.add((cue, deviceId));
+  }
+}
+
 void main() {
   late Settings settings;
   late _FakeHaptics haptics;
   late _FakeSounds sounds;
+  late _FakeControllerHaptics controllerHaptics;
   late int soundPlayersCreated;
   late List<String> recordedErrors;
 
   ShiftFeedbackService build() => ShiftFeedbackService(
     settings: settings,
     haptics: haptics,
+    controllerHaptics: controllerHaptics,
     createSoundPlayer: () {
       soundPlayersCreated++;
       return sounds;
@@ -54,10 +67,11 @@ void main() {
     onError: (context, e, s) => recordedErrors.add(context),
   );
 
-  Future<void> seed({bool haptics = false, bool sound = false}) async {
+  Future<void> seed({bool haptics = false, bool sound = false, bool? controllerVibration}) async {
     SharedPreferences.setMockInitialValues({
       'shift_haptics_enabled': haptics,
       'shift_sound_enabled': sound,
+      'vibration_enabled': ?controllerVibration,
     });
     settings = Settings();
     settings.prefs = await SharedPreferences.getInstance();
@@ -66,6 +80,7 @@ void main() {
   setUp(() async {
     haptics = _FakeHaptics();
     sounds = _FakeSounds();
+    controllerHaptics = _FakeControllerHaptics();
     soundPlayersCreated = 0;
     recordedErrors = [];
     await seed();
@@ -172,5 +187,35 @@ void main() {
     await expectLater(service.shifted(up: true), completes);
     expect(recordedErrors, hasLength(2));
     expect(recordedErrors, everyElement(startsWith('ShiftFeedback')));
+  });
+
+  test('the controller that shifted buzzes by default, independent of the phone settings', () async {
+    final service = build();
+
+    await service.shifted(up: true, sourceDeviceId: 'pad-1');
+    await service.shifted(up: false, sourceDeviceId: 'pad-1');
+    await service.atLimit(sourceDeviceId: 'pad-2');
+
+    expect(controllerHaptics.played, [(ShiftCue.up, 'pad-1'), (ShiftCue.down, 'pad-1'), (ShiftCue.limit, 'pad-2')]);
+    expect(haptics.cues, isEmpty);
+    expect(soundPlayersCreated, 0);
+  });
+
+  test('controller vibration off, or no source controller: no controller buzz', () async {
+    final service = build();
+    await service.shifted(up: true);
+    expect(controllerHaptics.played, isEmpty);
+
+    await seed(controllerVibration: false);
+    await build().shifted(up: true, sourceDeviceId: 'pad-1');
+    expect(controllerHaptics.played, isEmpty);
+  });
+
+  test('a failing controller buzz is recorded and never throws into the shift path', () async {
+    controllerHaptics.throwOnPlay = StateError('no motors');
+    final service = build();
+
+    await expectLater(service.shifted(up: true, sourceDeviceId: 'pad-1'), completes);
+    expect(recordedErrors, ['ShiftFeedback.controllerHaptic']);
   });
 }

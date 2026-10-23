@@ -335,6 +335,56 @@ Future<void> main() async {
     expect(core.settings.getUseNewUnlockMethod(), isTrue);
   });
 
+  // Reported from Windows: right-side-only picked while on the legacy unified
+  // controller took the early "turn split back on" route, which never ignored
+  // the left puck. The rescan rebuilt it as a split left side that connected
+  // and ran the restart loop beside the right side -- a reboot every few
+  // seconds, and the app froze after a few of them.
+  test('right-side-only from the legacy representation ignores the left puck', () async {
+    await core.settings.setClickV2OnboardingDone(true);
+    await core.settings.setUnlockWithZwift(false);
+    await core.settings.setUseNewUnlockMethod(false);
+
+    final left = buildZwiftClickV2(sideCode: ZwiftConstants.CLICK_V2_LEFT_SIDE);
+    env.ble.addPeripheral(left);
+    await core.connection.performScanning();
+    final unified = await IntegrationEnv.waitFor(
+      () => core.connection.devices.whereType<ZwiftClickV2>().isNotEmpty,
+      description: 'the legacy unified Click V2 to appear',
+    ).then((_) => core.connection.devices.whereType<ZwiftClickV2>().first);
+    await IntegrationEnv.waitFor(() => unified.isConnected, description: 'the unified Click V2 to connect');
+
+    await ClickV2Onboarding.chooseRightSideOnly();
+
+    expect(
+      core.settings.getIgnoredDevices().map((d) => d.name),
+      contains(ZwiftClickV2.label),
+    );
+    await IntegrationEnv.waitFor(() => !left.isConnected, description: 'the left puck to be dropped');
+    await core.connection.performScanning();
+    expect(core.connection.devices.whereType<ZwiftClickV2LeftSide>(), isEmpty);
+    expect(left.isConnected, isFalse);
+  });
+
+  // Riders already stuck in that state on 7.3.0: right-side-only is on, but
+  // their left puck never made it onto the ignored list.
+  test('right-side-only never connects a left puck that is not ignored', () async {
+    await core.settings.setClickV2OnboardingDone(true);
+    await core.settings.setUnlockWithZwift(false);
+    await core.settings.setUseNewUnlockMethod(true);
+    await core.settings.setClickV2RightSideOnly(true);
+
+    final left = buildZwiftClickV2(sideCode: ZwiftConstants.CLICK_V2_LEFT_SIDE);
+    final right = buildZwiftClickV2(sideCode: ZwiftConstants.CLICK_V2_RIGHT_SIDE);
+    env.ble.addPeripheral(left);
+    env.ble.addPeripheral(right);
+    await core.connection.performScanning();
+
+    await IntegrationEnv.waitFor(() => right.isConnected, description: 'the right side to connect');
+    expect(left.isConnected, isFalse);
+    expect(left.writes, isEmpty);
+  });
+
   // "Set up again" routes through the same chooseRightSideOnly /
   // chooseUnlockWithZwift entry points as first-time onboarding, but reaches
   // them with the left side ALREADY CONNECTED -- a case first-time onboarding

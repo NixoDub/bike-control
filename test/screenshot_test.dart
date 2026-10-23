@@ -244,6 +244,45 @@ Future<void> main() async {
   final boardSlots =
       slotFilter.isEmpty ? sizes : sizes.where((s) => slotFilter.split(',').contains(s.type.name)).toList();
 
+  // `--dart-define=EDITOR_CAPTURES=true` swaps the store boards for the bare
+  // captures the store_screenshots/ editor frames itself: phone, iPad and
+  // desktop sizes, each light and dark, written to the gitignored
+  // ../screenshots/editor/<locale>/<scene>-<name>[-dark].png.
+  const editorCaptures = bool.fromEnvironment('EDITOR_CAPTURES');
+  const kEditorVsBack = 16;
+  // The iPad slot is the 13" iPad in portrait at its real 2x, so the app lays
+  // out as it does on the device rather than as a narrow 3x phone.
+  const editorSlots = <({String name, TargetPlatform platform, Size size, double pixelRatio})>[
+    (name: 'phone', platform: TargetPlatform.android, size: Size(1100, 2390), pixelRatio: 3),
+    (name: 'tablet', platform: TargetPlatform.iOS, size: Size(2064, 2752), pixelRatio: 2),
+    (name: 'desktop', platform: TargetPlatform.macOS, size: Size(3840, 2400), pixelRatio: 3),
+  ];
+  final captureSlots = editorCaptures
+      ? [
+          for (final slot in editorSlots)
+            for (final dark in const [false, true])
+              (
+                type: DeviceType.noFrame,
+                platform: slot.platform,
+                size: slot.size,
+                pixelRatio: slot.pixelRatio,
+                dark: dark,
+                file: '../screenshots/editor/{loc}/{scene}-${slot.name}${dark ? '-dark' : ''}.png',
+              ),
+        ]
+      : [
+          for (final size in boardSlots)
+            (
+              type: size.type,
+              platform: size.platform,
+              size: size.size,
+              pixelRatio: kStorePixelRatio,
+              dark: false,
+              file:
+                  '../screenshots/{loc}/{scene}-${size.type.name}-${size.size.width.toInt()}x${size.size.height.toInt()}.png',
+            ),
+        ];
+
   // Marketing copy, the brand gradient and the per-scene hue ramp all live in
   // store_copy.dart, so the board tests can read them without booting the app.
 
@@ -271,14 +310,15 @@ Future<void> main() async {
     for (final loc in screenshotLocales) {
       await AppLocalizations.load(Locale(loc));
       screenshotLocale = Locale(loc);
-      for (final size in boardSlots) {
+      for (final size in captureSlots) {
+        screenshotThemeMode = size.dark ? ThemeMode.dark : null;
         await tester.pumpWidget(
           ScreenshotApp(
             locale: Locale(loc),
             device: ScreenshotDevice(
               platform: size.platform,
               resolution: size.size,
-              pixelRatio: 3,
+              pixelRatio: size.pixelRatio,
               goldenSubFolder: 'iphoneScreenshots/',
               frameBuilder:
                   ({
@@ -310,14 +350,21 @@ Future<void> main() async {
         // re-measure everything as it would have been.
         await tester.binding.reassembleApplication();
         await tester.pump();
+        // The editor captures alternate light and dark, and the app cross-fades
+        // between themes (buttons animate their own fill, slower than the
+        // theme); let all of it finish so no capture is half of each.
+        if (editorCaptures) {
+          for (var i = 0; i < 10; i++) {
+            await tester.pump(const Duration(milliseconds: 250));
+          }
+        }
         await expectLater(
           find.byType(ma.Scaffold),
-          matchesGoldenFile(
-            '../screenshots/$loc/$scene-${size.type.name}-${size.size.width.toInt()}x${size.size.height.toInt()}.png',
-          ),
+          matchesGoldenFile(size.file.replaceAll('{loc}', loc).replaceAll('{scene}', scene)),
         );
       }
     }
+    screenshotThemeMode = null;
   }
 
   // Blog screenshot: a single clean frameless (noFrame) English shot written to
@@ -685,6 +732,18 @@ Future<void> main() async {
             alignment: 0,
           );
           await tester.pump(const Duration(milliseconds: 300));
+          if (editorCaptures) {
+            // The editor captures have no board above them, so re-align once
+            // the page has settled and leave a sliver of the page above the
+            // drivetrain card instead of cutting it at the app bar.
+            await tester.pump(const Duration(seconds: 1));
+            final drivetrain = tester.element(find.byKey(const ValueKey('vs-drivetrain')));
+            Scrollable.ensureVisible(drivetrain, alignment: 0);
+            await tester.pump(const Duration(milliseconds: 300));
+            final position = Scrollable.of(drivetrain).position;
+            position.jumpTo((position.pixels - kEditorVsBack).clamp(0, double.infinity));
+            await tester.pump(const Duration(milliseconds: 300));
+          }
         },
       );
     } finally {

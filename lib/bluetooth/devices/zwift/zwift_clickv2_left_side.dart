@@ -24,6 +24,13 @@ class ZwiftClickV2LeftSide extends ZwiftClickV2 {
   @override
   List<int> get startCommand => ZwiftConstants.RIDE_ON + ZwiftConstants.RESPONSE_START_CLICK_V2;
 
+  /// Right-side-only normally keeps this puck away through the ignored list.
+  /// Should one slip past it, it must still not connect: its handshake would
+  /// start the restart loop next to the right side, rebooting the puck every
+  /// few seconds.
+  @override
+  bool get shouldAutoConnect => super.shouldAutoConnect && !core.settings.getClickV2RightSideOnly();
+
   @override
   bool get isResetting => ClickLogic.isResetting(device.deviceId);
 
