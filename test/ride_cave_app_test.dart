@@ -26,6 +26,13 @@ void main() {
         {TrainerConnectionType.bluetooth});
   });
 
+  test('Ride Cave lists the buttons it supports before it first connects', () {
+    expect(
+      rideCave().defaultObpSupportedButtons.map((b) => b.identifier).toList(),
+      [0x01, 0x02, 0x03, 0x20, 0x30, 0x31, 0x32, 0x33, 0x34],
+    );
+  });
+
   test('Ride Cave ships a logo asset and links to ridecave.com', () {
     expect(rideCave().logoAsset, 'assets/ridecave.png');
     expect(rideCave().officialUrl, 'https://ridecave.com');
