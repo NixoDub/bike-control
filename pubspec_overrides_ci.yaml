@@ -1,11 +1,12 @@
 dependency_overrides:
-  # 3.1.0 + Windows fix: closes failed connect attempts off the UI thread (a rebooting
-  # Click V2 froze the window). Upstream PR Navideck/universal_ble#358 -- drop
-  # once a release contains it.
+  # 3.1.0 + Windows fixes: closes failed connect attempts (a rebooting Click V2 froze
+  # the window, upstream PR Navideck/universal_ble#358) and refreshes GATT services
+  # off the UI thread (GattDeviceService::Close hang in Store crash reports). Drop
+  # once a release contains both.
   universal_ble:
     git:
       url: https://github.com/jonasbark/universal_ble.git
-      ref: 66e3a45be4ef90565ed0a0d4465bfabcc3a07804
+      ref: c0a1031dc529de93fed7e19cf5691769cc91e4db
   path_provider_foundation: ">=2.3.0 <2.6.0"
   gamepads_windows:
     path: packages/gamepads_windows
