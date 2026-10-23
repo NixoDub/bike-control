@@ -66,7 +66,11 @@ dependencies:
     path: packages/multi_window_native
   local_network_permission:
     path: packages/local_network_permission
-  flutter_overlay_window: ^0.5.0
+  # Vendored 0.5.0: the service no longer crashes when Android restarts it with no
+  # intent after killing the app. Stay on 0.5.x (1.0.0 breaks dragging), and keep
+  # the class name -- OverlayActionBridge reflects into OverlayService.
+  flutter_overlay_window:
+    path: packages/flutter_overlay_window
   live_activities: ^2.4.9
   device_info_plus: ^12.1.0
   keypress_simulator:
