@@ -277,7 +277,7 @@ class OpenBikeControlBluetoothEmulator extends TrainerConnection
 
     if (isKeyDown && isKeyUp) {
       final responseDataDown = OpenBikeProtocolParser.encodeButtonState(
-        mappedButtons.map((b) => ButtonState(b, 1)).toList(),
+        mappedButtons.map((b) => ButtonState(b, OpenBikeProtocolParser.pressedState(b, keyPair.inGameActionValue))).toList(),
       );
       await _server.notify(
         characteristicId: OpenBikeControlConstants.BUTTON_STATE_CHARACTERISTIC_UUID,
@@ -294,7 +294,7 @@ class OpenBikeControlBluetoothEmulator extends TrainerConnection
       );
     } else {
       final responseData = OpenBikeProtocolParser.encodeButtonState(
-        mappedButtons.map((b) => ButtonState(b, isKeyDown ? 1 : 0)).toList(),
+        mappedButtons.map((b) => ButtonState(b, isKeyDown ? OpenBikeProtocolParser.pressedState(b, keyPair.inGameActionValue) : 0)).toList(),
       );
       await _server.notify(
         characteristicId: OpenBikeControlConstants.BUTTON_STATE_CHARACTERISTIC_UUID,

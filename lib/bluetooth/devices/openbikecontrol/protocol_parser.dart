@@ -134,6 +134,16 @@ class OpenBikeProtocolParser {
     return buttons;
   }
 
+  /// The state a press of [button] sends: an Emote with a chosen [value]
+  /// (the Emote menu's 1-6) carries it as value + 1, in the spec's app-specific
+  /// emote range (`0x02-0x1F`); every other press is `0x01`.
+  static int pressedState(ControllerButton button, int? value) {
+    if (button.action == InGameAction.emote && value != null && value >= 1 && value <= 0x1E) {
+      return value + 1;
+    }
+    return 0x01;
+  }
+
   static Uint8List encodeButtonState(List<ButtonState> buttons) {
     final bytes = BytesBuilder();
     bytes.addByte(MSG_TYPE_BUTTON_STATE);
