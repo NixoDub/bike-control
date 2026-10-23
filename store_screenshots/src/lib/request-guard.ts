@@ -14,7 +14,15 @@ export function rejectCrossSiteWrite(req: Request): GuardFailure | null {
     return { error: "Content-Type must be application/json", status: 415 };
   }
 
-  // 2. Another local app (including a different port) is a different origin.
+  // 2. The Host must be this machine (or a host named in EDITOR_DEV_ORIGINS),
+  //    so a DNS-rebound page cannot pass the same-origin check below.
+  const host = (req.headers.get("host") || "").replace(/:\d+$/, "").replace(/^\[|\]$/g, "");
+  const allowedHosts = ["localhost", "127.0.0.1", "::1", ...(process.env.EDITOR_DEV_ORIGINS ?? "").split(",").filter(Boolean)];
+  if (host && !allowedHosts.includes(host)) {
+    return { error: "Unknown host rejected", status: 403 };
+  }
+
+  // 3. Another local app (including a different port) is a different origin.
   const origin = req.headers.get("origin");
   // Next can canonicalize req.url to localhost even when the browser used
   // 127.0.0.1 or a LAN address. Host is the browser's actual request authority.
@@ -24,7 +32,7 @@ export function rejectCrossSiteWrite(req: Request): GuardFailure | null {
     return { error: "Cross-origin write rejected", status: 403 };
   }
 
-  // 3. Sec-Fetch-Site, when present, must not be cross-site.
+  // 4. Sec-Fetch-Site, when present, must not be cross-site.
   const site = req.headers.get("sec-fetch-site");
   if (site && site !== "same-origin" && site !== "none") {
     return { error: "Cross-site write rejected", status: 403 };
