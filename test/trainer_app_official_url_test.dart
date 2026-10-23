@@ -8,6 +8,7 @@ void main() {
   test('trainer apps expose an https officialUrl for the chooser link', () {
     const named = [
       'Strappo',
+      'Ride Cave',
       'MyWhoosh',
       'Rouvy',
       'Zwift',
