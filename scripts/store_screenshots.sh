@@ -9,6 +9,10 @@
 #      editor's public/screenshots/.
 #   3. store_screenshots/scripts/export.mjs exports every deck headless into
 #      store_screenshots/out/<platform>/<device>/<WxH>/<locale>/.
+#   4. The sizes the stores get are copied into the committed
+#      screenshots/store/<locale>/<slot>/, which
+#      scripts/prepare_store_screenshots.sh prefers over the Flutter-drawn
+#      boards for that locale.
 #
 # The decks themselves (copy, layouts, placement) live in
 # store_screenshots/app-store-screenshots.json; edit them in the editor:
@@ -52,4 +56,26 @@ echo "==> Syncing captures into the editor"
 if [ "$EXPORT" = 1 ]; then
   echo "==> Exporting decks"
   (cd "$EDITOR" && node scripts/export.mjs ${DECKS[@]+"${DECKS[@]}"})
+
+  echo "==> Publishing store sizes into screenshots/store/"
+  # slot <- export dir. iPhone 1284x2778 is a 6.5" size (APP_IPHONE_65);
+  # 2880x1800 is a Mac App Store size (APP_DESKTOP).
+  publish() {
+    local slot="$1" src="$EDITOR/out/$2"
+    [ -d "$src" ] || return 0
+    for dir in "$src"/*/; do
+      local loc dest
+      loc="$(basename "$dir")"
+      dest="$ROOT/screenshots/store/$loc/$slot"
+      rm -rf "$dest"
+      mkdir -p "$dest"
+      cp "$dir"*.png "$dest/"
+    done
+  }
+  publish iphone65 ios/iphone/1284x2778
+  publish desktop macos/mac/2880x1800
+  publish android android/android/1080x1920
+  publish androidTablet10 android/android-10/2560x1600
+  publish androidTablet7 android/android-7/1920x1200
+  publish featureGraphic android/feature-graphic/1024x500
 fi

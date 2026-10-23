@@ -236,6 +236,16 @@ platform :ios do
     sync_screenshots("MAC_OS", SCREENSHOTS_MACOS)
   end
 
+  desc "Replace the iOS screenshots only (no listing texts) from ios/fastlane/screenshots"
+  lane :upload_screenshots do
+    sync_screenshots("IOS", SCREENSHOTS)
+  end
+
+  desc "Replace the Mac App Store screenshots only (no listing texts) from ios/fastlane/screenshots_macos"
+  lane :upload_screenshots_macos do
+    sync_screenshots("MAC_OS", SCREENSHOTS_MACOS)
+  end
+
   desc "Download the current App Store listing into prop/store_metadata/ios"
   lane :download_metadata do
     require "json"

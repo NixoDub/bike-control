@@ -20,6 +20,23 @@ IOS_LOCALES="en-US de-DE fr-FR es-ES it pl"
 # Order in which the scenes appear in the store listing.
 SCENES="device devices virtualshifting-settings customization trainer companion"
 
+# Editor decks (store_screenshots/, exported by scripts/store_screenshots.sh)
+# land in screenshots/store/<lang>/<slot>/NN-*.png. Where a locale has one for
+# a slot, it replaces that slot's Flutter-drawn boards; otherwise the boards
+# below are used.
+EDITOR="$ROOT/screenshots/store"
+
+# use_editor <lang> <slot> <dest dir> <suffix>: copies the editor deck for
+# <slot> into <dest dir> as NN_editor<suffix>.png; fails if there is none.
+use_editor() {
+  local src="$EDITOR/$1/$2" f n
+  ls "$src"/*.png >/dev/null 2>&1 || return 1
+  for f in "$src"/*.png; do
+    n="$(basename "$f" | cut -c1-2)"
+    cp "$f" "$3/${n}_editor$4.png"
+  done
+}
+
 if [ ! -d "$SRC" ]; then
   echo "Source screenshots folder not found: $SRC" >&2
   exit 1
@@ -36,15 +53,25 @@ for loc in $ANDROID_LOCALES; do
   # in prop.
   phone="$ROOT/prop/store_metadata/android/$loc/images/phoneScreenshots"
   ten="$ROOT/prop/store_metadata/android/$loc/images/tenInchScreenshots"
-  rm -rf "$phone" "$ten"
-  mkdir -p "$phone" "$ten"
-  i=1
-  for scene in $SCENES; do
-    n=$(printf '%02d' "$i")
-    cp "$src/${scene}-android-1320x2868.png" "$phone/${n}_${scene}.png"
-    cp "$src/${scene}-androidTablet-3840x2400.png" "$ten/${n}_${scene}.png"
-    i=$((i + 1))
-  done
+  seven="$ROOT/prop/store_metadata/android/$loc/images/sevenInchScreenshots"
+  rm -rf "$phone" "$ten" "$seven"
+  mkdir -p "$phone" "$ten" "$seven"
+  use_editor "$lang" android "$phone" "" || {
+    i=1
+    for scene in $SCENES; do
+      cp "$src/${scene}-android-1320x2868.png" "$phone/$(printf '%02d' "$i")_${scene}.png"
+      i=$((i + 1))
+    done
+  }
+  use_editor "$lang" androidTablet10 "$ten" "" || {
+    i=1
+    for scene in $SCENES; do
+      cp "$src/${scene}-androidTablet-3840x2400.png" "$ten/$(printf '%02d' "$i")_${scene}.png"
+      i=$((i + 1))
+    done
+  }
+  # 7" tablets only get the editor deck; without one Play keeps none.
+  use_editor "$lang" androidTablet7 "$seven" "" || rmdir "$seven"
 done
 
 # --- App Store (deliver) ---------------------------------------------------
@@ -57,11 +84,16 @@ for loc in $IOS_LOCALES; do
   d="$ROOT/ios/fastlane/screenshots/$loc"
   rm -rf "$d"
   mkdir -p "$d"
+  use_editor "$lang" iphone65 "$d" "_iphone65" || {
+    i=1
+    for scene in $SCENES; do
+      cp "$src/${scene}-iPhone-1242x2688.png" "$d/$(printf '%02d' "$i")_${scene}_iphone65.png"
+      i=$((i + 1))
+    done
+  }
   i=1
   for scene in $SCENES; do
-    n=$(printf '%02d' "$i")
-    cp "$src/${scene}-iPhone-1242x2688.png" "$d/${n}_${scene}_iphone65.png"
-    cp "$src/${scene}-iPad-2752x2064.png" "$d/${n}_${scene}_ipad129.png"
+    cp "$src/${scene}-iPad-2752x2064.png" "$d/$(printf '%02d' "$i")_${scene}_ipad129.png"
     i=$((i + 1))
   done
 done
@@ -76,12 +108,13 @@ for loc in $IOS_LOCALES; do
   d="$ROOT/ios/fastlane/screenshots_macos/$loc"
   rm -rf "$d"
   mkdir -p "$d"
-  i=1
-  for scene in $SCENES; do
-    n=$(printf '%02d' "$i")
-    cp "$src/${scene}-desktop-2560x1600.png" "$d/${n}_${scene}_desktop.png"
-    i=$((i + 1))
-  done
+  use_editor "$lang" desktop "$d" "_desktop" || {
+    i=1
+    for scene in $SCENES; do
+      cp "$src/${scene}-desktop-2560x1600.png" "$d/$(printf '%02d' "$i")_${scene}_desktop.png"
+      i=$((i + 1))
+    done
+  }
 done
 
 echo "Prepared store screenshots for Play Store (${ANDROID_LOCALES}), App Store (${IOS_LOCALES}) and Mac App Store (${IOS_LOCALES})."
