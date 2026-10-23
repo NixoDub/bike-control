@@ -1284,6 +1284,12 @@ class Connection {
       _startWifiTrainerDiscovery();
       _gamePadSearchTimer = Timer.periodic(Duration(seconds: 3), (_) {
         Gamepads.list().then((list) {
+          // Each listed controller subscribes to the event stream to track its
+          // state. Only id and name are needed: dispose them, else every poll
+          // leaves one more listener per pad running on every input event.
+          for (final pad in list) {
+            unawaited(pad.dispose());
+          }
           final pads = list.map((pad) => GamepadDevice(pad.name.isEmpty ? 'Gamepad' : pad.name, id: pad.id)).toList();
           addDevices(pads);
 
