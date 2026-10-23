@@ -4,6 +4,7 @@ import 'package:bike_control/utils/keymap/apps/bike_control.dart';
 import 'package:bike_control/utils/keymap/apps/biketerra.dart';
 import 'package:bike_control/utils/keymap/apps/fulgaz.dart';
 import 'package:bike_control/utils/keymap/apps/openbikecontrol.dart';
+import 'package:bike_control/utils/keymap/apps/ride_cave.dart';
 import 'package:bike_control/utils/keymap/apps/rouvy.dart';
 import 'package:bike_control/utils/keymap/apps/strappo.dart';
 import 'package:bike_control/utils/keymap/apps/tacx.dart';
@@ -202,6 +203,7 @@ abstract class SupportedApp {
     Biketerra(),
     Rouvy(),
     Strappo(),
+    RideCave(),
     Tacx(),
     FulGaz(),
     BikeControl(),
