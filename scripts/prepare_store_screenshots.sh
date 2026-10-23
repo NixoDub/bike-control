@@ -74,6 +74,10 @@ for loc in $ANDROID_LOCALES; do
   }
   # 7" tablets only get the editor deck; without one Play keeps none.
   use_editor "$lang" androidTablet7 "$seven" "" || rmdir "$seven"
+  # The feature graphic (scripts/graphics.mjs), uploaded by its own lane.
+  rm -f "$ROOT/prop/store_metadata/android/$loc/images/featureGraphic."*
+  fg="$EDITOR/$lang/featureGraphic/01.jpg"
+  [ -f "$fg" ] && cp "$fg" "$ROOT/prop/store_metadata/android/$loc/images/featureGraphic.jpg"
 done
 
 # --- App Store (deliver) ---------------------------------------------------

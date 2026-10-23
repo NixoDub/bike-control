@@ -9,7 +9,9 @@
 #      editor's public/screenshots/.
 #   3. store_screenshots/scripts/export.mjs exports every deck headless into
 #      store_screenshots/out/<platform>/<device>/<WxH>/<locale>/.
-#   4. store_screenshots/scripts/publish.mjs compresses the sizes the stores
+#   4. store_screenshots/scripts/graphics.mjs renders the Play feature graphic
+#      and the App Store header / search results stills from the captures.
+#   5. store_screenshots/scripts/publish.mjs compresses the sizes the stores
 #      get into the committed screenshots/store/<locale>/<slot>/, which
 #      scripts/prepare_store_screenshots.sh prefers over the Flutter-drawn
 #      boards for that locale.
@@ -21,7 +23,10 @@
 # Usage: scripts/store_screenshots.sh [--locales en,de] (default: every store language) [--no-capture] [--no-export] [deck ...]
 #   --no-capture  reuse the existing screenshots/editor/ captures
 #   --no-export   stop after syncing (e.g. to open the editor)
-#   deck          iphone ipad android mac android-10 android-7 feature-graphic (default: all)
+#   deck          iphone ipad android mac android-10 android-7 (default: all)
+#
+# The App Store header loop (video) is its own HyperFrames project:
+#   cd store_screenshots/header-loop && node render-all.mjs
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -42,10 +47,15 @@ done
 if [ "$CAPTURE" = 1 ]; then
   echo "==> Rendering editor captures ($LOCALES)"
   rm -rf "$ROOT/screenshots/editor"
-  (cd "$ROOT" && flutter test --run-skipped --update-goldens \
-    --dart-define=EDITOR_CAPTURES=true --dart-define=STORE_LOCALES="$LOCALES" \
-    --name '^(Device|Trainer|Customization|Trainer Controls|Devices|Virtual Shifting Settings)$' \
-    test/screenshot_test.dart)
+  capture() {
+    (cd "$ROOT" && flutter test --run-skipped --update-goldens \
+      --dart-define=EDITOR_CAPTURES=true --dart-define=STORE_LOCALES="$LOCALES" \
+      --name '^(Device|Trainer|Customization|Trainer Controls|Devices|Virtual Shifting Settings)$' \
+      test/screenshot_test.dart)
+  }
+  # The first scene sometimes trips over a plugin channel the test host lacks
+  # (app_links); a second run gets through.
+  capture || { echo "==> Capture failed; retrying once"; capture; }
 fi
 
 [ -d "$EDITOR/node_modules" ] || (cd "$EDITOR" && bun install)
@@ -56,6 +66,9 @@ echo "==> Syncing captures into the editor"
 if [ "$EXPORT" = 1 ]; then
   echo "==> Exporting decks"
   (cd "$EDITOR" && node scripts/export.mjs ${DECKS[@]+"${DECKS[@]}"})
+
+  echo "==> Rendering store graphics (feature graphic, App Store header + search)"
+  (cd "$EDITOR" && node scripts/graphics.mjs)
 
   echo "==> Publishing store sizes into screenshots/store/"
   (cd "$EDITOR" && node scripts/publish.mjs)

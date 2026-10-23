@@ -351,8 +351,13 @@ Future<void> main() async {
         await tester.binding.reassembleApplication();
         await tester.pump();
         // The editor captures alternate light and dark, and the app cross-fades
-        // between themes; let that finish so no capture is half of each.
-        if (editorCaptures) await tester.pump(const Duration(milliseconds: 600));
+        // between themes (buttons animate their own fill, slower than the
+        // theme); let all of it finish so no capture is half of each.
+        if (editorCaptures) {
+          for (var i = 0; i < 10; i++) {
+            await tester.pump(const Duration(milliseconds: 250));
+          }
+        }
         await expectLater(
           find.byType(ma.Scaffold),
           matchesGoldenFile(size.file.replaceAll('{loc}', loc).replaceAll('{scene}', scene)),

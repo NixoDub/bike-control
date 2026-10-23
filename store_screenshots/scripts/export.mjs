@@ -25,7 +25,6 @@ const DECKS = {
   mac: "landscape",
   "android-10": "landscape",
   "android-7": "landscape",
-  "feature-graphic": "portrait",
 };
 const decks = process.argv.length > 2 ? process.argv.slice(2) : Object.keys(DECKS);
 for (const d of decks) if (!(d in DECKS)) throw new Error(`Unknown deck "${d}" (known: ${Object.keys(DECKS).join(", ")})`);

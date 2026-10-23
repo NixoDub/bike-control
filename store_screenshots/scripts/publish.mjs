@@ -5,6 +5,8 @@
 // for Google Play (which takes JPEG or 24-bit PNG, not palette PNGs).
 //
 // The Microsoft Store listing reuses the androidTablet10 set (2560x1600).
+// The Play feature graphic and the App Store header / search results assets
+// come from scripts/graphics.mjs.
 //
 // Usage: node scripts/publish.mjs
 import { promises as fs } from "node:fs";
@@ -25,7 +27,14 @@ const SLOTS = {
   android: ["android/android/1080x1920", "jpg"],
   androidTablet10: ["android/android-10/2560x1600", "jpg"],
   androidTablet7: ["android/android-7/1920x1200", "jpg"],
-  featureGraphic: ["android/feature-graphic/1024x500", "jpg"],
+};
+
+// slot -> graphics kind (scripts/graphics.mjs writes out/graphics/<kind>/<locale>.png).
+// JPEG, which Play's feature graphic and both App Store creative placements take.
+const GRAPHICS = {
+  featureGraphic: "feature-graphic",
+  appstoreHeader: "appstore-header",
+  appstoreSearch: "appstore-search",
 };
 
 let count = 0;
@@ -45,4 +54,14 @@ for (const [slot, [dir, format]] of Object.entries(SLOTS)) {
     }
   }
 }
-console.log(`Published ${count} store screenshots into screenshots/store/.`);
+for (const [slot, kind] of Object.entries(GRAPHICS)) {
+  const src = path.join(OUT, "graphics", kind);
+  for (const file of (await fs.readdir(src).catch(() => [])).filter((f) => f.endsWith(".png"))) {
+    const dest = path.join(DEST, path.basename(file, ".png"), slot);
+    await fs.rm(dest, { recursive: true, force: true });
+    await fs.mkdir(dest, { recursive: true });
+    await sharp(path.join(src, file)).flatten({ background: "#ffffff" }).jpeg({ quality: 92, mozjpeg: true }).toFile(path.join(dest, "01.jpg"));
+    count++;
+  }
+}
+console.log(`Published ${count} store screenshots and graphics into screenshots/store/.`);
