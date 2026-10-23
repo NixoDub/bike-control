@@ -23,8 +23,10 @@ cd store_screenshots && bun dev              # http://localhost:3000
   `screenshots/store/<locale>/<slot>/`, which `scripts/prepare_store_screenshots.sh`
   stages for fastlane. Screenshots-only uploads: `fastlane ios upload_screenshots`,
   `fastlane ios upload_screenshots_macos`, `fastlane android upload_screenshots`.
-  The Microsoft Store listing (en-US only) is updated by hand in Partner Center
-  from `screenshots/store/en/androidTablet10/` (2560x1600).
+  The Microsoft Store listing (en-US only) takes the 10" deck's PNGs through
+  Partner Center: `node scripts/msstore-upload.mjs --dry-run`, then
+  `node scripts/msstore-upload.mjs --submit` (Playwright on the logged-in
+  Partner Center Chrome profile; see the script's header).
 - Design follows `prop/design/DESIGN.md`: Barlow Condensed 800 headlines,
   `#F2F2F7` / `#121212` grounds, brand blue as the only accent; the two
   inverted slides use the dark-mode captures.
