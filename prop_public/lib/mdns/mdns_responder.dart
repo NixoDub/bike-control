@@ -22,6 +22,10 @@ class MdnsQueryLogEntry {
   final bool answeredUnicast;
   final bool answeredMulticast;
 
+  /// Whether this query was most likely our own app browsing, so diagnostics
+  /// do not count it as a trainer app asking for us.
+  final bool duringOwnBrowse;
+
   /// How many times this exact query was seen in a row.
   int count;
 
@@ -33,6 +37,7 @@ class MdnsQueryLogEntry {
     required this.questions,
     required this.answeredUnicast,
     required this.answeredMulticast,
+    this.duringOwnBrowse = false,
     this.count = 1,
   });
 
@@ -40,4 +45,21 @@ class MdnsQueryLogEntry {
 
   @override
   String toString() => '$source:$sourcePort';
+}
+
+/// Marks the windows during which BikeControl itself browses mDNS, so the
+/// queries it provokes are not mistaken for a trainer app's. Stubbed: only
+/// the nesting counter is kept.
+class OwnMdnsBrowsing {
+  OwnMdnsBrowsing._();
+
+  static int _active = 0;
+
+  static bool get isBrowsing => _active > 0;
+
+  static void begin() => _active++;
+
+  static void end() {
+    if (_active > 0) _active--;
+  }
 }

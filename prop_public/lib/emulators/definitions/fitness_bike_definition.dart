@@ -128,6 +128,43 @@ class FitnessBikeDefinition extends BleDefinition {
 
   int get neutralGear => 0;
 
+  /// Lowest gear the rider can shift down to.
+  static const int minGear = 1;
+
+  // FAKE placeholder scale: the calibrator's per-trainer percentage applied to
+  // every gear's resistance.
+  static const int defaultDifficultyPct = 100;
+  static const int minDifficultyPct = 25;
+  static const int maxDifficultyPct = 400;
+
+  final ValueNotifier<int> _difficultyPctN = ValueNotifier<int>(defaultDifficultyPct);
+
+  /// The calibrator's per-trainer scale on every gear's resistance.
+  ValueListenable<int> get difficultyPct => _difficultyPctN;
+
+  void setDifficultyPct(int pct) {
+    _difficultyPctN.value = pct.clamp(minDifficultyPct, maxDifficultyPct);
+  }
+
+  /// Holds the trainer at [grade001Pct] (hundredths of a percent) while the
+  /// calibration runs.
+  void setCalibrationGrade(int grade001Pct) {}
+
+  /// What the trainer is doing right now (ERG and its target, or a grade),
+  /// so a calibration run can hand it back.
+  TrainerControlSnapshot captureControlState() => const TrainerControlSnapshot();
+
+  void restoreControlState(TrainerControlSnapshot snapshot) {}
+
+  final ValueNotifier<ChainPositionHint> _chainPositionHintN = ValueNotifier<ChainPositionHint>(ChainPositionHint.none);
+  final ValueNotifier<double?> _estimatedChainRatioN = ValueNotifier<double?>(null);
+
+  /// Where the rider's real chain seems to sit on the trainer.
+  ValueListenable<ChainPositionHint> get chainPositionHint => _chainPositionHintN;
+
+  /// Flywheel speed over cadence, approximate; null until it is known.
+  ValueListenable<double?> get estimatedChainRatio => _estimatedChainRatioN;
+
   /// The delivery the trainer is actually driven over: the rider's
   /// [controlProtocolOverride] when set, otherwise auto-detection.
   TrainerControlProtocol get controlProtocol => TrainerControlProtocol.ftms;
@@ -296,6 +333,14 @@ enum ZwiftGearEchoVerdict {
 }
 
 enum FrontRing { small, large }
+
+/// Whether the real chain on the trainer sits at an extreme of the cassette.
+enum ChainPositionHint { none, veryBigGear, verySmallGear }
+
+/// What the trainer was doing before a calibration run, opaque to the app.
+class TrainerControlSnapshot {
+  const TrainerControlSnapshot();
+}
 
 enum TrainerMode { ergMode, simMode, simModeVirtualShifting }
 
