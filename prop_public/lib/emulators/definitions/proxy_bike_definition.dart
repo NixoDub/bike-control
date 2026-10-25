@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:prop/emulators/ble_definition.dart';
+import 'package:prop/ftms/ftms.dart';
 import 'package:prop/transports/ble_trainer_transport.dart';
 import 'package:prop/transports/trainer_transport.dart';
 import 'package:prop/utils/shared.dart';
@@ -195,64 +196,15 @@ class ProxyBikeDefinition extends BleDefinition {
     _disposed = true;
   }
 
-  // ===========================================================================
-  // Bluetooth SIG measurement parsing
-  // ===========================================================================
+  // Measurement parsing lives in ftms.dart, shared with the virtual bike.
 
-  /// Heart Rate Measurement (0x2A37): flag bit 0 says whether the rate is 8 or
-  /// 16 bits wide.
   @visibleForTesting
-  static int? parseHeartRate(Uint8List b) {
-    if (b.length < 2) return null;
-    if (b[0] & 0x01 == 0) return b[1];
-    return b.length >= 3 ? b[1] | (b[2] << 8) : null;
-  }
+  static int? parseHeartRate(Uint8List b) => parseHeartRateMeasurement(b);
 
-  /// Cycling Power Measurement (0x2A63): flags (16 bit), then the
-  /// instantaneous power as a signed 16-bit watts value.
   @visibleForTesting
-  static int? parseCyclingPower(Uint8List b) {
-    if (b.length < 4) return null;
-    return ByteData.sublistView(b).getInt16(2, Endian.little);
-  }
+  static int? parseCyclingPower(Uint8List b) => parseCyclingPowerWatts(b);
 
-  /// Indoor Bike Data (0x2AD2). The 16-bit flags say which fields follow, in a
-  /// fixed order; bit 0 is inverted (set means the speed is *absent*).
   @visibleForTesting
-  static ({double? speedKph, int? cadenceRpm, int? powerW, int? heartRateBpm}) parseIndoorBikeData(Uint8List b) {
-    if (b.length < 2) return (speedKph: null, cadenceRpm: null, powerW: null, heartRateBpm: null);
-    final view = ByteData.sublistView(b);
-    final flags = view.getUint16(0, Endian.little);
-    var offset = 2;
-    double? speed;
-    int? cadence;
-    int? power;
-    int? heartRate;
-
-    bool has(int bytes) => offset + bytes <= b.length;
-
-    if (flags & 0x0001 == 0 && has(2)) {
-      speed = view.getUint16(offset, Endian.little) / 100;
-      offset += 2;
-    }
-    if (flags & 0x0002 != 0 && has(2)) offset += 2; // average speed
-    if (flags & 0x0004 != 0 && has(2)) {
-      cadence = (view.getUint16(offset, Endian.little) / 2).round();
-      offset += 2;
-    }
-    if (flags & 0x0008 != 0 && has(2)) offset += 2; // average cadence
-    if (flags & 0x0010 != 0 && has(3)) offset += 3; // total distance
-    if (flags & 0x0020 != 0 && has(2)) offset += 2; // resistance level
-    if (flags & 0x0040 != 0 && has(2)) {
-      power = view.getInt16(offset, Endian.little);
-      offset += 2;
-    }
-    if (flags & 0x0080 != 0 && has(2)) offset += 2; // average power
-    if (flags & 0x0100 != 0 && has(5)) offset += 5; // expended energy
-    if (flags & 0x0200 != 0 && has(1)) {
-      heartRate = b[offset];
-      offset += 1;
-    }
-    return (speedKph: speed, cadenceRpm: cadence, powerW: power, heartRateBpm: heartRate);
-  }
+  static ({double? speedKph, int? cadenceRpm, int? powerW, int? heartRateBpm}) parseIndoorBikeData(Uint8List b) =>
+      parseIndoorBikeDataFrame(b);
 }
