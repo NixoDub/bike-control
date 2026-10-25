@@ -13,6 +13,7 @@ import 'package:prop/ftms/ftms.dart';
 import 'package:prop/mdns/service_advertiser.dart';
 import 'package:prop/utils/cps_measurement.dart';
 import 'package:prop/utils/network_address.dart';
+import 'package:prop/utils/shared.dart';
 import 'package:prop/utils/uuid.dart';
 import 'package:universal_ble/universal_ble.dart';
 
@@ -477,6 +478,9 @@ void main() {
     });
 
     test('a trainer that refuses grade simulation is moved to target power, once', () async {
+      final events = <String>[];
+      Logger.onEvent = events.add;
+      addTearDown(() => Logger.onEvent = null);
       await climb();
       expect(bike.effectiveVirtualShiftingMode, VirtualShiftingMode.trackResistance);
       bike.onNotification(
@@ -484,6 +488,7 @@ void main() {
         ftmsResponse(FtmsOpcode.setIndoorBikeSimulation, FtmsResult.operationFailed),
       );
       expect(bike.trackResistanceRefused.value, isTrue);
+      expect(events.any((e) => e.contains('refused grade simulation')), isTrue, reason: 'the app log says so');
       expect(bike.effectiveVirtualShiftingMode, VirtualShiftingMode.targetPower);
       expect(bike.lastControlWrite!.ok, isFalse, reason: 'the refusal is on record until the next write lands');
       await settle(300);

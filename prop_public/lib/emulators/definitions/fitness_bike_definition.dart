@@ -639,6 +639,14 @@ class FitnessBikeDefinition extends BleDefinition {
 
   void _setFeature(MachineFeature feature) {
     _trainerFeatureN.value = feature;
+    Logger.onEvent?.call(
+      'FitnessBike: the trainer can be driven by '
+      '${[
+        for (final mode in VirtualShiftingMode.values)
+          if (supportsVirtualShiftingMode(mode)) mode.name,
+      ].join(', ')} '
+      '($ftmsCapabilitySummary)',
+    );
     if (_usingDefaultMode) _virtualShiftingModeN.value = defaultVirtualShiftingMode;
     _controlChanged(force: true);
   }
@@ -1160,6 +1168,9 @@ class FitnessBikeDefinition extends BleDefinition {
     if (opcode == FtmsOpcode.setIndoorBikeSimulation && !trackResistanceRefused.value) {
       trackResistanceRefused.value = true;
       Logger.warn('FitnessBike: the trainer refused grade simulation; switched to Target Power');
+      Logger.onEvent?.call(
+        'FitnessBike: the trainer refused grade simulation (result $result); shifting now uses Target Power',
+      );
       _controlChanged(force: true);
     } else if (result == FtmsResult.controlNotPermitted) {
       _takeControlOfTrainer();
