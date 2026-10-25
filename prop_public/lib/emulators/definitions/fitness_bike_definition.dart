@@ -299,6 +299,7 @@ class FitnessBikeDefinition extends BleDefinition {
   Timer? _transitionTimer;
 
   void _startShiftTransition() {
+    _lastShiftAt = DateTime.now();
     final from = _outputRatio;
     if (_shiftTransitionMsN.value <= 0 || from == null) {
       _endShiftTransition();
@@ -1243,13 +1244,19 @@ class FitnessBikeDefinition extends BleDefinition {
   Uint8List? _lastControl;
   DateTime _lastControlAt = DateTime.fromMillisecondsSinceEpoch(0);
   DateTime _lastWriteAt = DateTime.fromMillisecondsSinceEpoch(0);
-  ({Uint8List bytes, String op})? _pendingControl;
+  ({Uint8List bytes, String op, String? detail, DateTime at})? _pendingControl;
+
+  /// When the rider last shifted, and how many of the writes that follow a
+  /// shift may still be written to the app log (the log is for diagnosing a
+  /// shift that feels slow, not for a whole ride).
+  DateTime? _lastShiftAt;
+  int _shiftWritesToLog = 80;
   Timer? _controlTimer;
 
   /// Queues a Control Point request for the trainer. At most one goes out per
   /// [minControlWriteInterval]; while one waits, a newer request replaces it,
   /// and a request identical to the last is dropped unless it is stale.
-  void _sendUpstream(Uint8List bytes, String op) {
+  void _sendUpstream(Uint8List bytes, String op, {String? detail}) {
     if (_disposed || _upstreamChar(FITNESS_MACHINE_CONTROL_POINT_UUID) == null) return;
     if (controlProtocol != TrainerControlProtocol.ftms) {
       Logger.trace(() => _notImplementedProtocol, record: false);
@@ -1263,7 +1270,7 @@ class FitnessBikeDefinition extends BleDefinition {
         now.difference(_lastControlAt) < const Duration(seconds: 5)) {
       return;
     }
-    _pendingControl = (bytes: bytes, op: op);
+    _pendingControl = (bytes: bytes, op: op, detail: detail, at: now);
     if (_controlTimer != null) return;
     final wait = minControlWriteInterval - now.difference(_lastWriteAt);
     if (wait <= Duration.zero) {
@@ -1283,11 +1290,23 @@ class FitnessBikeDefinition extends BleDefinition {
     _lastControl = pending.bytes;
     _lastControlAt = now;
     _lastWriteAt = now;
+    final shiftedAt = _lastShiftAt;
+    final afterShift = shiftedAt != null && now.difference(shiftedAt) < const Duration(seconds: 4);
     _enqueueUpstream(
       'write ${pending.op}',
       () async {
+        final started = DateTime.now();
         await transport.write(control.service, control.characteristic, pending.bytes);
-        _lastControlWrite = ControlWriteResult(at: DateTime.now(), ok: true, op: pending.op);
+        final answered = DateTime.now();
+        _lastControlWrite = ControlWriteResult(at: answered, ok: true, op: pending.op);
+        if (afterShift && _shiftWritesToLog > 0) {
+          _shiftWritesToLog--;
+          Logger.onEvent?.call(
+            'Shift to gear ${_currentGear.value}: asked ${pending.op}${pending.detail == null ? '' : ' ${pending.detail}'}; '
+            'sent ${started.difference(shiftedAt).inMilliseconds} ms after the shift, '
+            'trainer answered in ${answered.difference(started).inMilliseconds} ms',
+          );
+        }
       },
       onError: (_) => _lastControlWrite = ControlWriteResult(at: DateTime.now(), ok: false, op: pending.op),
     );
@@ -1350,7 +1369,7 @@ class FitnessBikeDefinition extends BleDefinition {
                 .round()
                 .clamp(0, 2000);
         _targetPowerW.value = watts;
-        _sendUpstream(ftmsSetTargetPower(watts), 'target-power');
+        _sendUpstream(ftmsSetTargetPower(watts), 'target-power', detail: '$watts W');
       case VirtualShiftingMode.trackResistance:
         final simulated = physics.trackResistanceGrade(
           cadenceRpm: cadence,
@@ -1369,6 +1388,7 @@ class FitnessBikeDefinition extends BleDefinition {
             windResistanceKgPerM: cw,
           ).toRequest(),
           'simulation',
+          detail: '${simulated.toStringAsFixed(2)} % (terrain ${grade.toStringAsFixed(1)} %, ratio ${ratio.toStringAsFixed(2)})',
         );
       case VirtualShiftingMode.basicResistance:
         final watts = difficulty *
@@ -1383,7 +1403,7 @@ class FitnessBikeDefinition extends BleDefinition {
             );
         final fraction = (watts / 600).clamp(0.0, 1.0);
         final level = (_resistanceRange.min + fraction * (_resistanceRange.max - _resistanceRange.min)).round();
-        _sendUpstream(ftmsSetTargetResistance(level), 'resistance');
+        _sendUpstream(ftmsSetTargetResistance(level), 'resistance', detail: 'level $level');
     }
   }
 

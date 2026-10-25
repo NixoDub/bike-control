@@ -338,6 +338,18 @@ void main() {
       expect(bike.gearRatios.value, FitnessBikeDefinition.defaultGearRatiosFor(24), reason: 'the table itself is unchanged');
     });
 
+    test('a shift leaves a line in the app log: what was asked and how fast the trainer answered', () async {
+      final events = <String>[];
+      Logger.onEvent = events.add;
+      addTearDown(() => Logger.onEvent = null);
+      await climb();
+      bike.setTargetGear(15);
+      await settle(300);
+      final line = events.lastWhere((e) => e.startsWith('Shift to gear 15'));
+      expect(line, contains('asked simulation'));
+      expect(line, matches(RegExp(r'sent \d+ ms after the shift, trainer answered in \d+ ms')));
+    });
+
     test('the gear step is kept within its range', () {
       bike.setGearStepPct(5);
       expect(bike.gearStepPct.value, FitnessBikeDefinition.minGearStepPct);
