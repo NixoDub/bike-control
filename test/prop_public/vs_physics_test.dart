@@ -127,4 +127,32 @@ void main() {
       expect(physics.estimateChainRatio(speedKph: 0, cadenceRpm: 90), isNull);
     });
   });
+
+  group('air resistance from the power at 30 km/h', () {
+    test('holding 30 km/h on the flat takes the chosen power, whatever the weight', () {
+      for (final mass in [60.0, 85.0, 110.0]) {
+        for (final watts in [140.0, 180.0, 250.0]) {
+          final cw = physics.windResistanceForPowerAtReferenceSpeed(powerW: watts, massKg: mass);
+          final ratio = (30 / 3.6) / (90 / 60 * physics.kWheelCircumferenceMeters);
+          final needed = physics.targetPowerFor(
+            cadenceRpm: 90,
+            gearRatio: ratio,
+            gradePercent: 0,
+            massKg: mass,
+            windResistanceKgPerM: cw,
+          );
+          expect(needed, closeTo(watts, 0.5), reason: '$mass kg, $watts W');
+        }
+      }
+    });
+
+    test('180 W for a 85 kg rider is about half the usual 0.51 kg/m', () {
+      expect(physics.windResistanceForPowerAtReferenceSpeed(powerW: 180, massKg: 85), closeTo(0.255, 0.01));
+    });
+
+    test('stays within sane bounds for absurd inputs', () {
+      expect(physics.windResistanceForPowerAtReferenceSpeed(powerW: 0, massKg: 200), 0.02);
+      expect(physics.windResistanceForPowerAtReferenceSpeed(powerW: 100000, massKg: 80), 1.5);
+    });
+  });
 }

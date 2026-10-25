@@ -597,6 +597,7 @@ class ProxyDevice extends BluetoothDevice {
     def.setDifficultyPct(cfg.difficultyPct);
     def.setGearStepPct(cfg.gearStepPct);
     def.setShiftTransitionMs(cfg.shiftTransitionMs);
+    def.setPowerAt30KphW(cfg.powerAt30KphW);
     // A rider who saved a config chose their mode; honour it. With no saved
     // config, let the definition manage the capability-based default (Track
     // Resistance on a grade-capable trainer) rather than the generic Target

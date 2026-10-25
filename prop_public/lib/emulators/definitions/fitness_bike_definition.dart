@@ -262,6 +262,23 @@ class FitnessBikeDefinition extends BleDefinition {
   static const int defaultShiftTransitionMs = 0;
   static const int maxShiftTransitionMs = 3000;
 
+  static const int defaultPowerAt30KphW = 180;
+  static const int minPowerAt30KphW = 100;
+  static const int maxPowerAt30KphW = 400;
+
+  final ValueNotifier<int> _powerAt30KphN = ValueNotifier<int>(defaultPowerAt30KphW);
+
+  /// The power a rider needs to hold 30 km/h on the flat, in watts. It sets the
+  /// air resistance the gears are worked out with (the game's own coefficient is
+  /// not used), so how hard fast riding feels is chosen here, whatever the game
+  /// reports.
+  ValueListenable<int> get powerAt30KphW => _powerAt30KphN;
+
+  void setPowerAt30KphW(int watts) {
+    _powerAt30KphN.value = watts.clamp(minPowerAt30KphW, maxPowerAt30KphW);
+    _controlChanged(force: true);
+  }
+
   final ValueNotifier<int> _gearStepPctN = ValueNotifier<int>(defaultGearStepPct);
   final ValueNotifier<int> _shiftTransitionMsN = ValueNotifier<int>(defaultShiftTransitionMs);
 
@@ -1350,7 +1367,11 @@ class FitnessBikeDefinition extends BleDefinition {
     final ratio = _controlRatio();
     _outputRatio = ratio;
     final crr = _sim?.rollingResistance ?? 0.004;
-    final cw = _sim?.windResistanceKgPerM ?? 0.51;
+    final cw = physics.windResistanceForPowerAtReferenceSpeed(
+      powerW: _powerAt30KphN.value.toDouble(),
+      massKg: mass,
+      rollingResistance: crr,
+    );
     final wind = _sim?.windSpeedMps ?? 0;
     final difficulty = _difficultyPctN.value / 100;
     switch (effectiveVirtualShiftingMode) {

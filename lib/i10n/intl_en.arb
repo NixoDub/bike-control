@@ -1372,6 +1372,8 @@
   "shiftTransition": "Shift transition",
   "shiftTransitionDesc": "How long the resistance takes to reach the new gear. Instant is like a real shift",
   "shiftTransitionInstant": "Instant",
+  "powerAt30Kph": "Power at 30 km/h",
+  "powerAt30KphDesc": "The power it takes to hold 30 km/h on the flat. Lower it if fast gears feel too heavy",
   "presetDefault": "Default",
   "presetCompact": "Compact",
   "presetWide": "Wide",

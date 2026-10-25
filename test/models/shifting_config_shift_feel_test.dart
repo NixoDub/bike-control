@@ -39,4 +39,14 @@ void main() {
       a.copyWith(gearStepPct: 150).hashCode,
     );
   });
+
+  test('the power at 30 km/h defaults to 180 W, round-trips and is clamped', () {
+    expect(ShiftingConfig.defaults(trainerKey: 'VICTORY').powerAt30KphW, 180);
+    expect(ShiftingConfig.fromJson({'name': 'x', 'trainerKey': 'VICTORY'}).powerAt30KphW, 180);
+    final cfg = ShiftingConfig.defaults(trainerKey: 'VICTORY').copyWith(powerAt30KphW: 220);
+    expect(ShiftingConfig.fromJson(cfg.toJson()).powerAt30KphW, 220);
+    expect(ShiftingConfig.fromJson({...cfg.toJson(), 'powerAt30KphW': 5}).powerAt30KphW, 100);
+    expect(ShiftingConfig.fromJson({...cfg.toJson(), 'powerAt30KphW': 5000}).powerAt30KphW, 400);
+    expect(cfg, isNot(ShiftingConfig.defaults(trainerKey: 'VICTORY')));
+  });
 }

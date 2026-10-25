@@ -331,6 +331,31 @@ Future<void> main() async {
       expect(core.shiftingConfigs.activeFor(proxy.trainerKey).shiftTransitionMs, 0);
     });
 
+    testWidgets('the power at 30 km/h is set in the Physics group, kept, and reset', (tester) async {
+      final (:proxy, :definition) = attachLiveTrainer();
+      await _pump(tester, VirtualShiftingSettingsPage(definition: definition, device: proxy), height: 844);
+      await tester.pump();
+
+      final minus = find.descendant(
+        of: find.byKey(const ValueKey('vs-power-30')),
+        matching: find.byKey(const ValueKey('stepper-minus')),
+      );
+      await tester.ensureVisible(minus);
+      await tester.tap(minus);
+      await tester.pump();
+      expect(definition.powerAt30KphW.value, 170);
+      expect(core.shiftingConfigs.activeFor(proxy.trainerKey).powerAt30KphW, 170);
+
+      await tester.ensureVisible(find.byKey(const ValueKey('vs-reset')));
+      await tester.tap(find.byKey(const ValueKey('vs-reset')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.byKey(const ValueKey('vs-reset-confirm')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(definition.powerAt30KphW.value, FitnessBikeDefinition.defaultPowerAt30KphW);
+    });
+
     testWidgets('Per-gear ratios opens the steppers with the curve pinned above them', (tester) async {
       final (:proxy, :definition) = attachLiveTrainer();
       await _pump(tester, VirtualShiftingSettingsPage(definition: definition, device: proxy), height: 844);

@@ -858,6 +858,8 @@
   "shiftTransition": "Transition de vitesse",
   "shiftTransitionDesc": "Temps mis par la résistance pour atteindre la nouvelle vitesse. Instantané, comme un vrai changement de vitesse",
   "shiftTransitionInstant": "Instantané",
+  "powerAt30Kph": "Puissance à 30 km/h",
+  "powerAt30KphDesc": "La puissance qu'il faut pour tenir 30 km/h à plat. Baissez-la si les grandes vitesses sont trop dures",
   "presetDefault": "Par défaut",
   "presetCompact": "Compact",
   "presetWide": "Large",

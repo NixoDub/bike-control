@@ -66,6 +66,23 @@ double resistiveForceN({
 /// The power in watts needed to keep [speedMps] against [forceN].
 double powerForForceW(double forceN, double speedMps) => math.max(0, forceN * speedMps / kDrivetrainEfficiency);
 
+/// The speed the reference power below is quoted at.
+const double kReferenceSpeedKph = 30;
+
+/// The air resistance coefficient (kg/m) at which a rider of [massKg] on the
+/// flat needs [powerW] to hold [kReferenceSpeedKph]: what is left of the force
+/// after rolling resistance, over the speed squared.
+double windResistanceForPowerAtReferenceSpeed({
+  required double powerW,
+  required double massKg,
+  double rollingResistance = 0.004,
+}) {
+  final speed = kReferenceSpeedKph / 3.6;
+  final force = powerW * kDrivetrainEfficiency / speed;
+  final air = force - massKg * kGravity * rollingResistance;
+  return (air / (speed * speed)).clamp(0.02, 1.5).toDouble();
+}
+
 /// The target power for virtual shifting in target-power mode.
 double targetPowerFor({
   required double cadenceRpm,

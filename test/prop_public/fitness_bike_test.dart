@@ -350,6 +350,27 @@ void main() {
       expect(line, matches(RegExp(r'sent \d+ ms after the shift, trainer answered in \d+ ms')));
     });
 
+    test('target power: the power at 30 km/h sets how much the same gear asks for', () async {
+      await climb(mode: VirtualShiftingMode.targetPower, grade: 0);
+      bike.setTargetGear(20);
+      await settle(300);
+      final defaultAsk = wattsOf(sent(FtmsOpcode.setTargetPower).last);
+      bike.setPowerAt30KphW(300);
+      await settle(300);
+      final harder = wattsOf(sent(FtmsOpcode.setTargetPower).last);
+      expect(harder, greaterThan(defaultAsk));
+      bike.setPowerAt30KphW(100);
+      await settle(300);
+      expect(wattsOf(sent(FtmsOpcode.setTargetPower).last), lessThan(defaultAsk));
+    });
+
+    test('the power at 30 km/h is kept within its range', () {
+      bike.setPowerAt30KphW(5);
+      expect(bike.powerAt30KphW.value, FitnessBikeDefinition.minPowerAt30KphW);
+      bike.setPowerAt30KphW(9999);
+      expect(bike.powerAt30KphW.value, FitnessBikeDefinition.maxPowerAt30KphW);
+    });
+
     test('the gear step is kept within its range', () {
       bike.setGearStepPct(5);
       expect(bike.gearStepPct.value, FitnessBikeDefinition.minGearStepPct);
