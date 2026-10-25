@@ -317,6 +317,69 @@ void main() {
       expect(high, greaterThan(low));
     });
 
+    test('the gear step makes one shift felt more, or less, without touching the table', () async {
+      await climb();
+      Future<int> shiftBy(int gear) async {
+        final before = gradeOf(sent(FtmsOpcode.setIndoorBikeSimulation).last);
+        bike.setTargetGear(gear);
+        await settle(300);
+        return gradeOf(sent(FtmsOpcode.setIndoorBikeSimulation).last) - before;
+      }
+
+      bike.setTargetGear(12);
+      await settle(300);
+      final normal = await shiftBy(13);
+      bike.setGearStepPct(250);
+      await settle(300);
+      final sharp = await shiftBy(14);
+      expect(normal, greaterThan(0));
+      expect(sharp, greaterThan(normal * 2), reason: 'a 250 % step moves the slope far more per shift');
+      expect(bike.gearRatios.value, FitnessBikeDefinition.defaultGearRatiosFor(24), reason: 'the table itself is unchanged');
+    });
+
+    test('the gear step is kept within its range', () {
+      bike.setGearStepPct(5);
+      expect(bike.gearStepPct.value, FitnessBikeDefinition.minGearStepPct);
+      bike.setGearStepPct(900);
+      expect(bike.gearStepPct.value, FitnessBikeDefinition.maxGearStepPct);
+    });
+
+    test('a shift is asked for at once by default, and over the chosen time when there is one', () async {
+      await climb();
+      bike.setTargetGear(8);
+      await settle(300);
+      final start = gradeOf(sent(FtmsOpcode.setIndoorBikeSimulation).last);
+      bike.setTargetGear(20);
+      await settle(300);
+      final instant = gradeOf(sent(FtmsOpcode.setIndoorBikeSimulation).last);
+      expect(instant, greaterThan(start + 100), reason: 'no transition: the new resistance is asked for straight away');
+
+      bike.setShiftTransitionMs(2000);
+      bike.setTargetGear(8);
+      await settle(300);
+      final first = gradeOf(sent(FtmsOpcode.setIndoorBikeSimulation).last);
+      expect(first, greaterThan(instant - 50), reason: 'a transition starts from where the resistance was');
+
+      clock = clock.add(const Duration(milliseconds: 1000));
+      bike.debugTick();
+      await settle(300);
+      final half = gradeOf(sent(FtmsOpcode.setIndoorBikeSimulation).last);
+      expect(half, lessThan(first));
+      expect(half, greaterThan(start));
+
+      clock = clock.add(const Duration(milliseconds: 1500));
+      bike.debugTick();
+      await settle(300);
+      expect(gradeOf(sent(FtmsOpcode.setIndoorBikeSimulation).last), start);
+    });
+
+    test('the transition time is kept within its range', () {
+      bike.setShiftTransitionMs(-5);
+      expect(bike.shiftTransitionMs.value, 0);
+      bike.setShiftTransitionMs(99999);
+      expect(bike.shiftTransitionMs.value, FitnessBikeDefinition.maxShiftTransitionMs);
+    });
+
     test('track resistance: a smaller gear asks for a gentler one', () async {
       await climb();
       bike.setTargetGear(12);

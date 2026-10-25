@@ -295,6 +295,42 @@ Future<void> main() async {
       );
     });
 
+    // How a shift feels is changed in the app, with no rebuild: the stepper
+    // moves the trainer's definition at once and the stored config with it, and
+    // Reset takes both back.
+    testWidgets('the gear step and the shift transition are set here, kept, and reset', (tester) async {
+      final (:proxy, :definition) = attachLiveTrainer();
+      await _pump(tester, VirtualShiftingSettingsPage(definition: definition, device: proxy), height: 844);
+      await tester.pump();
+
+      Finder plus(String row) =>
+          find.descendant(of: find.byKey(ValueKey(row)), matching: find.byKey(const ValueKey('stepper-plus')));
+      await tester.ensureVisible(plus('vs-gear-step'));
+      await tester.tap(plus('vs-gear-step'));
+      await tester.pump();
+      await tester.ensureVisible(plus('vs-shift-transition'));
+      await tester.tap(plus('vs-shift-transition'));
+      await tester.pump();
+
+      expect(definition.gearStepPct.value, 110);
+      expect(definition.shiftTransitionMs.value, 250);
+      final stored = core.shiftingConfigs.activeFor(proxy.trainerKey);
+      expect(stored.gearStepPct, 110);
+      expect(stored.shiftTransitionMs, 250);
+
+      await tester.ensureVisible(find.byKey(const ValueKey('vs-reset')));
+      await tester.tap(find.byKey(const ValueKey('vs-reset')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.byKey(const ValueKey('vs-reset-confirm')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(definition.gearStepPct.value, FitnessBikeDefinition.defaultGearStepPct);
+      expect(definition.shiftTransitionMs.value, 0);
+      expect(core.shiftingConfigs.activeFor(proxy.trainerKey).shiftTransitionMs, 0);
+    });
+
     testWidgets('Per-gear ratios opens the steppers with the curve pinned above them', (tester) async {
       final (:proxy, :definition) = attachLiveTrainer();
       await _pump(tester, VirtualShiftingSettingsPage(definition: definition, device: proxy), height: 844);

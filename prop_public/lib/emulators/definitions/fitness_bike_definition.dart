@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:prop/emulators/ble_definition.dart';
@@ -186,6 +187,7 @@ class FitnessBikeDefinition extends BleDefinition {
   void setTargetGear(int gear) {
     _gearTouched = true;
     _currentGear.value = gear.clamp(1, _maxGear);
+    _startShiftTransition();
     _gearChanged();
   }
 
@@ -245,8 +247,97 @@ class FitnessBikeDefinition extends BleDefinition {
   bool toggleFrontChainring() {
     if (!_frontShiftEnabled) return false;
     _frontRingN.value = _frontRingN.value == FrontRing.small ? FrontRing.large : FrontRing.small;
+    _startShiftTransition();
     _gearChanged();
     return true;
+  }
+
+  // ===========================================================================
+  // How a shift feels
+  // ===========================================================================
+
+  static const int defaultGearStepPct = 100;
+  static const int minGearStepPct = 50;
+  static const int maxGearStepPct = 300;
+  static const int defaultShiftTransitionMs = 0;
+  static const int maxShiftTransitionMs = 3000;
+
+  final ValueNotifier<int> _gearStepPctN = ValueNotifier<int>(defaultGearStepPct);
+  final ValueNotifier<int> _shiftTransitionMsN = ValueNotifier<int>(defaultShiftTransitionMs);
+
+  /// How far apart the gears feel, in percent of the gear table: at 100 % each
+  /// gear is as much harder than the last as the table says; at 200 % twice as
+  /// much (in ratio terms), around the middle gear of a real chain.
+  ValueListenable<int> get gearStepPct => _gearStepPctN;
+
+  void setGearStepPct(int pct) {
+    _gearStepPctN.value = pct.clamp(minGearStepPct, maxGearStepPct);
+    _controlChanged(force: true);
+  }
+
+  /// How long the trainer takes to move to a new gear, in milliseconds: 0 asks
+  /// for the new resistance at once, as a real shift would.
+  ValueListenable<int> get shiftTransitionMs => _shiftTransitionMsN;
+
+  void setShiftTransitionMs(int ms) {
+    _shiftTransitionMsN.value = ms.clamp(0, maxShiftTransitionMs);
+    if (ms <= 0) _endShiftTransition();
+  }
+
+  /// The gear ratio the resistance is worked out from: the table's ratio
+  /// stretched by the gear step.
+  double _feltRatio(double ratio) {
+    final pct = _gearStepPctN.value;
+    if (pct == defaultGearStepPct || ratio <= 0) return ratio;
+    return physics.kAssumedChainRatio * math.pow(ratio / physics.kAssumedChainRatio, pct / 100);
+  }
+
+  /// The ratio the last control was worked out from, null before the first.
+  double? _outputRatio;
+  double? _transitionFrom;
+  DateTime? _transitionStart;
+  Timer? _transitionTimer;
+
+  void _startShiftTransition() {
+    final from = _outputRatio;
+    if (_shiftTransitionMsN.value <= 0 || from == null) {
+      _endShiftTransition();
+      return;
+    }
+    _transitionFrom = from;
+    _transitionStart = _now();
+    _transitionTimer ??= Timer.periodic(minControlWriteInterval, (_) {
+      if (_disposed) {
+        _endShiftTransition();
+        return;
+      }
+      _controlChanged();
+      if (_transitionFrom == null) _endShiftTransition();
+    });
+  }
+
+  void _endShiftTransition() {
+    _transitionFrom = null;
+    _transitionStart = null;
+    _transitionTimer?.cancel();
+    _transitionTimer = null;
+  }
+
+  /// The ratio to work the next control out from: the felt ratio of the
+  /// current gear, or somewhere on the way to it while a transition runs.
+  double _controlRatio() {
+    final target = _feltRatio(_gearRatioN.value);
+    final from = _transitionFrom;
+    final start = _transitionStart;
+    if (from == null || start == null || from <= 0 || target <= 0) return target;
+    final duration = _shiftTransitionMsN.value;
+    final t = duration <= 0 ? 1.0 : _now().difference(start).inMilliseconds / duration;
+    if (t >= 1) {
+      _transitionFrom = null;
+      _transitionStart = null;
+      return target;
+    }
+    return from * math.pow(target / from, t.clamp(0.0, 1.0));
   }
 
   // ===========================================================================
@@ -941,6 +1032,7 @@ class FitnessBikeDefinition extends BleDefinition {
   }
 
   void _stopPump() {
+    _endShiftTransition();
     _pump?.cancel();
     _pump = null;
     _controlTimer?.cancel();
@@ -1225,7 +1317,8 @@ class FitnessBikeDefinition extends BleDefinition {
     final grade = _gradeSmoothingN.value ? (_smoothedGrade ??= target) : target;
     final mass = _riderWeightKg.value + _bicycleWeightKg.value;
     final cadence = filteredCadence.toDouble();
-    final ratio = _gearRatioN.value;
+    final ratio = _controlRatio();
+    _outputRatio = ratio;
     final crr = _sim?.rollingResistance ?? 0.004;
     final cw = _sim?.windResistanceKgPerM ?? 0.51;
     final wind = _sim?.windSpeedMps ?? 0;
