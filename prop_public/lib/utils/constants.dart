@@ -42,7 +42,9 @@ class FtmsMdnsConstants {
 /// Values BikeControl embeds in its own mDNS TXT records so the WiFi scanner
 /// can exclude its own advertisements. FAKE placeholder fingerprints.
 class BikeControlMdnsMarkers {
-  static const macAddress = '00000000-0000-0000-0000-000000000000';
+  // MAC-shaped (locally administered) because trainer apps read this field as
+  // a device address; it doubles as the fingerprint of our own advertisements.
+  static const macAddress = '02:BC:0C:00:00:01';
   static const manufacturerData = '0000000000';
   static const clickMacAddress = '00-00-00-00-00-00';
   static const clickManufacturerData = '0000000001';

@@ -41,6 +41,10 @@ abstract class BleDefinition {
     transporter?.sendCharacteristicNotification(characteristicUUID, data, responseCode: responseCode);
   }
 
+  /// Called once the definition has been attached to an emulator's composite,
+  /// the moment the upstream link it relays is known to be up.
+  void onAttached() {}
+
   void dispose() {}
 
   void debug() {}

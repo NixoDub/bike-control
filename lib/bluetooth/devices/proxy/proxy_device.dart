@@ -1365,6 +1365,15 @@ class ProxyDevice extends BluetoothDevice {
     isStarting.value = true;
     try {
       await super.connect();
+    } catch (_) {
+      // A DirCon trainer takes one client at a time: a half-open session left
+      // behind by a failed connect would lock out every retry.
+      if (isWifiUpstream) {
+        try {
+          await transport.disconnect();
+        } catch (_) {}
+      }
+      rethrow;
     } finally {
       isStarting.value = false;
     }

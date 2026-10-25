@@ -6,9 +6,19 @@ final propPrefs = PropPrefs();
 
 class PropPrefs {
   late SharedPreferences _prefs;
+  bool _ready = false;
 
   void initialize(SharedPreferences prefs) {
     _prefs = prefs;
+    _ready = true;
+  }
+
+  /// A string persisted under [key], or null before [initialize] ran.
+  String? getString(String key) => _ready ? _prefs.getString(key) : null;
+
+  /// Persists [value] under [key]; a no-op before [initialize] ran.
+  void setString(String key, String value) {
+    if (_ready) _prefs.setString(key, value);
   }
 
   /// [keyPrefix] namespaces the persisted unlock state per controller family

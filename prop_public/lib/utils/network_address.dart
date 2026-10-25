@@ -7,6 +7,8 @@
 
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+
 /// How the host's network interfaces are enumerated. Injectable so tests can
 /// simulate multi-homed machines without touching the real network stack.
 typedef InterfaceLister = Future<List<NetworkInterface>> Function();
@@ -63,6 +65,14 @@ class AdvertisedAddressPicker {
     return AddressPickReport(chosen: best, candidates: candidates);
   }
 
+  /// Test seam: when set, [pick] returns this instead of reading the network.
+  @visibleForTesting
+  static Future<InternetAddress?> Function()? debugPick;
+
   /// The address to advertise, or null when the host has no usable IPv4.
-  static Future<InternetAddress?> pick() async => (await report()).chosen;
+  static Future<InternetAddress?> pick() async {
+    final override = debugPick;
+    if (override != null) return override();
+    return (await report()).chosen;
+  }
 }
