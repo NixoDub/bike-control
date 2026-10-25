@@ -37,6 +37,17 @@ class ShiftingConfig {
   /// physics ([FitnessBikeDefinition.setDifficultyPct]); set by the calibrator.
   final int difficultyPct;
 
+  /// How far apart the gears feel, in percent ([FitnessBikeDefinition.setGearStepPct]).
+  final int gearStepPct;
+
+  /// How long the trainer takes to move to a new gear, in milliseconds; 0 is at once
+  /// ([FitnessBikeDefinition.setShiftTransitionMs]).
+  final int shiftTransitionMs;
+
+  /// The power needed to hold 30 km/h on the flat, in watts
+  /// ([FitnessBikeDefinition.setPowerAt30KphW]).
+  final int powerAt30KphW;
+
   const ShiftingConfig({
     required this.name,
     required this.trainerKey,
@@ -52,6 +63,9 @@ class ShiftingConfig {
     this.smallChainringTeeth = smallChainringDefault,
     this.largeChainringTeeth = largeChainringDefault,
     this.difficultyPct = FitnessBikeDefinition.defaultDifficultyPct,
+    this.gearStepPct = FitnessBikeDefinition.defaultGearStepPct,
+    this.shiftTransitionMs = FitnessBikeDefinition.defaultShiftTransitionMs,
+    this.powerAt30KphW = FitnessBikeDefinition.defaultPowerAt30KphW,
   });
 
   factory ShiftingConfig.defaults({
@@ -110,6 +124,12 @@ class ShiftingConfig {
               .clamp(chainringTeethMin, chainringTeethMax),
       difficultyPct: ((json['difficultyPct'] as num?)?.toInt() ?? FitnessBikeDefinition.defaultDifficultyPct)
           .clamp(FitnessBikeDefinition.minDifficultyPct, FitnessBikeDefinition.maxDifficultyPct),
+      gearStepPct: ((json['gearStepPct'] as num?)?.toInt() ?? FitnessBikeDefinition.defaultGearStepPct)
+          .clamp(FitnessBikeDefinition.minGearStepPct, FitnessBikeDefinition.maxGearStepPct),
+      shiftTransitionMs: ((json['shiftTransitionMs'] as num?)?.toInt() ?? FitnessBikeDefinition.defaultShiftTransitionMs)
+          .clamp(0, FitnessBikeDefinition.maxShiftTransitionMs),
+      powerAt30KphW: ((json['powerAt30KphW'] as num?)?.toInt() ?? FitnessBikeDefinition.defaultPowerAt30KphW)
+          .clamp(FitnessBikeDefinition.minPowerAt30KphW, FitnessBikeDefinition.maxPowerAt30KphW),
     );
   }
 
@@ -128,6 +148,9 @@ class ShiftingConfig {
         'smallChainringTeeth': smallChainringTeeth,
         'largeChainringTeeth': largeChainringTeeth,
         'difficultyPct': difficultyPct,
+        'gearStepPct': gearStepPct,
+        'shiftTransitionMs': shiftTransitionMs,
+        'powerAt30KphW': powerAt30KphW,
       };
 
   ShiftingConfig copyWith({
@@ -146,6 +169,9 @@ class ShiftingConfig {
     int? smallChainringTeeth,
     int? largeChainringTeeth,
     int? difficultyPct,
+    int? gearStepPct,
+    int? shiftTransitionMs,
+    int? powerAt30KphW,
   }) {
     final resolvedMaxGear = maxGear ?? this.maxGear;
     final resolvedRatios = clearGearRatios ? null : (gearRatios ?? this.gearRatios);
@@ -169,6 +195,9 @@ class ShiftingConfig {
       smallChainringTeeth: smallChainringTeeth ?? this.smallChainringTeeth,
       largeChainringTeeth: largeChainringTeeth ?? this.largeChainringTeeth,
       difficultyPct: difficultyPct ?? this.difficultyPct,
+      gearStepPct: gearStepPct ?? this.gearStepPct,
+      shiftTransitionMs: shiftTransitionMs ?? this.shiftTransitionMs,
+      powerAt30KphW: powerAt30KphW ?? this.powerAt30KphW,
     );
   }
 
@@ -189,7 +218,10 @@ class ShiftingConfig {
           frontShiftEnabled == other.frontShiftEnabled &&
           smallChainringTeeth == other.smallChainringTeeth &&
           largeChainringTeeth == other.largeChainringTeeth &&
-          difficultyPct == other.difficultyPct);
+          difficultyPct == other.difficultyPct &&
+          gearStepPct == other.gearStepPct &&
+          shiftTransitionMs == other.shiftTransitionMs &&
+          powerAt30KphW == other.powerAt30KphW);
 
   @override
   int get hashCode => Object.hash(
@@ -207,5 +239,8 @@ class ShiftingConfig {
         smallChainringTeeth,
         largeChainringTeeth,
         difficultyPct,
+        gearStepPct,
+        shiftTransitionMs,
+        powerAt30KphW,
       );
 }

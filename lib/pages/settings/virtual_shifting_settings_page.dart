@@ -162,6 +162,9 @@ class _VirtualShiftingSettingsPageState extends State<VirtualShiftingSettingsPag
     def.setGradeSmoothingEnabled(cfg.gradeSmoothing);
     def.setCadenceFilterEnabled(cfg.cadenceFilterEnabled);
     def.setDifficultyPct(cfg.difficultyPct);
+    def.setGearStepPct(cfg.gearStepPct);
+    def.setShiftTransitionMs(cfg.shiftTransitionMs);
+    def.setPowerAt30KphW(cfg.powerAt30KphW);
     def.setVirtualShiftingMode(cfg.mode);
     // The front derailleur belongs to the config too: picking another config
     // brings its rings with it, and the drivetrain above draws them.
@@ -203,12 +206,18 @@ class _VirtualShiftingSettingsPageState extends State<VirtualShiftingSettingsPag
     def.setGradeSmoothingEnabled(true);
     def.resetGearRatios();
     def.setDifficultyPct(FitnessBikeDefinition.defaultDifficultyPct);
+    def.setGearStepPct(FitnessBikeDefinition.defaultGearStepPct);
+    def.setShiftTransitionMs(FitnessBikeDefinition.defaultShiftTransitionMs);
+    def.setPowerAt30KphW(FitnessBikeDefinition.defaultPowerAt30KphW);
     await _update(
       (c) => c.copyWith(
         maxGear: targetMaxGear,
         gradeSmoothing: true,
         clearGearRatios: true,
         difficultyPct: FitnessBikeDefinition.defaultDifficultyPct,
+        gearStepPct: FitnessBikeDefinition.defaultGearStepPct,
+        shiftTransitionMs: FitnessBikeDefinition.defaultShiftTransitionMs,
+        powerAt30KphW: FitnessBikeDefinition.defaultPowerAt30KphW,
       ),
     );
   }
@@ -370,6 +379,46 @@ class _VirtualShiftingSettingsPageState extends State<VirtualShiftingSettingsPag
               def.setCadenceFilterEnabled(v);
               await _update((c) => c.copyWith(cadenceFilterEnabled: v));
             },
+          ),
+        ),
+        ValueListenableBuilder<int>(
+          valueListenable: def.gearStepPct,
+          builder: (context, pct, _) => BkGroupedRow(
+            key: const ValueKey('vs-gear-step'),
+            icon: LucideIcons.chevronsUpDown,
+            title: l10n.gearStep,
+            subtitle: l10n.gearStepDesc,
+            trailing: StepperControl(
+              value: pct.toDouble(),
+              step: 10,
+              min: FitnessBikeDefinition.minGearStepPct.toDouble(),
+              max: FitnessBikeDefinition.maxGearStepPct.toDouble(),
+              format: (v) => '${v.toStringAsFixed(0)} %',
+              onChanged: (v) async {
+                def.setGearStepPct(v.toInt());
+                await _update((c) => c.copyWith(gearStepPct: v.toInt()));
+              },
+            ),
+          ),
+        ),
+        ValueListenableBuilder<int>(
+          valueListenable: def.shiftTransitionMs,
+          builder: (context, ms, _) => BkGroupedRow(
+            key: const ValueKey('vs-shift-transition'),
+            icon: LucideIcons.timer,
+            title: l10n.shiftTransition,
+            subtitle: l10n.shiftTransitionDesc,
+            trailing: StepperControl(
+              value: ms.toDouble(),
+              step: 250,
+              min: 0,
+              max: FitnessBikeDefinition.maxShiftTransitionMs.toDouble(),
+              format: (v) => v == 0 ? l10n.shiftTransitionInstant : '${(v / 1000).toStringAsFixed(2)} s',
+              onChanged: (v) async {
+                def.setShiftTransitionMs(v.toInt());
+                await _update((c) => c.copyWith(shiftTransitionMs: v.toInt()));
+              },
+            ),
           ),
         ),
         ValueListenableBuilder<List<double>>(
@@ -542,6 +591,26 @@ class _VirtualShiftingSettingsPageState extends State<VirtualShiftingSettingsPag
       header: l10n.vsGroupPhysics,
       footer: l10n.virtualShiftingPhysicsDesc,
       children: [
+        ValueListenableBuilder<int>(
+          valueListenable: def.powerAt30KphW,
+          builder: (context, watts, _) => BkGroupedRow(
+            key: const ValueKey('vs-power-30'),
+            icon: LucideIcons.wind,
+            title: l10n.powerAt30Kph,
+            subtitle: l10n.powerAt30KphDesc,
+            trailing: StepperControl(
+              value: watts.toDouble(),
+              step: 10,
+              min: FitnessBikeDefinition.minPowerAt30KphW.toDouble(),
+              max: FitnessBikeDefinition.maxPowerAt30KphW.toDouble(),
+              format: (v) => '${v.toStringAsFixed(0)} W',
+              onChanged: (v) async {
+                def.setPowerAt30KphW(v.toInt());
+                await _update((c) => c.copyWith(powerAt30KphW: v.toInt()));
+              },
+            ),
+          ),
+        ),
         ValueListenableBuilder<double>(
           valueListenable: def.bicycleWeightKg,
           builder: (context, kg, _) {

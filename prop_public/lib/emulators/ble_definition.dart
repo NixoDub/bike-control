@@ -45,6 +45,13 @@ abstract class BleDefinition {
   /// the moment the upstream link it relays is known to be up.
   void onAttached() {}
 
+  /// The emulator's server is up and this definition is part of what it
+  /// serves: the moment to start anything that runs while serving.
+  void onServerStarted() {}
+
+  /// The emulator's server stopped.
+  void onServerStopped() {}
+
   void dispose() {}
 
   void debug() {}

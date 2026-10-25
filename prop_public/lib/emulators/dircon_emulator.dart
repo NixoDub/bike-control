@@ -187,6 +187,7 @@ class DirconEmulator {
       _server = server;
       _localAddressN.value = address.address;
       isStarted.value = true;
+      composite.onServerStarted();
     }
 
     try {
@@ -198,6 +199,7 @@ class DirconEmulator {
   }
 
   Future<void> _stop() async {
+    composite.onServerStopped();
     await _unadvertise();
     _transporter?.dispose();
     _transporter = null;
