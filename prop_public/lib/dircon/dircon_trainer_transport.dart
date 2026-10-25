@@ -32,6 +32,19 @@ class DirconTrainerTransport extends TrainerTransport {
   int _sequence = 0;
   bool _closing = false;
 
+  /// The last frames on the wire, newest last, so a request that never gets an
+  /// answer can say what the trainer did send instead.
+  final List<String> _wire = [];
+  static const int _wireDepth = 14;
+  int _timeoutsReported = 0;
+  int _unmatchedReported = 0;
+
+  void _note(String direction, int messageId, int sequence, int responseCode, List<int> payload) {
+    final head = payload.length > 20 ? payload.sublist(0, 20) : payload;
+    _wire.add('$direction id=$messageId seq=$sequence rc=$responseCode len=${payload.length} ${bytesToHex(head)}');
+    if (_wire.length > _wireDepth) _wire.removeAt(0);
+  }
+
   @override
   String get id => _id;
 
@@ -64,6 +77,7 @@ class DirconTrainerTransport extends TrainerTransport {
 
   void _onData(Uint8List data) {
     for (final frame in _parser.add(data)) {
+      _note('rx', frame.messageId, frame.sequence, frame.responseCode, frame.payload);
       if (frame.messageId == FtmsMdnsConstants.DC_MESSAGE_CHARACTERISTIC_NOTIFICATION) {
         if (frame.payload.length >= 16) {
           _notifications.add((
@@ -74,7 +88,14 @@ class DirconTrainerTransport extends TrainerTransport {
         continue;
       }
       final waiting = _pending.remove(frame.sequence);
-      if (waiting != null && !waiting.isCompleted) waiting.complete(frame);
+      if (waiting != null && !waiting.isCompleted) {
+        waiting.complete(frame);
+      } else if (_unmatchedReported++ < 10) {
+        Logger.onEvent?.call(
+          'DirCon: answer nobody is waiting for: id=${frame.messageId} seq=${frame.sequence} '
+          'rc=${frame.responseCode} len=${frame.payload.length}; waiting for seq ${_pending.keys.toList()}',
+        );
+      }
     }
   }
 
@@ -106,11 +127,18 @@ class DirconTrainerTransport extends TrainerTransport {
       sequence = (++_sequence) & 0xff;
     }
     final completer = _pending[sequence] = Completer<DirconFrame>();
+    _note('tx', messageId, sequence, 0, payload);
     socket.add(encodeDirconFrame(messageId: messageId, sequence: sequence, responseCode: 0, payload: payload));
     return completer.future.timeout(
       requestTimeout,
       onTimeout: () {
         _pending.remove(sequence);
+        if (_timeoutsReported++ < 3) {
+          Logger.onEvent?.call(
+            'DirCon: request $messageId (seq $sequence) got no answer in ${requestTimeout.inSeconds}s; '
+            '${_parser.pendingBytes} unparsed bytes; last frames:\n${_wire.join('\n')}',
+          );
+        }
         throw TimeoutException('DirCon request $messageId timed out', requestTimeout);
       },
     );

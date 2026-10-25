@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:prop/dircon/dircon_trainer_transport.dart';
 import 'package:prop/emulators/transporter/dircon_codec.dart';
+import 'package:prop/utils/shared.dart';
 import 'package:prop/utils/uuid.dart';
 import 'package:universal_ble/universal_ble.dart';
 
@@ -30,6 +31,7 @@ class _FakeDirconTrainer {
   Socket? client;
   final writes = <(String, List<int>)>[];
   final enabled = <String>[];
+  bool ignoreWrites = false;
 
   static const service = '00001826-0000-1000-8000-00805f9b34fb';
   static const feature = '00002acc-0000-1000-8000-00805f9b34fb';
@@ -53,6 +55,7 @@ class _FakeDirconTrainer {
       case 3:
         _reply(s, f, [...f.payload.sublist(0, 16), 0x86, 0x14, 0, 0, 0, 0, 0, 0]);
       case 4:
+        if (ignoreWrites) return;
         writes.add((uuidFromBytes(f.payload.sublist(0, 16)), f.payload.sublist(16).toList()));
         _reply(s, f, f.payload.sublist(0, 16));
       case 5:
@@ -140,5 +143,34 @@ void main() {
   test('a request on a closed connection fails instead of hanging', () async {
     await transport.disconnect();
     expect(transport.read(_FakeDirconTrainer.service, _FakeDirconTrainer.feature), throwsA(isA<SocketException>()));
+  });
+
+  test('a trainer that stays silent leaves the last frames in the log', () async {
+    final events = <String>[];
+    Logger.onEvent = events.add;
+    addTearDown(() => Logger.onEvent = null);
+    final silent = _FakeDirconTrainer.start();
+    final server = await silent;
+    server.ignoreWrites = true;
+    final quiet = DirconTrainerTransport(id: 'q', host: '127.0.0.1', port: server.server.port);
+    await quiet.connect();
+    await expectLater(
+      quiet.write(_FakeDirconTrainer.service, _FakeDirconTrainer.control, Uint8List.fromList([0])),
+      throwsA(isA<TimeoutException>()),
+    );
+    expect(events.single, contains('request 4'));
+    expect(events.single, contains('tx id=4'));
+    await quiet.disconnect();
+    await server.close();
+  }, timeout: const Timeout(Duration(seconds: 20)));
+
+  test('an answer nobody asked for is reported, not fatal', () async {
+    final events = <String>[];
+    Logger.onEvent = events.add;
+    addTearDown(() => Logger.onEvent = null);
+    trainer.client!.add(encodeDirconFrame(messageId: 4, sequence: 99, responseCode: 0, payload: List.filled(16, 1)));
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    expect(events.single, contains('seq=99'));
+    expect(transport.isConnected, isTrue);
   });
 }
