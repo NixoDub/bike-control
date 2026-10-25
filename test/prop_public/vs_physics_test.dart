@@ -7,7 +7,7 @@ void main() {
       final ratios = physics.defaultGearRatiosFor(24);
       expect(ratios, hasLength(24));
       expect(ratios.first, 0.75);
-      expect(ratios.last, 5.0);
+      expect(ratios.last, 5.49);
       for (var i = 1; i < ratios.length; i++) {
         expect(ratios[i], greaterThan(ratios[i - 1]));
       }

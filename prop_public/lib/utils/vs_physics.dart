@@ -28,7 +28,7 @@ const double kMaxSimGradePercent = 20;
 /// [count] gear ratios from a low climbing gear to a high sprinting one, in even
 /// geometric steps (each gear is the same percentage faster than the last),
 /// rounded to two decimals. The middle gear lands near [kAssumedChainRatio].
-List<double> defaultGearRatiosFor(int count, {double lowest = 0.75, double highest = 5.0}) {
+List<double> defaultGearRatiosFor(int count, {double lowest = 0.75, double highest = 5.49}) {
   if (count <= 0) return const [];
   if (count == 1) return [kAssumedChainRatio];
   final step = math.pow(highest / lowest, 1 / (count - 1)).toDouble();
