@@ -39,7 +39,7 @@ class SettingsSyncService {
 
   /// Checks if the user can sync (is pro and logged in).
   bool _canSync() {
-    return IAPManager.instance.hasActiveSubscription && IAPManager.instance.isLoggedIn;
+    return IAPManager.instance.hasVerifiedSubscription && IAPManager.instance.isLoggedIn;
   }
 
   /// Loads the last sync information.

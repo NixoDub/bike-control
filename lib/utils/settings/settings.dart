@@ -1073,7 +1073,7 @@ class Settings {
   /// Uses debouncing to avoid excessive sync calls.
   void _triggerAutoSync() {
     if (_syncService == null) return;
-    if (!IAPManager.instance.hasActiveSubscription) return;
+    if (!IAPManager.instance.hasVerifiedSubscription) return;
     if (!IAPManager.instance.isLoggedIn) return;
 
     // Cancel existing timer
