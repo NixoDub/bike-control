@@ -33,6 +33,10 @@ class _FakeDirconTrainer {
   final enabled = <String>[];
   bool ignoreWrites = false;
 
+  /// A Victory writes a response's header first, and its own notifications can
+  /// land before the body does.
+  bool lateBody = false;
+
   static const service = '00001826-0000-1000-8000-00805f9b34fb';
   static const feature = '00002acc-0000-1000-8000-00805f9b34fb';
   static const control = '00002ad9-0000-1000-8000-00805f9b34fb';
@@ -53,7 +57,15 @@ class _FakeDirconTrainer {
           ...uuidToBytes(bikeData), 4,
         ]);
       case 3:
-        _reply(s, f, [...f.payload.sublist(0, 16), 0x86, 0x14, 0, 0, 0, 0, 0, 0]);
+        final body = [...f.payload.sublist(0, 16), 0x86, 0x14, 0, 0, 0, 0, 0, 0];
+        if (lateBody) {
+          final whole = encodeDirconFrame(messageId: 3, sequence: f.sequence, responseCode: 0, payload: body);
+          s.add(whole.sublist(0, dirconHeaderLength));
+          notify(bikeData, [9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9]);
+          s.add(whole.sublist(dirconHeaderLength));
+        } else {
+          _reply(s, f, body);
+        }
       case 4:
         if (ignoreWrites) return;
         writes.add((uuidFromBytes(f.payload.sublist(0, 16)), f.payload.sublist(16).toList()));
@@ -172,5 +184,18 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 100));
     expect(events.single, contains('seq=99'));
     expect(transport.isConnected, isTrue);
+  });
+
+  test('a notification between a response header and its body breaks nothing', () async {
+    trainer.lateBody = true;
+    final seen = <List<int>>[];
+    transport.notifications.listen((n) => seen.add(n.value));
+    final value = await transport.read(_FakeDirconTrainer.service, _FakeDirconTrainer.feature);
+    expect(value, [0x86, 0x14, 0, 0, 0, 0, 0, 0]);
+    final next = await transport.read(_FakeDirconTrainer.service, _FakeDirconTrainer.feature);
+    expect(next, [0x86, 0x14, 0, 0, 0, 0, 0, 0]);
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(seen, hasLength(2));
+    expect(seen.first, List.filled(11, 9));
   });
 }

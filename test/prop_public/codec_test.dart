@@ -97,4 +97,38 @@ void main() {
       expect(parser.add(second.sublist(4)).single.payload, [5]);
     });
   });
+
+  group('DirconClientParser', () {
+    final uuid = Uint8List.fromList(List.generate(16, (i) => i + 10));
+    final body = [...uuid, 1, 2, 3];
+    final header = encodeDirconFrame(messageId: 3, sequence: 4, responseCode: 0, payload: body).sublist(0, 6);
+    final notification = encodeDirconFrame(messageId: 6, sequence: 2, responseCode: 0, payload: [...uuidToBytes('2ad2'), 7, 8]);
+    Uint8List? expected(int seq, int id) => seq == 4 && id == 3 ? uuid : null;
+
+    test('a response whose body arrives after a notification still pairs up, wherever the stream is cut', () {
+      final stream = [...header, ...notification, ...body, ...notification];
+      for (var cut = 0; cut <= stream.length; cut++) {
+        final parser = DirconClientParser(expectedUuid: expected);
+        final frames = [...parser.add(stream.sublist(0, cut)), ...parser.add(stream.sublist(cut))];
+        expect(frames.map((f) => f.messageId), [6, 3, 6], reason: 'cut at $cut');
+        expect(frames[1].payload, body, reason: 'cut at $cut');
+        expect(frames[1].sequence, 4);
+        expect(parser.pendingBytes, 0);
+      }
+    });
+
+    test('an ordinary response is untouched', () {
+      final frames = DirconClientParser(
+        expectedUuid: expected,
+      ).add(encodeDirconFrame(messageId: 3, sequence: 4, responseCode: 0, payload: body));
+      expect(frames.single.payload, body);
+    });
+
+    test('a response nobody is waiting for passes through as it is', () {
+      final frames = DirconClientParser(
+        expectedUuid: (_, __) => null,
+      ).add(encodeDirconFrame(messageId: 3, sequence: 9, responseCode: 0, payload: body));
+      expect(frames.single.payload, body);
+    });
+  });
 }

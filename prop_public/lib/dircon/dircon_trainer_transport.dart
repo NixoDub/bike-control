@@ -26,7 +26,18 @@ class DirconTrainerTransport extends TrainerTransport {
 
   Socket? _socket;
   StreamSubscription<Uint8List>? _socketSub;
-  final DirconFrameParser _parser = DirconFrameParser();
+  late final DirconClientParser _parser = DirconClientParser(
+    expectedUuid: (sequence, messageId) => switch (messageId) {
+      FtmsMdnsConstants.DC_MESSAGE_DISCOVER_CHARACTERISTICS ||
+      FtmsMdnsConstants.DC_MESSAGE_READ_CHARACTERISTIC ||
+      FtmsMdnsConstants.DC_MESSAGE_WRITE_CHARACTERISTIC ||
+      FtmsMdnsConstants.DC_MESSAGE_ENABLE_CHARACTERISTIC_NOTIFICATIONS => _expectedUuids[sequence],
+      _ => null,
+    },
+  );
+
+  /// The UUID each request in flight asked about, by sequence number.
+  final Map<int, Uint8List> _expectedUuids = {};
   final Map<int, Completer<DirconFrame>> _pending = {};
   final StreamController<({String characteristic, Uint8List value})> _notifications = StreamController.broadcast();
   int _sequence = 0;
@@ -88,6 +99,7 @@ class DirconTrainerTransport extends TrainerTransport {
         continue;
       }
       final waiting = _pending.remove(frame.sequence);
+      _expectedUuids.remove(frame.sequence);
       if (waiting != null && !waiting.isCompleted) {
         waiting.complete(frame);
       } else if (_unmatchedReported++ < 10) {
@@ -117,6 +129,7 @@ class DirconTrainerTransport extends TrainerTransport {
       if (!waiting.isCompleted) waiting.completeError(const SocketException('DirCon connection closed'));
     }
     _pending.clear();
+    _expectedUuids.clear();
   }
 
   Future<DirconFrame> _request(int messageId, [List<int> payload = const []]) {
@@ -127,16 +140,20 @@ class DirconTrainerTransport extends TrainerTransport {
       sequence = (++_sequence) & 0xff;
     }
     final completer = _pending[sequence] = Completer<DirconFrame>();
+    if (messageId != FtmsMdnsConstants.DC_MESSAGE_DISCOVER_SERVICES && payload.length >= 16) {
+      _expectedUuids[sequence] = Uint8List.fromList(payload.sublist(0, 16));
+    }
     _note('tx', messageId, sequence, 0, payload);
     socket.add(encodeDirconFrame(messageId: messageId, sequence: sequence, responseCode: 0, payload: payload));
     return completer.future.timeout(
       requestTimeout,
       onTimeout: () {
         _pending.remove(sequence);
+        _expectedUuids.remove(sequence);
         if (_timeoutsReported++ < 3) {
           Logger.onEvent?.call(
             'DirCon: request $messageId (seq $sequence) got no answer in ${requestTimeout.inSeconds}s; '
-            '${_parser.pendingBytes} unparsed bytes; last frames:\n${_wire.join('\n')}',
+            '${_parser.pendingBytes} unparsed bytes, ${_parser.interleavedNotifications} notifications inside a response; last frames:\n${_wire.join('\n')}',
           );
         }
         throw TimeoutException('DirCon request $messageId timed out', requestTimeout);
