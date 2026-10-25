@@ -98,31 +98,49 @@ class FitnessBikeDefinition extends BleDefinition {
 
   int get maxGear => 13;
 
-  get cadenceRpm => null;
+  // Live values the Proxy bridge reads for display. Real notifiers, so the
+  // app can listen to them even though nothing in this build fills them.
+  final ValueNotifier<int?> _cadenceRpm = ValueNotifier<int?>(null);
+  final ValueNotifier<double?> _speedKph = ValueNotifier<double?>(null);
+  final ValueNotifier<int?> _powerW = ValueNotifier<int?>(null);
+  final ValueNotifier<int?> _heartRateBpm = ValueNotifier<int?>(null);
+  final ValueNotifier<TrainerMode> _trainerMode = ValueNotifier<TrainerMode>(TrainerMode.simMode);
+  final ValueNotifier<int?> _ergTargetPower = ValueNotifier<int?>(null);
+  final ValueNotifier<int> _currentGear = ValueNotifier<int>(1);
+  final ValueNotifier<int?> _targetPowerW = ValueNotifier<int?>(null);
+  final ValueNotifier<double> _gearRatio = ValueNotifier<double>(1.0);
+  final ValueNotifier<List<double>> _gearRatios = ValueNotifier<List<double>>([]);
+  final ValueNotifier<VirtualShiftingMode> _virtualShiftingMode = ValueNotifier<VirtualShiftingMode>(
+    VirtualShiftingMode.targetPower,
+  );
+  final ValueNotifier<bool> _trainerFeature = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> _gradeSmoothing = ValueNotifier<bool>(false);
 
-  get speedKph => null;
+  ValueListenable<int?> get cadenceRpm => _cadenceRpm;
 
-  get powerW => null;
+  ValueListenable<double?> get speedKph => _speedKph;
 
-  get heartRateBpm => null;
+  ValueListenable<int?> get powerW => _powerW;
 
-  get trainerMode => null;
+  ValueListenable<int?> get heartRateBpm => _heartRateBpm;
 
-  get ergTargetPower => null;
+  ValueNotifier<TrainerMode> get trainerMode => _trainerMode;
 
-  get currentGear => null;
+  ValueNotifier<int?> get ergTargetPower => _ergTargetPower;
 
-  get targetPowerW => null;
+  ValueNotifier<int> get currentGear => _currentGear;
 
-  get gearRatio => null;
+  ValueListenable<int?> get targetPowerW => _targetPowerW;
 
-  ValueNotifier<List<double>> get gearRatios => ValueNotifier([]);
+  ValueListenable<double> get gearRatio => _gearRatio;
 
-  ValueNotifier get virtualShiftingMode => ValueNotifier(false);
+  ValueNotifier<List<double>> get gearRatios => _gearRatios;
 
-  ValueNotifier get trainerFeature => ValueNotifier(false);
+  ValueNotifier<VirtualShiftingMode> get virtualShiftingMode => _virtualShiftingMode;
 
-  ValueListenable<bool> get gradeSmoothingEnabled => ValueNotifier(false);
+  ValueNotifier get trainerFeature => _trainerFeature;
+
+  ValueListenable<bool> get gradeSmoothingEnabled => _gradeSmoothing;
 
   int get neutralGear => 0;
 
