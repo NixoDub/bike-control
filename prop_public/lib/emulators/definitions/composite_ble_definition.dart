@@ -14,6 +14,7 @@ class CompositeBleDefinition extends BleDefinition {
   }
 
   final List<BleDefinition> _children = [];
+  bool _serving = false;
 
   /// Read-only view of the currently attached children, in attach-order.
   List<BleDefinition> get children => List.unmodifiable(_children);
@@ -24,12 +25,14 @@ class CompositeBleDefinition extends BleDefinition {
     _children.add(def);
     def.transporter = transporter;
     def.onAttached();
+    if (_serving) def.onServerStarted();
     return true;
   }
 
   /// Detach [def]. Returns `true` if [def] was a current child.
   bool detach(BleDefinition def) {
     final removed = _children.remove(def);
+    if (removed && _serving) def.onServerStopped();
     if (removed && identical(def.transporter, transporter)) def.transporter = null;
     return removed;
   }
@@ -138,6 +141,24 @@ class CompositeBleDefinition extends BleDefinition {
       owner.onNotification(characteristic, bytes);
     }
     return owners.isNotEmpty;
+  }
+
+  @override
+  void onServerStarted() {
+    if (_serving) return;
+    _serving = true;
+    for (final child in List<BleDefinition>.from(_children)) {
+      child.onServerStarted();
+    }
+  }
+
+  @override
+  void onServerStopped() {
+    if (!_serving) return;
+    _serving = false;
+    for (final child in List<BleDefinition>.from(_children)) {
+      child.onServerStopped();
+    }
   }
 
   @override

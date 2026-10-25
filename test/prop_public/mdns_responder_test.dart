@@ -210,7 +210,7 @@ void main() {
     test('records an unanswered query as such, and a QU bit as a wish for unicast', () {
       responder.handleDatagram(query(['nothing', 'local'], dnsTypeA, unicast: true), source, 5353);
       final entry = responder.recentQueries.single;
-      expect(entry.reply, 'no match');
+      expect(entry.reply, 'no answer');
       expect(entry.wantsUnicast, isTrue);
       expect(entry.source, '192.168.1.77');
     });

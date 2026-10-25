@@ -26,9 +26,13 @@ class MdnsQueryLogEntry {
   /// do not count it as a trainer app asking for us.
   final bool duringOwnBrowse;
 
-  /// How the responder answered, for diagnostics: `multicast`, `unicast` or
-  /// `no match`.
-  String reply;
+  /// How the responder answered, for diagnostics.
+  String get reply => switch ((answeredUnicast, answeredMulticast)) {
+    (true, true) => 'unicast+multicast',
+    (true, false) => 'unicast',
+    (false, true) => 'multicast',
+    (false, false) => 'no answer',
+  };
 
   /// How many times this exact query was seen in a row.
   int count;
@@ -42,7 +46,6 @@ class MdnsQueryLogEntry {
     required this.answeredUnicast,
     required this.answeredMulticast,
     this.duringOwnBrowse = false,
-    this.reply = '',
     this.count = 1,
   });
 

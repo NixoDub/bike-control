@@ -320,12 +320,8 @@ class ResponderServiceAdvertiser implements ServiceAdvertiser {
     // than 5353) wants a unicast reply that repeats its question.
     final legacyUnicast = sourcePort != _port;
     final entry = _logQuery(query, source, sourcePort);
-    if (answers.isEmpty) {
-      entry.reply = 'no match';
-      return;
-    }
+    if (answers.isEmpty) return;
     if (legacyUnicast) {
-      entry.reply = 'unicast';
       entry.answeredUnicast = true;
       List<DnsRecord> plain(Iterable<DnsRecord> records) => [
         for (final r in records) DnsRecord(name: r.name, type: r.type, ttl: min(r.ttl, 10), rdata: r.rdata),
@@ -341,7 +337,6 @@ class ResponderServiceAdvertiser implements ServiceAdvertiser {
         port: sourcePort,
       );
     } else {
-      entry.reply = 'multicast';
       entry.answeredMulticast = true;
       _send(buildDnsResponse(answers: answers.values.toList(), additional: additional.values.toList()));
     }
