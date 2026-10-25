@@ -215,6 +215,7 @@ class DirconEmulator {
     _transporter = NetworkTransporter(socket: socket, definition: composite);
     isConnected.value = true;
     Logger.info('DirCon: client connected from ${socket.remoteAddress.address}');
+    Logger.onEvent?.call('DirCon: client connected from ${socket.remoteAddress.address}');
   }
 
   void _onClientDisconnected() {
@@ -222,6 +223,7 @@ class DirconEmulator {
     _transporter = null;
     isConnected.value = false;
     Logger.info('DirCon: client disconnected');
+    Logger.onEvent?.call('DirCon: client disconnected');
   }
 
   /// Announces what the composite serves. A composite with nothing to

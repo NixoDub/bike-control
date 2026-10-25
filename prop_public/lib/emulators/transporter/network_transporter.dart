@@ -38,8 +38,36 @@ class NetworkTransporter extends Transporter {
     }
   }
 
+  /// How many exchanges one client's session may put in the app log. A
+  /// pairing is a few dozen messages; a ride is thousands.
+  static const int _loggedExchanges = 80;
+  int _logged = 0;
+
+  static String _shortName(List<int> uuidBytes) {
+    final uuid = uuidFromBytes(uuidBytes);
+    return shortUuidOf(uuid) ?? uuid;
+  }
+
+  void _logRequest(DirconFrame frame) {
+    if (_logged >= _loggedExchanges) return;
+    _logged++;
+    final payload = frame.payload;
+    final what = switch (frame.messageId) {
+      FtmsMdnsConstants.DC_MESSAGE_DISCOVER_SERVICES => 'discover services',
+      FtmsMdnsConstants.DC_MESSAGE_DISCOVER_CHARACTERISTICS => 'discover characteristics',
+      FtmsMdnsConstants.DC_MESSAGE_READ_CHARACTERISTIC => 'read',
+      FtmsMdnsConstants.DC_MESSAGE_WRITE_CHARACTERISTIC => 'write',
+      FtmsMdnsConstants.DC_MESSAGE_ENABLE_CHARACTERISTIC_NOTIFICATIONS => 'notifications',
+      final id => 'message $id',
+    };
+    final target = payload.length >= 16 ? ' ${_shortName(payload.sublist(0, 16))}' : '';
+    final value = payload.length > 16 ? ' ${bytesToHex(payload.sublist(16, payload.length.clamp(16, 32)))}' : '';
+    Logger.onEvent?.call('DirCon client: $what$target$value');
+  }
+
   Future<void> _handleFrame(DirconFrame frame) async {
     if (_disposed) return;
+    _logRequest(frame);
     if (frame.version != dirconProtocolVersion) {
       _respond(frame, FtmsMdnsConstants.DC_RC_UNKNOWN_PROTOCOL_VERSION);
       return;
@@ -172,7 +200,12 @@ class NetworkTransporter extends Transporter {
     return null;
   }
 
+  int _refusals = 0;
+
   void _respond(DirconFrame request, int responseCode, [List<int> payload = const []]) {
+    if (responseCode != FtmsMdnsConstants.DC_RC_REQUEST_COMPLETED_SUCCESSFULLY && _refusals++ < 20) {
+      Logger.onEvent?.call('DirCon: refused message ${request.messageId} with code $responseCode');
+    }
     _send(
       encodeDirconFrame(
         messageId: request.messageId,

@@ -12,6 +12,7 @@ import 'package:prop/emulators/dircon_emulator.dart';
 import 'package:prop/emulators/transporter/dircon_codec.dart';
 import 'package:prop/mdns/service_advertiser.dart';
 import 'package:prop/utils/network_address.dart';
+import 'package:prop/utils/shared.dart';
 import 'package:prop/utils/uuid.dart';
 import 'package:universal_ble/universal_ble.dart';
 
@@ -107,6 +108,23 @@ void main() {
       await settle();
       expect(frames.map((f) => f.responseCode), [7, 1]);
       socket.destroy();
+    });
+  });
+
+  group('what the app log shows of a client', () {
+    test('its connection, what it asks for and what the bridge refuses', () async {
+      final events = <String>[];
+      Logger.onEvent = events.add;
+      addTearDown(() => Logger.onEvent = null);
+      await start();
+      await client!.discoverServices();
+      await client!.request(3, uuidToBytes(indoorBikeData));
+      await client!.request(2, uuidToBytes('0000dead-0000-1000-8000-00805f9b34fb'));
+      await settle();
+      expect(events, contains(startsWith('DirCon: client connected from')));
+      expect(events, contains('DirCon client: discover services'));
+      expect(events.any((e) => e.startsWith('DirCon client: read 2ad2')), isTrue);
+      expect(events.any((e) => e.startsWith('DirCon: refused message 2 with code 3')), isTrue);
     });
   });
 
