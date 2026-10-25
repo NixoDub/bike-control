@@ -75,14 +75,10 @@ class FitnessBikeDefinition extends BleDefinition {
   static List<double> defaultGearRatios = [];
 
   @override
-  // TODO: implement advertiseServiceUUIDs
-  List<String> get advertiseServiceUUIDs => throw UnimplementedError();
+  List<String> get advertiseServiceUUIDs => throw UnsupportedError(_notImplemented);
 
   @override
-  List<BleCharacteristic> getCharacteristics(String serviceUUID) {
-    // TODO: implement getCharacteristics
-    throw UnimplementedError();
-  }
+  List<BleCharacteristic> getCharacteristics(String serviceUUID) => throw UnsupportedError(_notImplemented);
 
   @override
   void onNotification(String characteristic, Uint8List bytes) {
@@ -95,8 +91,10 @@ class FitnessBikeDefinition extends BleDefinition {
   }
 
   @override
-  // TODO: implement serviceUUIDs
-  List<String> get serviceUUIDs => throw UnimplementedError();
+  List<String> get serviceUUIDs => throw UnsupportedError(_notImplemented);
+
+  static const String _notImplemented =
+      'Virtual shifting is not implemented in this build yet; connect the trainer in Proxy mode.';
 
   int get maxGear => 13;
 

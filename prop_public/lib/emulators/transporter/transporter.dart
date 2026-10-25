@@ -10,7 +10,9 @@ import 'package:prop/emulators/ble_definition.dart';
 abstract class Transporter {
   final BleDefinition definition;
 
-  Transporter({required this.definition});
+  Transporter({required this.definition}) {
+    definition.transporter = this;
+  }
 
   /// Push a notification out to the connected client.
   void sendCharacteristicNotification(
@@ -19,5 +21,7 @@ abstract class Transporter {
     int responseCode = 1,
   });
 
-  void dispose() {}
+  void dispose() {
+    if (identical(definition.transporter, this)) definition.transporter = null;
+  }
 }

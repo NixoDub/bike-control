@@ -19,12 +19,16 @@ class MdnsQueryLogEntry {
   /// Human-readable questions, e.g. 'PTR _wahoo-fitness-tnp._tcp.local'.
   final List<String> questions;
 
-  final bool answeredUnicast;
-  final bool answeredMulticast;
+  bool answeredUnicast;
+  bool answeredMulticast;
 
   /// Whether this query was most likely our own app browsing, so diagnostics
   /// do not count it as a trainer app asking for us.
   final bool duringOwnBrowse;
+
+  /// How the responder answered, for diagnostics: `multicast`, `unicast` or
+  /// `no match`.
+  String reply;
 
   /// How many times this exact query was seen in a row.
   int count;
@@ -38,10 +42,9 @@ class MdnsQueryLogEntry {
     required this.answeredUnicast,
     required this.answeredMulticast,
     this.duringOwnBrowse = false,
+    this.reply = '',
     this.count = 1,
   });
-
-  String get reply => '';
 
   @override
   String toString() => '$source:$sourcePort';
