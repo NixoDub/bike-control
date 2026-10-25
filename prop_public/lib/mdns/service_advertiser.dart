@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:nsd/nsd.dart' as nsd;
 import 'package:prop/mdns/dns_message.dart';
 import 'package:prop/mdns/mdns_responder.dart';
 import 'package:prop/utils/network_address.dart';
@@ -47,7 +48,7 @@ abstract class ServiceAdvertiser {
 
   /// The right backend for the current platform.
   static ServiceAdvertiser platformDefault() {
-    if (kIsWeb) return NsdServiceAdvertiser();
+    if (kIsWeb || Platform.isAndroid) return NsdServiceAdvertiser();
     final desktop = Platform.isWindows || Platform.isMacOS || Platform.isLinux;
     return ResponderServiceAdvertiser(
       announceInterval: desktop
@@ -97,13 +98,48 @@ abstract final class MdnsHostLabel {
   }
 }
 
-/// The OS-responder backend (via the `nsd` plugin). Stubbed here.
+/// The OS-responder backend, through the `nsd` plugin: Android's NsdManager,
+/// or the Bonjour of Apple's platforms. The system owns the records, so the
+/// address and the host name are the system's, and [AdvertisedService.address]
+/// and [AdvertisedService.hostLabel] are not used.
+///
+/// Android is why it exists: its Wi-Fi drops most incoming multicast unless the
+/// system holds the lock for it, so an in-process responder there is seldom
+/// asked anything.
 class NsdServiceAdvertiser implements ServiceAdvertiser {
   @override
   ValueListenable<String?> get advertisedAddress => ServiceAdvertiser.untrackedAddress;
 
   @override
-  Future<ServiceAdvertisement> register(AdvertisedService service) => throw UnimplementedError();
+  Future<ServiceAdvertisement> register(AdvertisedService service) async {
+    // The service types here (`_wahoo-fitness-tnp._tcp`) are not on the list
+    // the plugin checks against.
+    nsd.disableServiceTypeValidation(true);
+    final registration = await nsd.register(
+      nsd.Service(name: service.name, type: service.type, port: service.port, txt: service.txt),
+    );
+    Logger.onEvent?.call('mDNS: announced "${service.name}" (${service.type}) on port ${service.port} through the system');
+    return _NsdAdvertisement(registration);
+  }
+}
+
+class _NsdAdvertisement implements ServiceAdvertisement {
+  _NsdAdvertisement(this._registration);
+
+  final nsd.Registration _registration;
+  bool _unregistered = false;
+
+  @override
+  Future<void> unregister() async {
+    if (_unregistered) return;
+    _unregistered = true;
+    try {
+      await nsd.unregister(_registration);
+    } catch (e) {
+      // The system forgets a registration when the network goes away.
+      Logger.warn('mDNS: could not withdraw "${_registration.service.name}": $e');
+    }
+  }
 }
 
 /// An in-process multicast DNS responder.
