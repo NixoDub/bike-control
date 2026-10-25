@@ -122,14 +122,27 @@ class IAPManager {
   /// before the first entitlements fetch.
   bool get isBetaTester => (isLoggedIn && entitlements.hasActive(betaAccessProductKey) || kDebugMode);
 
-  bool get hasActiveSubscription =>
+  /// Local-build switch (`--dart-define=BIKECONTROL_LOCAL_PRO=true`): treats this
+  /// build as Pro on this device, so the Pro-gated features, the trial gate and
+  /// the daily command limit stay out of the way. It only changes what the app
+  /// itself decides; it never claims an entitlement from the account, so
+  /// anything the server grants (settings sync) still needs a real
+  /// subscription — see [hasVerifiedSubscription]. Off by default.
+  static const bool _localPro = bool.fromEnvironment('BIKECONTROL_LOCAL_PRO');
+
+  /// The subscription as the account or the local Pro flag record it, ignoring
+  /// [_localPro]. Server-side features gate on this one.
+  bool get hasVerifiedSubscription =>
       (isLoggedIn && (entitlements.hasActive(premiumMonthlyProductKey)) ||
           entitlements.hasActive(premiumYearlyProductKey)) ||
       (!isLoggedIn && isLocalPro.value);
 
-  bool get isProEnabled => hasActiveSubscription && (isLoggedIn || (!isLoggedIn && isLocalPro.value));
+  bool get hasActiveSubscription => _localPro || hasVerifiedSubscription;
+
+  bool get isProEnabled => _localPro || (hasActiveSubscription && (isLoggedIn || (!isLoggedIn && isLocalPro.value)));
 
   bool get isProEnabledForCurrentDevice {
+    if (_localPro && !_unregisteredDeviceForTesting) return true;
     if (!_isInitialized) return false;
     if (_unregisteredDeviceForTesting) return false;
     return hasActiveSubscription &&
